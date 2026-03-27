@@ -415,29 +415,29 @@ Utwórz fakturę z minimalnymi danymi / Create invoice with minimal data:
 ---
 
 ## Struktura repozytorium / Repository Structure
-.
-├── bash
-├── data 
-├── docs
-│   ├── graph
-│   └── other
-├── models
-├── security
-├── static
-│   ├── description
-│   ├── img
-│   ├── src
-│   │   ├── java
-│   │   │   └── pl
-│   │   │       └── ksef
-│   │   │           ├── auth
-│   │   │           ├── invoice
-│   │   │           └── session
-│   │   └── js
-│   └── tests
-├── tests
-├── views
-└── wizard
+	.
+	├── bash
+	├── data 
+	├── docs
+	│   ├── graph
+	│   └── other
+	├── models
+	├── security
+	├── static
+	│   ├── description
+	│   ├── img
+	│   ├── src
+	│   │   ├── java
+	│   │   │   └── pl
+	│   │   │       └── ksef
+	│   │   │           ├── auth
+	│   │   │           ├── invoice
+	│   │   │           └── session
+	│   │   └── js
+	│   └── tests
+	├── tests
+	├── views
+	└── wizard
 
 - W katalogu `data` znajdują się przykładowe szablony XET / Sample XET templates are located in the `data` directory
 - W katalogu `static/src/java` znajdują się kody źródłowe Java do skompilowania klienta KSeF / Java source code for compiling the KSeF client is located in the `static/src/java` directory
