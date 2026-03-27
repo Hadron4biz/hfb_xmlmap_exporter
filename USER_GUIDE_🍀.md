@@ -166,19 +166,23 @@ Szczegółowy opis procesu generowania certyfikatów dla KSeF 2.0 znajduje się 
 
 **`docs/przygotowanie-certyfikatow.md`**
 
-Plik zawiera instrukcje dotyczące:
-- Wymagań technicznych dla certyfikatów
-- Generowania klucza prywatnego
-- Tworzenia CSR (Certificate Signing Request)
-- Procesu uzyskania certyfikatu publicznego z centrum certyfikacji
-- Weryfikacji poprawności certyfikatów
+Plik zawiera kompletną instrukcję przygotowania certyfikatów PKCS#12 (.p12) na potrzeby integracji z KSeF, obejmującą:
 
-The file contains instructions for:
-- Technical requirements for certificates
-- Private key generation
-- CSR (Certificate Signing Request) creation
-- Process of obtaining a public certificate from the certification authority
-- Certificate validation
+- Wymagania techniczne – certyfikaty muszą być oparte o algorytm RSA
+- Sprawdzanie algorytmu certyfikatu przed użyciem
+- Tworzenie plików .p12 dla certyfikatów AUTH i SIGN
+- Weryfikację poprawności utworzonych plików
+- Wgrywanie certyfikatów do konfiguracji Providera
+- Rozwiązywanie najczęstszych problemów
+
+The file contains complete instructions for preparing PKCS#12 (.p12) certificates for KSeF integration, including:
+
+- Technical requirements – certificates must use RSA algorithm
+- Certificate algorithm verification before use
+- Creating .p12 files for AUTH and SIGN certificates
+- Verification of created files
+- Uploading certificates to Provider configuration
+- Troubleshooting common issues
 
 > ⚠️ **Ważne / Important**: Klucz prywatny musi być w formacie PEM i może być zabezpieczony hasłem (do skonfigurowania w Providerze) / Private key must be in PEM format and can be password-protected (configurable in Provider).
 
