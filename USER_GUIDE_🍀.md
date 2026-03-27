@@ -1,5 +1,4 @@
-# hfb_xmlmap_exporter - Integracja Odoo z KSeF 2.0
-# hfb_xmlmap_exporter - Odoo Integration with KSeF 2.0
+# Integracja Odoo z KSeF 2.0 / Odoo Integration with KSeF 2.0
 
 ---
 
