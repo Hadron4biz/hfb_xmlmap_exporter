@@ -20,7 +20,6 @@ Rozdzielenie tych warstw eliminuje zależności pomiędzy:
 
 Architektura modułu oparta jest o trzy główne warstwy:
 
-+------------------------------------------------------+
 | XET (XML Mapping Layer) |
 | xml.export.template / xml.export.node |
 +------------------------------------------------------+
@@ -29,8 +28,6 @@ Architektura modułu oparta jest o trzy główne warstwy:
 +------------------------------------------------------+
 | Integration Layer (KSeF / Java / API) |
 | ProviderKsefApiService / Java CLI / XAdES |
-+------------------------------------------------------+
-
 
 ---
 
