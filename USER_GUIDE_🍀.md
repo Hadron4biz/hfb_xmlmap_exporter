@@ -162,28 +162,27 @@ Provider definiuje połączenie z rzeczywistym środowiskiem KSeF / Provider def
 
 #### Krok 1: Generowanie certyfikatów / Step 1: Certificate Generation
 
-KSeF 2.0 wymaga certyfikatów kwalifikowanych / KSeF 2.0 requires qualified certificates.
+Szczegółowy opis procesu generowania certyfikatów dla KSeF 2.0 znajduje się w pliku / Detailed description of the certificate generation process for KSeF 2.0 is available in the file:
 
-Wykonaj następujące kroki / Follow these steps:
+**`docs/przygotowanie-certyfikatow.md`**
 
-**a) Wygeneruj klucz prywatny (2048-bit RSA) / Generate private key (2048-bit RSA)**
+Plik zawiera kompletną instrukcję przygotowania certyfikatów PKCS#12 (.p12) na potrzeby integracji z KSeF, obejmującą:
 
-openssl genrsa -out klucz_prywatny.pem 2048
+- Wymagania techniczne – certyfikaty muszą być oparte o algorytm RSA
+- Sprawdzanie algorytmu certyfikatu przed użyciem
+- Tworzenie plików .p12 dla certyfikatów AUTH i SIGN
+- Weryfikację poprawności utworzonych plików
+- Wgrywanie certyfikatów do konfiguracji Providera
+- Rozwiązywanie najczęstszych problemów
 
-**b) Wygeneruj CSR (Certificate Signing Request) / Generate CSR**
+The file contains complete instructions for preparing PKCS#12 (.p12) certificates for KSeF integration, including:
 
-openssl req -new -key klucz_prywatny.pem -out cert_request.csr
--subj "/CN=Nazwa Firmy/O=Firma/NIP=1234567890"
-
-Dla wersji angielskiej / For English version:
-
-openssl req -new -key private_key.pem -out cert_request.csr
--subj "/CN=Company Name/O=Company/TaxID=1234567890"
-
-
-**c) Wyślij CSR do centrum certyfikacji (wskazane przez Ministerstwo Finansów) / Submit CSR to certification authority (as specified by Ministry of Finance)**
-
-Otrzymasz certyfikat publiczny w formacie PEM / You will receive a public certificate in PEM format.
+- Technical requirements – certificates must use RSA algorithm
+- Certificate algorithm verification before use
+- Creating .p12 files for AUTH and SIGN certificates
+- Verification of created files
+- Uploading certificates to Provider configuration
+- Troubleshooting common issues
 
 > ⚠️ **Ważne / Important**: Klucz prywatny musi być w formacie PEM i może być zabezpieczony hasłem (do skonfigurowania w Providerze) / Private key must be in PEM format and can be password-protected (configurable in Provider).
 
@@ -440,6 +439,60 @@ Utwórz fakturę z minimalnymi danymi / Create invoice with minimal data:
 
 - W katalogu `data` znajdują się przykładowe szablony XET / Sample XET templates are located in the `data` directory
 - W katalogu `static/src/java` znajdują się kody źródłowe Java do skompilowania klienta KSeF / Java source code for compiling the KSeF client is located in the `static/src/java` directory
+
+---
+
+### Instalacja środowiska Java / Java Environment Installation
+
+Moduł wykorzystuje klienta Java do komunikacji z API KSeF. Przed kompilacją i użyciem należy zainstalować środowisko Java / The module uses a Java client for KSeF API communication. Before compilation and use, install the Java environment.
+
+#### 1. Instalacja Java / Install Java
+	sudo apt update
+	sudo apt upgrade -y
+	sudo apt install -y openjdk-17-jdk openjdk-17-jre
+	java -version
+
+#### 2. Ustawienie domyślnej wersji Java / Set default Java version
+	sudo update-alternatives --config java
+	sudo update-alternatives --config javac
+
+	# Ustaw domyślną wersję (np. OpenJDK 17) / Set default version (e.g., OpenJDK 17)
+	sudo update-java-alternatives -s java-1.17.0-openjdk-amd64
+
+#### 3. Ustawienie środowiska / Set environment variables
+	# Dodaj JAVA_HOME do ~/.bashrc / Add JAVA_HOME to ~/.bashrc
+	echo 'export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"' >> ~/.bashrc
+	echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.bashrc
+
+	# Odśwież / Refresh
+	source ~/.bashrc
+
+	# Sprawdź / Verify
+	echo $JAVA_HOME
+
+#### 4. Optymalizacja dla klienta KSeF / Optimization for KSeF client
+	# Stwórz plik konfiguracyjny dla Java opts / Create configuration file for Java opts
+	sudo mkdir -p /etc/odoo/java
+	sudo tee /etc/odoo/java/jvm-opts.conf << 'EOF'
+	# Optymalizacje dla KSeF JAR / Optimizations for KSeF JAR
+	-Xmx2g           # 2GB RAM max
+	-Xms512m         # 512MB initial
+	-XX:MaxMetaspaceSize=512m
+	-XX:+UseG1GC     # Garbage Collector
+	-XX:+UseStringDeduplication
+	-Dfile.encoding=UTF-8
+	-Duser.timezone=Europe/Warsaw
+	EOF
+
+#### 5. Weryfikacja instalacji / Installation verification
+	# Sprawdź wersję Java dla użytkownika odoo / Check Java version for odoo user
+	sudo -u odoo java -version
+
+	# Sprawdź ścieżkę Java / Check Java path
+	sudo -u odoo which java
+
+Po poprawnej instalacji środowiska Java można przystąpić do kompilacji klienta KSeF (szczegóły w katalogu static/src/java) / After successful Java environment installation, proceed to compile the KSeF client (details in the static/src/java directory).
+
 
 ---
 
