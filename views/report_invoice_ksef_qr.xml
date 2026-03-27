@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<template id="report_invoice_document_ksef_qr" inherit_id="account.report_invoice_document">
+		<xpath expr="//div[@name='comment']" position="after">
+
+			<t t-set="ksef_qr_url" t-value="o._build_ksef_qr_invoice_url()"/>
+			<t t-if="ksef_qr_url">
+				<t t-set="ksef_qr_img_b64" t-value="o._get_ksef_qr_image_base64()"/>
+				<t t-if="ksef_qr_img_b64">
+					<div class="mt-4 pt-3" style="border-top: 1px solid #ddd; page-break-inside: avoid;">
+						<p style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">
+							Sprawdź, czy Twoja faktura znajduje się w KSeF
+						</p>
+						<div style="display: flex; align-items: flex-start; gap: 20px;">
+							<div style="flex: 0 0 140px;">
+								<img t-att-src="'data:image/png;base64,' + ksef_qr_img_b64"
+									 style="width: 140px; height: 140px;"
+									 alt="QR KSeF"/>
+							</div>
+							<div style="font-size: 11px; color: #555; line-height: 1.4;">
+								<p style="margin-bottom: 6px;">
+									Zeskanuj kod QR, aby zweryfikować fakturę
+									w Krajowym Systemie e-Faktur (KSeF).
+								</p>
+								<p style="margin-bottom: 6px;">
+									Jeżeli nie możesz zeskanować kodu, użyj linku:
+								</p>
+								<p style="margin-bottom: 6px;">
+									<a t-att-href="ksef_qr_url"
+									   style="color: #1a73e8; text-decoration: none;"
+									   target="_blank">
+										<t t-esc="ksef_qr_url"/>
+									</a>
+								</p>
+								<p t-if="o.ksef_issue_mode != 'offline'" style="font-size: 10px; color: #777; margin-bottom: 0;">
+									Numer KSeF:
+									<span t-esc="o.ksef_number or '-'"/>
+								</p>
+                                <p t-if="o.ksef_issue_mode != 'online'" style="font-size: 10px; color: #777; margin-bottom: 0;">
+                                    FAKTURA WYSTAWIONA W TRYBIE OFFLINE KSeF
+                                </p>
+
+							</div>
+						</div>
+					</div>
+				</t>
+			</t>
+		</xpath>
+	</template>
+
+
+	<record id="action_ksef_invoice_print" model="ir.actions.server">
+		<field name="name">🖨 Drukuj fakturę KSeF (z QR)</field>
+		<field name="model_id" ref="account.model_account_move"/>
+		<field name="binding_model_id" ref="account.model_account_move"/>
+		<field name="binding_view_types">form</field>
+		<field name="state">code</field>
+		<field name="code">action = records.action_print_ksef_invoice()</field>
+	</record>
+
+	<record id="action_show_ksef_upo" model="ir.actions.server">
+		<field name="name">📎 UPO KSeF (pobierz)</field>
+		<field name="model_id" ref="account.model_account_move"/>
+		<field name="binding_model_id" ref="account.model_account_move"/>
+		<field name="binding_view_types">form</field>
+		<field name="state">code</field>
+		<field name="code">action = records.action_show_ksef_upo()</field>
+	</record>
+
+
+</odoo>

@@ -1,0 +1,72 @@
+IMPOR flow:
+
+Przypadek 1: Tokeny ważne w cache
+text
+Cron → _create_import_list_record()
+    ↓ (tokeny ważne w provider cache)
+Tworzy rekord: ksef_operation='import_list' ✅
+    ↓
+Główny cron: _process_single_ksef_step()
+    ↓ (operations_requiring_tokens sprawdza tokeny)
+Tokeny ważne? ✅ → wykonaj import_list przez Java JAR
+    ↓
+Java JAR: pobierz listę faktur (metadata)
+    ↓
+_handle_ksef_success() dla import_list:
+    - Zapisz listę
+    - Utwórz child records z ksef_operation='import_invoice'
+    - Oznacz import_list jako 'completed'
+    ↓
+Child records (import_invoice) są przetwarzane przez cron
+    ↓
+Każdy import_invoice pobiera fakturę przez Java JAR
+
+Przypadek 2: Brak tokenów lub nieważne
+text
+Cron → _create_import_list_record()
+    ↓ (brak tokenów w cache)
+Tworzy rekord: ksef_operation='auth' ✅
+    ↓
+Główny cron: _process_single_ksef_step()
+    ↓
+Wykonaj auth, zapisz tokeny w payload_context
+    ↓
+_handle_ksef_success() dla auth:
+    - Zaktualizuj tokeny w payload_context
+    - Ustaw ksef_operation='import_list' (następna operacja)
+    - Zaplanuj natychmiastowe wykonanie
+    ↓
+Następne wykonanie cron:
+    - Przetwarza rekord z ksef_operation='import_list'
+    - Tokeny są już w payload_context
+    - Wykonaj import_list przez Java JAR
+    ↓
+... dalej jak w Przypadku 1
+
+
+
+STRUKTURA HIERARCHII REKORDÓW:
+communication.log (ID: 100)
+├── ksef_operation: 'import_list'
+├── direction: 'import'
+└── Child records:
+    ├── communication.log (ID: 101)
+    │   ├── parent_id: 100
+    │   ├── ksef_operation: 'import_invoice'
+    │   ├── ksef_invoice_number: '7491003186-20251222-010040BD5D51-78'
+    │   ├── document_id: 5001 (account.move)
+    │   └── attachment → account.move(5001)
+    ├── communication.log (ID: 102)
+    │   ├── parent_id: 100
+    │   ├── ksef_operation: 'import_invoice'
+    │   ├── ksef_invoice_number: '7491003186-20251222-010060B2E45B-80'
+    │   ├── document_id: 5002 (account.move)
+    │   └── attachment → account.move(5002)
+    └── communication.log (ID: 103)
+        ├── parent_id: 100
+        ├── ksef_operation: 'import_invoice'
+        ├── ksef_invoice_number: '9542828349-20260112-010020B06055-02'
+        ├── document_id: 5003 (account.move)
+        └── attachment → account.move(5003)
+
+

@@ -1,0 +1,9 @@
+# Automatycznie wygenerowane zależności dla modułu Odoo
+# Zainstaluj za pomocą: pip install -r requirements.txt
+
+cryptography
+lxml
+markupsafe
+psycopg2
+qrcode
+requests

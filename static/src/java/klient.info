@@ -1,0 +1,53 @@
+
+WYSYŁKA
+
+java -jar build/libs/ksef-auth.jar -c /opt/ksef/client/config/ksef-auth.yml -out runtime > /tmp/auth_runtime_context.json
+java -jar build/libs/ksef-open-session.jar --runtime-file /tmp/auth_runtime_context.json > /tmp/session_runtime.json
+java -jar build/libs/ksef-send-invoice.jar --session-runtime /tmp/session_runtime.json --invoice /tmp/2025/12/22/ksef-fa-standard-v21-NIP_45.xml
+java -jar build/libs/ksef-close-session.jar --session-runtime /tmp/session_runtime.json
+java -jar build/libs/ksef-check-status.jar --session-runtime /tmp/session_runtime.json
+java -jar build/libs/ksef-download-upo.jar --session-runtime /tmp/session_runtime.json
+
+
+POBIERANIE
+
+LISTA
+java -jar build/libs/ksef-auth.jar -c /opt/ksef/client/config/ksef-auth.yml -out runtime > /tmp/auth_runtime_context.json
+java -jar build/libs/ksef-get-received-invoices.jar --session-runtime /tmp/auth_runtime_context.json
+
+
+1. Pobieranie pojedynczej faktury przez ksefNumber:
+bash
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --ksef-number "7491003186-20251222-010040BD5D51-78" \
+  --download ./invoices
+2. Pobieranie wszystkich faktur z listy:
+bash
+# Pobierz metadane i od razu wszystkie faktury XML
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --download-all ./downloads \
+  --output /tmp/metadata.json
+3. Tylko lista metadanych (oryginalne zachowanie):
+bash
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --output /tmp/metadata.json
+4. Z określoną liczbą dni i pobraniem:
+bash
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --days 90 \
+  --page-size 100 \
+  --download-all ./invoices_90days
+Funkcje bezpieczeństwa:
+Sanityzacja nazw plików - usuwa niebezpieczne znaki
+
+Formatowanie nazw plików - 001_1_12_2025_7491003186-20251222-010040BD5D51-78.xml
+Małe opóźnienie między pobraniami - 100ms aby uniknąć rate limiting
+Kompletne logowanie - postęp pobierania w czasie rzeczywistym
+Podsumowanie - statystyki sukcesów/porażek
+
+====================================================================================================================================================
+

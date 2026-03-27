@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Akcja listy szablonów -->
+  <record id="action_xml_export_templates" model="ir.actions.act_window">
+    <field name="name">Szablony XML</field>
+    <field name="res_model">xml.export.template</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_xml_export_template_search"/>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Utwórz pierwszy szablon eksportu XML.
+      </p>
+      <p>
+        Skorzystaj z kreatora nazwy szablonu, a następnie zaimportuj strukturę z XSD.
+      </p>
+    </field>
+  </record>
+
+</odoo>

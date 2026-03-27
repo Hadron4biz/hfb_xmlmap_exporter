@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<!-- Widok formularza dla res.partner-->
+	<record id="ksef_base_view_partner_form" model="ir.ui.view">
+		<field name="model">res.partner</field>
+		<field name="inherit_id" ref="base.view_partner_form" />
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='vat']" position="after">
+				<group string="Dane KSeF">
+					<field name="ksef_address_line"
+						   readonly="1"
+						   help="Sformatowany adres kontrahenta – generowany automatycznie na podstawie pól adresowych."
+						   placeholder="ul. Przykładowa 10, 00-000 Miasto"/>
+					<field name="ksef_is_foreign"
+						   readonly="1"
+						   help="Czy kontrahent jest podmiotem zagranicznym (kraj różny od PL)."/>
+				</group>
+			</xpath>
+		</field>
+	</record>
+
+	<!-- Widok formularza dla res.company -->
+	<record id="ksef_base_view_company_form" model="ir.ui.view">
+		<field name="model">res.company</field>
+		<field name="inherit_id" ref="base.view_company_form" />
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='vat']" position="after">
+				<field name="vat_clean"
+					   readonly="1"
+					   help="NIP firmy bez prefiksu PL, spacji i myślników – używany do eksportu faktur do KSeF."
+					   placeholder="1234567890"/>
+				<field name="ksef_address_line"
+					   readonly="1"
+					   help="Sformatowany adres firmy – używany do uzupełniania pól adresowych w fakturze FA(3)."
+					   placeholder="ul. Przykładowa 10, 00-000 Miasto"/>
+
+			</xpath>
+		</field>
+	</record>
+
+	<!-- Widok drzewa (listy) dla validation_log -->
+	<record id="view_account_move_validation_log_tree" model="ir.ui.view">
+		<field name="name">account.move.validation.log.tree</field>
+		<field name="model">xml.validation.log</field>
+		<field name="arch" type="xml">
+			<list string="Walidacje XML" 
+				decoration-success="state=='valid'"
+				decoration-danger="state=='invalid'"
+				decoration-muted="state=='none'"
+				>
+				<field name="validation_date"/>
+				<field name="template_id"/>
+				<field name="state"/>
+				<field name="user_id"/>
+			</list>
+		</field>
+	</record>
+
+	<!-- Widok formularza dla validation_log -->
+	<record id="view_account_move_validation_log_form" model="ir.ui.view">
+		<field name="name">account.move.validation.log.form</field>
+		<field name="model">xml.validation.log</field>
+		<field name="arch" type="xml">
+			<form string="Raport walidacji">
+				<sheet>
+					<group>
+						<group>
+							<field name="validation_date"/>
+							<field name="template_id"/>
+							<field name="user_id"/>
+							<field name="state"/>
+						</group>
+						<group>
+							<field name="error_log" nolabel="1" colspan="2"/>
+						</group>
+					</group>
+				</sheet>
+			</form>
+		</field>
+	</record>
+
+    <record id="view_move_tree_inherit_xsd_validate" model="ir.ui.view">
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='abnormal_date_warning']" position="after" >
+				<field name="ksef_number" optional="show" />
+				<field name="ksef_rodzaj_faktury" optional="show" />
+			</xpath>
+        </field>
+    </record>
+
+	<record id="view_move_form_inherit_xsd_validate" model="ir.ui.view">
+		<field name="name">account.move.form.xsd.validate</field>
+		<field name="model">account.move</field>
+		<field name="inherit_id" ref="account.view_move_form" />
+		<field name="arch" type="xml">
+
+			<!-- numer KSeF przy numerze głównym-->
+			<xpath expr="//div[hasclass('oe_title')]" position="inside">
+				<field name="xsd_validation_state" invisible="1" />
+				<field name="order_id" invisible="1" />
+				<field name="xml_export_template_id" invisible="1" />
+				<field name="ksef_issue_mode" invisible="1" />
+				<group string="KSeF" invisible="not xml_export_template_id and not ksef_number" >
+					<field name="ksef_process_state"
+						invisible="ksef_issue_mode != 'online'"
+						statusbar_visible="queued,waiting_delay,processing" 
+						widget="statusbar"/>
+					<field name="ksef_offline_state" 
+						invisible="ksef_issue_mode != 'offline'"/>
+					<field name="ksef_process_message" 
+						invisible="not ksef_process_message" />
+					<field name="ksef_rodzaj_faktury" 
+						readonly="1" 
+						invisible="not ksef_number and not xml_export_template_id" />
+					<field name="order_id" 
+						readonly="1" 
+						string="Dokument Zamówienia"
+						invisible="not order_id" /> 
+					<!-- KSeF NUMBER -->
+					<field name="ksef_number" 
+						readonly="1" 
+						class="bold"
+						invisible="not ksef_number" />
+					<!-- korekty -->
+					<field name="ksef_numer_korygowanej" 
+						readonly="1" 
+						invisible="not ksef_numer_korygowanej"  />
+					<field name="ksef_corrects_move_id" 
+						readonly="1" 
+						invisible="not ksef_numer_korygowanej"  />
+					<field name="ksef_correction_type" 
+						invisible="not ksef_numer_korygowanej" />
+					<!--field name="ksef_log_id" readonly="1"/-->
+
+				</group>
+				<seperator string="KSeF" />
+			</xpath>
+
+			<!-- pola do pozycji w fakturze -->
+			<xpath expr="//field[@name='invoice_line_ids']/list" position="inside">
+				<field name="ksef_line_no"
+					   readonly="1"
+					   optional="show"
+					   help="Numer pozycji na fakturze, generowany automatycznie według kolejności pozycji."/>
+				<field name="ksef_tax_percent"
+					   readonly="1"
+					   optional="show"
+					   help="Stawka VAT dla pozycji – ustawiana automatycznie na podstawie wybranych podatków."/>
+				<field name="ksef_uom_code"
+					   readonly="1"
+					   optional="show"
+					   help="Kod jednostki miary (zgodnie ze słownikiem KSeF) dla tej pozycji."/>
+
+			</xpath>
+
+			<!-- dedykowane zakładki -->
+			<xpath expr="//notebook" position="inside">
+				 <page id="xml_export_tab" name="xml_export_tab" string="Szablon Eksportu" >
+					<group>
+						<field name="xml_export_template_id" options="{'no_create_edit': False}" />
+						<separator string="Historia walidacji"/>
+						<field name="validation_log_ids" nolabel="1" context="{'default_move_id': id}"/>
+					</group>
+				</page>
+
+				<page id="xml_export_ksef_tab" name="xml_export_ksef_tab" string="KSeF">
+					<group string="Tryb wysyłki">
+						<field name="ksef_issue_mode" />
+						<field name="ksef_offline_mode"/>
+						<field name="ksef_offline_reason"/>
+						<field name="ksef_offline_state" readonly="1"/>
+					</group>
+
+					<group>
+						<!-- Grupa 1: Podstawowe informacje z KSeF -->
+						<group string="Informacje z KSeF">
+							<field name="ksef_kurswaluty" />
+							<field name="ksef_number"
+								   readonly="1"
+								   help="Numer faktury nadany przez KSeF. Wartość jest ustawiana automatycznie po wysłaniu dokumentu do KSeF."
+								   placeholder="FAK/123456/KSeF"/>
+							<field name="ksef_sent_date"
+								   readonly="1"
+								   help="Data i godzina przesłania faktury do KSeF (pole generowane automatycznie po wysyłce)."
+								   placeholder="2025-12-22 13:22:58"/>
+							<field name="ksef_invoice_hash"
+								   readonly="1" />
+							<field name="ksef_creation_datetime"
+								   readonly="1"
+								   help="Data utworzenia faktury wg. KSeF. Ustawiana automatycznie na podstawie danych z nagłówka dokumentu."
+								   placeholder="2025-12-22T13:22:58.408Z"/>
+							<field name="ksef_system_info"
+								   readonly="1"
+								   help="Informacja o systemie informatycznym, z którego pochodzi faktura. Wypełniane przez aplikację eksportującą."
+								   placeholder="Aplikacja Odoo KSeF"/>
+							<field name="ksef_rodzaj_faktury"
+								   readonly="1"
+								   help="Oryginalna wartość z pola RodzajFaktury w XML (VAT, ZAL, ROZ, KOR, UPR, etc.)"/>
+						</group>
+						
+						<!-- Grupa 2: Typy i statusy faktur -->
+						<group string="Typ faktury KSeF">
+							<field name="ksef_issue_mode" />
+							<separator />
+							<field name="ksef_p16"
+								   help="P_16: Czy faktura jest duplikatem. Wartość 1 – duplikat, 2 – nie jest duplikatem."
+								   placeholder="1 lub 2"/>
+							<field name="ksef_p17"
+								   help="P_17: Rodzaj faktury (np. zaliczkowa, końcowa, rozliczeniowa). Wartość 1 – podstawowa, 2 – inny typ."
+								   placeholder="1 lub 2"/>
+							<field name="ksef_p23"
+								   help="P_23: Czy występuje odwrotne obciążenie VAT (mechanizm podzielonej płatności). 1 – tak, 2 – nie."
+								   placeholder="1 lub 2"/>
+							<field name="ksef_is_advance"
+								   help="Czy faktura jest zaliczkowa (ZAL)"/>
+							<field name="ksef_is_settlement"
+								   help="Czy faktura jest rozliczeniowa (ROZ)"/>
+							<field name="ksef_is_upr"
+								   help="Czy faktura jest uproszczona (UPR)"/>
+							<field name="ksef_correction_type"
+								   help="Typ korekty: standardowa, zaliczkowa lub rozliczeniowa"/>
+						</group>
+						
+						<!-- Grupa 3: Specjalne procedury VAT -->
+						<group string="Specjalne procedury VAT">
+							<field name="ksef_p18"
+								   help="P_18: Czy faktura dotyczy dostawy towarów w trybie uproszczonym. 1 – tak, 2 – nie."
+								   placeholder="1 lub 2"/>
+							<field name="ksef_p18a"
+								   help="P_18a: Czy dotyczy procedury marży. 1 – tak, 2 – nie."
+								   placeholder="1 lub 2"/>
+							<field name="ksef_p19n"
+								   help="P_19n: Czy faktura dokumentuje świadczenie usług turystyki opodatkowanych na zasadach marży."
+								   placeholder="Zaznacz, jeśli dotyczy"/>
+							<field name="ksef_pmarzyn"
+								   help="Czy dotyczy procedury marży VAT (pole specjalne KSeF)."
+								   placeholder="Zaznacz, jeśli dotyczy"/>
+						</group>
+						
+						<!-- Grupa 4: Podmioty specjalne -->
+						<group string="Podmioty specjalne">
+							<field name="ksef_p22n"
+								   help="P_22n: Czy faktura dotyczy podmiotów publicznych (JST)."
+								   placeholder="Zaznacz, jeśli dotyczy"/>
+							<field name="ksef_is_jst"
+								   help="Czy podmiot to jednostka samorządu terytorialnego (JST)."
+								   placeholder="Zaznacz, jeśli dotyczy"/>
+							<field name="ksef_is_vat_group"
+								   help="Czy podmiot należy do grupy VAT."
+								   placeholder="Zaznacz, jeśli dotyczy"/>
+						</group>
+						
+						<!-- Grupa 5: Podmiot 3 (JST) -->
+						<group string="Podmiot 3 (JST lub inny)">
+							<field name="ksef_podmiot3_partner_id"
+								   help="Podmiot trzeci na fakturze (najczęściej JST – Jednostka Samorządu Terytorialnego)."
+								   placeholder="Wybierz partnera"/>
+							<field name="ksef_podmiot3_role"
+								   help="Rola podmiotu trzeciego. Dla JST: 8. Możliwe wartości: 1-Faktor, 2-Odbiorca, 3-Podmiot pierwotny, 4-Dodatkowy nabywca, 5-Wystawca, 6-Płatnik, 7-JST wystawca, 8-JST odbiorca, 9-Członek grupy VAT wystawca, 10-Członek grupy VAT odbiorca, 11-Pracownik"
+								   placeholder="Wybierz rolę"/>
+							<field name="ksef_podmiot3_address_line"
+								   readonly="1"
+								   help="Adres podmiotu trzeciego. Pole generowane automatycznie na podstawie partnera."
+								   placeholder="ul. Adres, 00-000 Miasto"/>
+						</group>
+						
+						<!-- Grupa 6: Referencje i wartości -->
+						<group string="Referencje i wartości">
+							<field name="ksef_advance_refs"
+								   help="Numery faktur zaliczkowych (dla faktur rozliczeniowych ROZ)"/>
+							<field name="ksef_order_value"
+								   help="Wartość zamówienia (dla faktur zaliczkowych ZAL)"/>
+							<field name="ksef_delivery_date"
+								   help="Data dostawy (P_6)"/>
+						</group>
+						
+						<!-- Grupa 7: Dane techniczne i lokalizacyjne -->
+						<group string="Dane techniczne">
+							<field name="ksef_facontrol"
+								   help="Pole kontrolne faktury – do użytku wewnętrznego."
+								   placeholder="Numer kontrolny (opcjonalnie)"/>
+							<field name="invoice_city"
+								   help="Miasto wystawienia faktury. Uzupełniane automatycznie na podstawie danych firmy."
+								   placeholder="Warszawa"/>
+						</group>
+					</group>
+				</page>
+
+                <page string="Zaliczki KSeF" name="ksef_tab_zal" id="ksef_tab_zal" invisible="ksef_rodzaj_faktury in ['VAT','KOR','ZAL','KOR_ZAL']"   >
+                    <group>
+                        <field name="ksef_related_zal_ids" />
+                    </group>
+                </page>
+
+
+			</xpath>
+
+			<!-- przyciski do paska akcji -->
+			<xpath expr="//header" position="inside">
+				<field name="xsd_validation_state" invisible="1" />
+				<field name="ksef_issue_mode" invisible="1" />
+				<field name="ksef_number" invisible="1"/>
+
+				<button name="action_validate_template"
+						string="Wymaga Weryfikacji"
+						type="object"
+						class="btn-success"
+						icon="fa-check-circle"
+						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['valid','invalid']" />
+
+                <button name="action_validate_template"
+                        string="Weryfikacja Poprawna"
+                        type="object"
+                        class="btn-primary"
+                        icon="fa-check-circle"
+                        invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','invalid'] " />
+
+                <button name="action_validate_template"
+                        string="Błędy Weryfikacji POWTÓRZ"
+                        type="object"
+                        class="btn-warning"
+                        icon="fa-check-circle"
+                        invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','valid'] " />
+
+				<button name="action_export_xml"
+						type="object"
+						string="Zatwierdź wysłanie"
+						class="btn-success"
+						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state != 'valid'"/>
+
+				<button name="action_issue_ksef_offline"
+						type="object"
+						string="Wystaw fakturę OFFLINE"
+						class="btn-primary"
+						invisible="move_type in ['in_invoice', 'in_refund'] or ksef_issue_mode != 'online' and xsd_validation_state in ['invalid'] "
+						confirm="Wystawienie faktury w trybie OFFLINE oznacza, że KSeF był niedostępny lub spełnione są przesłanki ustawowe. Decyzja jest nieodwracalna i wiąże się z obowiązkiem późniejszego dosłania faktury do KSeF. Czy chcesz kontynuować?"/>
+
+				<button name="action_create_ksef_correction"
+					   type="object"
+					   string="Korekta KSeF"
+					   class="btn-primary"
+					   confirm="Wystawienie korekty KSeF dla tej faktury VAT spowoduje rozliczeniej bieżacej notą księgową i utworzenie nowej faktury w której dokonasz korekt. Czy chcesz kontynuować?"
+					   invisible="move_type in ['in_invoice', 'in_refund'] or not ksef_number and xsd_validation_state in ['none','invalid']" />
+
+			</xpath>
+
+			<!-- dostęp do dziennika dostawcy -->
+			<xpath expr="//div[@name='button_box']" position="inside">
+				<button name="action_open_logs"
+					type="object"
+					class="oe_stat_button"
+					icon="fa-retweet">
+					<field name="log_count" widget="statinfo" string="Dziennik Komunikacji"/>
+				</button>
+			</xpath>
+
+		</field>
+	</record>
+</odoo>

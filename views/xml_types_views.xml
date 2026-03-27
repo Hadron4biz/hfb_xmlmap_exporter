@@ -1,0 +1,46 @@
+<odoo>
+  <record id="view_xml_xsd_type_tree" model="ir.ui.view">
+    <field name="name">xml.xsd.type.tree</field>
+    <field name="model">xml.xsd.type</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name"/>
+        <field name="category"/>
+        <field name="base_type"/>
+        <field name="pattern"/>
+        <field name="enumeration"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_xml_xsd_type_form" model="ir.ui.view">
+    <field name="name">xml.xsd.type.form</field>
+    <field name="model">xml.xsd.type</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group>
+            <field name="name"/>
+            <field name="category"/>
+            <field name="base_type"/>
+            <field name="pattern"/>
+            <field name="enumeration"/>
+            <field name="documentation"/>
+          </group>
+          <notebook>
+            <page string="Elementy podrzędne">
+              <field name="element_ids">
+                <list editable="bottom">
+                  <field name="name"/>
+                  <field name="type"/>
+                  <field name="min_occurs"/>
+                  <field name="max_occurs"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+</odoo>

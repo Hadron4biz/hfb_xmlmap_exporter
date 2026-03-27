@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==========================================================
+         ACTION – otwiera widok providerów KSeF
+         ========================================================== -->
+    <record id="action_communication_provider_ksef" model="ir.actions.act_window">
+        <field name="name">Provider KSeF</field>
+        <field name="res_model">communication.provider.ksef</field>
+        <field name="view_mode">list,form</field>
+        <field name="help">Konfiguracja komunikacji z KSeF (FA(3) 2025+)</field>
+    </record>
+
+    <!-- ==========================================================
+         MENU ITEM dla KSeF
+         ========================================================== -->
+    <menuitem id="menu_communication_provider_ksef"
+              name="Provider KSeF"
+              parent="menu_communication_provider"
+              action="action_communication_provider_ksef"
+			  groups="base.group_system"
+              sequence="20"/>
+
+</odoo>
