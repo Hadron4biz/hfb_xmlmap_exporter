@@ -24,7 +24,7 @@
 ## Wymagania przed instalacją / Prerequisites
 
 ### Systemowe / System
-- Odoo 15+ (Community / Enterprise)
+- Odoo 18+ (Community / Enterprise)
 - Python 3.8 lub nowszy / Python 3.8 or newer
 - OpenSSL (do generowania certyfikatów / for certificate generation)
 - Dostęp do Internetu (endpointy KSeF) / Internet access (KSeF endpoints)
