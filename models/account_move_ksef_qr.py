@@ -269,7 +269,10 @@ class AccountMove(models.Model):
 
 		seq = 1
 		if not log:
-			log = self.log_ids[0]
+			if self.log_ids:
+				log = self.log_ids[0]
+			else:
+				return None
 
 		if ksef_invoice_hash and log:
 			log.ksef_invoice_hash = ksef_invoice_hash
