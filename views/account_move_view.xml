@@ -105,7 +105,7 @@
 				<field name="ksef_issue_mode" invisible="1" />
 				<group string="KSeF" invisible="not xml_export_template_id and not ksef_number" >
 					<field name="ksef_process_state"
-						invisible="ksef_issue_mode != 'online'"
+						invisible="ksef_issue_mode != 'online' or move_type in ['in_invoice', 'in_refund'] "
 						statusbar_visible="queued,waiting_delay,processing" 
 						widget="statusbar"/>
 					<field name="ksef_offline_state" 
