@@ -228,6 +228,33 @@ class AccountMoveKsef(models.Model):
 		string="Komunikat",
 	)
 
+	ksef_ui_status = fields.Selection([
+		('pending', 'Pending'),
+		('in_progress', 'In Progress'),
+		('confirmed', 'Confirmed'),
+		('error', 'Error'),
+	], compute="_compute_ksef_ui_status", store=True)
+
+	@api.depends('ksef_process_state')
+	def _compute_ksef_ui_status(self):
+		for rec in self:
+			state = rec.ksef_process_state
+
+			if state in ['none', 'queued']:
+				rec.ksef_ui_status = 'pending'
+
+			elif state in ['processing', 'waiting']:
+				rec.ksef_ui_status = 'in_progress'
+
+			elif state in ['completed', 'imported']:
+				rec.ksef_ui_status = 'confirmed'
+
+			elif state in ['error', 'offline']:
+				rec.ksef_ui_status = 'error'
+
+			else:
+				rec.ksef_ui_status = 'pending'
+
 	# -------------------------------------------------------- User UI
 	def get_ksef_user_message(self):
 		self.ensure_one()

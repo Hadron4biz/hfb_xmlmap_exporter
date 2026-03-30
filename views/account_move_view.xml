@@ -85,9 +85,17 @@
         <field name="inherit_id" ref="account.view_invoice_tree" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='abnormal_date_warning']" position="after" >
-				<field name="ksef_number" optional="show" />
-				<field name="ksef_rodzaj_faktury" optional="show" />
-			</xpath>
+                <field name="ksef_number" 
+                    decoration-warning="ksef_process_state in ('none','queued')"
+                    decoration-info="ksef_process_state in ('processing','waiting')"
+                    decoration-success="ksef_process_state in ('completed','imported')"
+                    decoration-danger="ksef_process_state in ('error','offline')"
+                    optional="show" />
+                <field name="ksef_rodzaj_faktury" 
+                    optional="show" />
+                <field name="ksef_process_state" 
+                    optional="show" />
+            </xpath>
         </field>
     </record>
 
