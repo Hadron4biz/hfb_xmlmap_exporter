@@ -141,6 +141,8 @@ Moduł udostępnia kompletne UI do:
 3. Zainstaluj **eXtensible Exchange Template – Base Provider**.
 4. Skonfiguruj providery i szablony z poziomu interfejsu.
 
+Zapoznaj się z treścią pliku USER_GUIDE_🍀.md
+
 ---
 
 ## 📊 Status projektu
