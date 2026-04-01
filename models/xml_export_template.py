@@ -63,6 +63,14 @@ class XmlTemplateExporter(models.AbstractModel):
 	_name = "xml.template.exporter"
 	_description = "Exporter: XML Template → JSON 2.0"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	# =================================================================
 	#  PUBLICZNA METODA EKSPORTU
 	# =================================================================
@@ -315,7 +323,8 @@ class XmlTemplateExporter(models.AbstractModel):
 
 			# dzieci
 			for child in self.env["xml.export.node"].search([
-				("parent_id", "=", node.id)
+				("parent_id", "=", node.id),
+				('company_id', '=', node.company_id.id),
 			], order="sequence"):
 				data["children"].append(export_node(child))
 
@@ -329,17 +338,22 @@ class XmlExportTemplate(models.Model):
 	def action_export_json(self):
 		self.ensure_one()
 
+		# ✅ ZABEZPIECZENIE 1: Sprawdź czy rekord należy do bieżącej firmy
+		if self.company_id and self.company_id != self.env.company:
+			raise UserError(_("You can only export templates from your own company."))
+
 		json_str = self.env["xml.template.exporter"].export_template_json(self)
 
 		json_b64 = base64.b64encode(json_str.encode("utf-8"))
 		filename = f"{(self.name or 'template').replace(' ', '_')}.xet.json"
 
-		attachment = self.env['ir.attachment'].create({
+		attachment = self.env['ir.attachment'].with_company( self.company_id).create({
 			'name': filename,
 			'datas': json_b64,
 			'res_model': 'xml.export.template',
 			'res_id': self.id,
 			'mimetype': 'application/json',
+			'company_id': self.company_id.id,
 		})
 
 		self.message_post(
@@ -518,11 +532,11 @@ class XmlExportTemplate(models.Model):
 				if issue['errors']:
 					html += "  Błędy:<br>"
 					for err in issue['errors']:
-						html += f"    • {err}<br>"
+						html += f"	• {err}<br>"
 				if issue['warnings']:
 					html += "  Ostrzeżenia:<br>"
 					for warn in issue['warnings']:
-						html += f"    • {warn}<br>"
+						html += f"	• {warn}<br>"
 		
 		if not errors and not warnings:
 			html += "<b style='color:green;'>✅ Walidacja zakończona pomyślnie!</b><br>"

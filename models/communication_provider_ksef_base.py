@@ -78,7 +78,8 @@ class SaleOrder(models.Model):
 			zal_exists = self.env['account.move'].search_count([
 				('order_id', '=', order.id),
 				('ksef_rodzaj_faktury', '=', 'ZAL'),
-				('state', '!=', 'cancel')
+				('state', '!=', 'cancel'),
+				('company_id', '=', order.company_id.id),
 			]) > 0
 
 			for move in related_moves:
@@ -121,6 +122,41 @@ class AccountMoveLineKsef(models.Model):
 
 	# --- KSeF / FA(3) RAW fields ---
 	ksef_p_6a = fields.Date(string="P_6A Data")
+	ksef_p_6_date = fields.Date(
+		string="Data dostawy/wykonania (P_6)",
+		copy=False,
+		help="""
+		Pole odpowiada elementowi P_6 w strukturze faktury FA(3) KSeF.
+		
+		Data dokonania lub zakończenia dostawy towarów lub wykonania usługi lub data otrzymania zapłaty,
+		o której mowa w art. 106b ust. 1 pkt 4 ustawy, o ile taka data jest określona i różni się od
+		daty wystawienia faktury. Pole wypełnia się w przypadku, gdy dla wszystkich pozycji faktury
+		data jest wspólna.
+		"""
+	)
+
+	ksef_p_6_from_date = fields.Date(
+		string="Okres od (P_6_Od)",
+		copy=False,
+		help="""
+		Pole odpowiada elementowi P_6_Od w strukturze faktury FA(3) KSeF.
+		
+		Data początkowa okresu, którego dotyczy faktura - w przypadkach, o których mowa w art. 19a
+		ust. 3 zdanie pierwsze i ust. 4 oraz ust. 5 pkt 4 ustawy.
+		"""
+	)
+
+	ksef_p_6_to_date = fields.Date(
+		string="Okres do (P_6_Do)",
+		copy=False,
+		help="""
+		Pole odpowiada elementowi P_6_Do w strukturze faktury FA(3) KSeF.
+		
+		Data końcowa okresu, którego dotyczy faktura - data dokonania lub zakończenia dostawy towarów
+		lub wykonania usługi.
+		"""
+	)
+
 	ksef_p_7 = fields.Char(string="P_7 Opis pozycji")
 
 	ksef_p_8a = fields.Char(string="P_8A Jednostka miary")
@@ -190,14 +226,6 @@ class AccountMoveLineKsef(models.Model):
 class AccountMoveKsef(models.Model):
 	_inherit = "account.move"
 
-	"""----------------------------------------------------------------------- UI 
-		account.move
-			└── ksef_log_id  → parent communication.log
-									 ├── child auth
-									 ├── child send
-									 ├── child status
-									 └── child upo
-	"""
 	ksef_log_id = fields.Many2one(
 		"communication.log",
 		string="Proces Komunikacji",
@@ -402,9 +430,9 @@ class AccountMoveKsef(models.Model):
 		for move in self:
 			# Wyszukaj płatności powiązane z tą fakturą poprzez pole invoice_ids
 			# ToDo: poza Odoo 18 może być to poważnym problemem
-			#payments = self.env['account.payment'].search([('invoice_ids', 'in', move.id)])	XXX
-			move.ksef_reconciled_payments = None ###payments									XXX
-	
+			payments = self.env['account.payment'].search([('invoice_ids', 'in', move.id)])	###XXX
+			move.ksef_reconciled_payments = payments 										###XXX
+
 	# --------------------------------------------------------------- Kursy walut
 	ksef_kurswaluty = fields.Float(
 		string="Kurs waluty",
@@ -448,7 +476,10 @@ class AccountMoveKsef(models.Model):
 		for vals in vals_list:
 			if vals.get('origin') and not vals.get('order_id'):
 				order = self.env['sale.order'].search(
-					[('name', '=', vals.get('origin'))], 
+					[
+						('name', '=', vals.get('origin')),
+						('company_id', '=', self.company_id.id)
+					], 
 					limit=1
 				)
 				if order:
@@ -458,7 +489,11 @@ class AccountMoveKsef(models.Model):
 	def write(self, values):
 		if values.get('origin'):
 			origin = values.get('origin')
-			order = self.env['sale.order'].search([('name','=', origin)], limit=1)
+			order = self.env['sale.order'].search(
+				[
+					('name','=', origin),
+					('company_id', '=', self.company_id.id)
+				], limit=1)
 			if order:
 				values['order_id'] = order.id
 		return super().write(values)
@@ -486,171 +521,113 @@ class AccountMoveKsef(models.Model):
 	ksef_system_info = fields.Char( copy=False,)
 	invoice_city = fields.Char( copy=False,)
 
+
+	# --- Podstawowe oznaczenia (sekcja Adnotacje) ---
 	ksef_p16 = fields.Selection(
 		[
-			('1', '1 – mechanizm podzielonej płatności (MPP)'),
-			('2', '2 – brak mechanizmu podzielonej płatności')
+			('1', '1 – metoda kasowa'),
+			('2', '2 – brak metody kasowej')
 		],
-		string="Mechanizm podzielonej płatności (P_16)",
+		string="Metoda kasowa (P_16)",
 		default='2',
 		copy=False,
 		help="""
 		Pole odpowiada elementowi P_16 w strukturze faktury FA(3) KSeF.
-
-		Określa czy dana faktura podlega obowiązkowemu mechanizmowi podzielonej płatności (MPP).
-
-		Wartości:
-		• 1 – faktura objęta mechanizmem podzielonej płatności (MPP)
-		• 2 – faktura nie podlega mechanizmowi podzielonej płatności
-
-		Pole wpływa na generowanie odpowiedniej informacji w XML przekazywanym do KSeF.
+		
+		W przypadku dostawy towarów lub świadczenia usług, w odniesieniu do których
+		obowiązek podatkowy powstaje zgodnie z art. 19a ust. 5 pkt 1 lub art. 21 ust. 1 ustawy
+		- wyrazy "metoda kasowa"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
 		"""
 	)
 
 	ksef_p17 = fields.Selection(
 		[
-			('1', '1 – faktura wystawiona w procedurze samofakturowania'),
-			('2', '2 – faktura nie jest wystawiona w procedurze samofakturowania')
+			('1', '1 – samofakturowanie'),
+			('2', '2 – brak samofakturowania')
 		],
 		string="Samofakturowanie (P_17)",
 		default='2',
 		copy=False,
 		help="""
 		Pole odpowiada elementowi P_17 w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura została wystawiona w procedurze samofakturowania,
-		czyli przez nabywcę w imieniu i na rzecz sprzedawcy.
-
-		Wartości:
-		• 1 – faktura wystawiona w procedurze samofakturowania
-		• 2 – faktura wystawiona przez sprzedawcę (standardowy przypadek)
-
-		Pole wpływa na oznaczenie sposobu wystawienia faktury w strukturze XML
-		przekazywanej do KSeF.
+		
+		W przypadku faktur, o których mowa w art. 106d ust. 1 ustawy - wyraz "samofakturowanie";
+		należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
 		"""
 	)
 
 	ksef_p18 = fields.Selection(
 		[
-			('1', '1 – dostawa towarów lub świadczenie usług poza terytorium kraju'),
-			('2', '2 – sprzedaż na terytorium kraju')
+			('1', '1 – odwrotne obciążenie'),
+			('2', '2 – brak odwrotnego obciążenia')
 		],
-		string="Sprzedaż poza terytorium kraju (P_18)",
+		string="Odwrotne obciążenie (P_18)",
 		default='2',
 		copy=False,
 		help="""
 		Pole odpowiada elementowi P_18 w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura dokumentuje dostawę towarów lub świadczenie usług,
-		dla których miejscem opodatkowania jest terytorium poza Polską.
-
-		Wartości:
-		• 1 – sprzedaż poza terytorium kraju
-		• 2 – sprzedaż na terytorium kraju
-
-		Oznaczenie to jest wymagane w sytuacjach, gdy transakcja nie podlega
-		opodatkowaniu VAT w Polsce, mimo że faktura jest raportowana do KSeF.
-		Wartość pola jest przenoszona do struktury XML przesyłanej do KSeF.
+		
+		W przypadku dostawy towarów lub wykonania usługi, dla których obowiązanym do rozliczenia
+		podatku od wartości dodanej lub podatku o podobnym charakterze jest nabywca towaru lub usługi
+		- wyrazy "odwrotne obciążenie"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
 		"""
 	)
 
 	ksef_p18a = fields.Selection(
 		[
-			('1', '1 – dostawa towarów lub świadczenie usług objętych odwrotnym obciążeniem'),
-			('2', '2 – brak procedury odwrotnego obciążenia')
+			('1', '1 – mechanizm podzielonej płatności (MPP)'),
+			('2', '2 – brak mechanizmu podzielonej płatności')
 		],
-		string="Odwrotne obciążenie (P_18A)",
+		string="Mechanizm podzielonej płatności (P_18A)",
 		default='2',
 		copy=False,
 		help="""
 		Pole odpowiada elementowi P_18A w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura dokumentuje dostawę towarów lub świadczenie usług,
-		dla których obowiązek rozliczenia podatku VAT został przeniesiony na nabywcę
-		(procedura odwrotnego obciążenia).
-
-		Wartości:
-		• 1 – transakcja objęta procedurą odwrotnego obciążenia
-		• 2 – standardowe rozliczenie podatku VAT przez sprzedawcę
-
-		Oznaczenie to stosowane jest w szczególnych przypadkach przewidzianych
-		przepisami VAT (np. wybrane usługi lub transakcje międzynarodowe).
-		Wartość pola jest przenoszona do struktury XML przekazywanej do KSeF.
+		
+		W przypadku faktur, w których kwota należności ogółem przekracza kwotę 15 000 zł lub jej
+		równowartość wyrażoną w walucie obcej, obejmujących dokonaną na rzecz podatnika dostawę towarów
+		lub świadczenie usług, o których mowa w załączniku nr 15 do ustawy - wyrazy 
+		"mechanizm podzielonej płatności"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
 		"""
 	)
 
 	ksef_p19n = fields.Selection(
 		[
-			('1', '1 – brak zastosowania procedury marży'),
-			('2', '2 – procedura marży dla biur podróży')
+			('1', '1 – brak zwolnień'),
+			('2', '2 – występują zwolnienia')
 		],
-		string="Procedura marży – biura podróży (P_19N)",
-		default='1',
+		string="Brak zwolnień (P_19N)",
+		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_19N w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura została wystawiona w procedurze marży dla usług turystyki,
-		zgodnie z art. 119 ustawy o podatku VAT.
-
-		Wartości:
-		• 1 – procedura marży dla biur podróży nie ma zastosowania
-		• 2 – faktura wystawiona w procedurze marży dla biur podróży
-
-		Oznaczenie to stosowane jest w przypadku świadczenia usług turystyki,
-		w których podstawą opodatkowania jest marża biura podróży.
-		Wartość pola jest przenoszona do struktury XML przekazywanej do KSeF.
-		"""
+		help="Znacznik braku dostawy towarów lub świadczenia usług zwolnionych od podatku."
 	)
 
 	ksef_p22n = fields.Selection(
 		[
-			('1', '1 – brak zastosowania procedury marży'),
-			('2', '2 – procedura marży dla towarów używanych')
+			('1', '1 – brak nowych środków transportu'),
+			('2', '2 – występują nowe środki transportu')
 		],
-		string="Procedura marży – towary używane (P_22N)",
+		string="Brak nowych środków transportu (P_22N)",
 		default='1',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_22N w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura została wystawiona w procedurze marży dla dostawy
-		towarów używanych zgodnie z art. 120 ustawy o podatku od towarów i usług.
-
-		Wartości:
-		• 1 – procedura marży dla towarów używanych nie ma zastosowania
-		• 2 – faktura wystawiona w procedurze marży dla towarów używanych
-
-		Oznaczenie stosowane jest w przypadku sprzedaży towarów używanych,
-		dla których podstawą opodatkowania VAT jest marża sprzedawcy.
-		Wartość pola jest przenoszona do struktury XML przekazywanej do KSeF.
-		"""
+		help="Znacznik braku wewnątrzwspólnotowej dostawy nowych środków transportu."
 	)
 
 	ksef_p23 = fields.Selection(
 		[
-			('1', '1 – dostawa towarów objęta procedurą VAT marża dla dzieł sztuki, przedmiotów kolekcjonerskich lub antyków'),
-			('2', '2 – brak zastosowania procedury VAT marża dla dzieł sztuki, przedmiotów kolekcjonerskich lub antyków')
+			('1', '1 – procedura uproszczona (drugi w kolejności podatnik)'),
+			('2', '2 – brak procedury uproszczonej')
 		],
-		string="Procedura marży – dzieła sztuki / antyki (P_23)",
-		copy=False,
+		string="Procedura uproszczona (P_23)",
 		default='2',
+		copy=False,
 		help="""
 		Pole odpowiada elementowi P_23 w strukturze faktury FA(3) KSeF.
-
-		Określa czy faktura została wystawiona w procedurze marży dotyczącej
-		dostawy dzieł sztuki, przedmiotów kolekcjonerskich lub antyków,
-		zgodnie z art. 120 ustawy o podatku od towarów i usług.
-
-		Wartości:
-		• 1 – faktura wystawiona w procedurze VAT marża dla dzieł sztuki,
-		  przedmiotów kolekcjonerskich lub antyków
-		• 2 – procedura marży nie ma zastosowania
-
-		Oznaczenie stosowane jest w szczególnych przypadkach sprzedaży
-		określonych kategorii dóbr kolekcjonerskich i artystycznych,
-		gdzie podstawą opodatkowania VAT jest marża sprzedawcy.
-		Wartość pola jest przenoszona do struktury XML przekazywanej do KSeF.
+		
+		W przypadku faktur wystawianych w procedurze uproszczonej przez drugiego w kolejności podatnika,
+		o którym mowa w art. 135 ust. 1 pkt 4 lit. b i c oraz ust. 2 ustawy, zawierającej adnotację,
+		o której mowa w art. 136 ust. 1 pkt 1 ustawy i stwierdzenie, o którym mowa w art. 136 ust. 1 pkt 2 ustawy,
+		należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
 		"""
 	)
 
@@ -1000,6 +977,7 @@ class AccountMoveKsef(models.Model):
 				continue
 
 			zal_moves = self.env['account.move'].search([
+				('company_id', '=', move.company_id.id),
 				('order_id', '=', move.order_id.id),
 				('ksef_rodzaj_faktury', '=', 'ZAL'),
 				('state', '!=', 'cancel')
@@ -1019,6 +997,7 @@ class AccountMoveKsef(models.Model):
 			return
 
 		zal_moves = self.env['account.move'].search([
+			('company_id', '=', self.company_id.id),
 			('ksef_number', 'in', zal_numbers),
 			('ksef_rodzaj_faktury', '=', 'ZAL')
 		])

@@ -85,17 +85,17 @@
         <field name="inherit_id" ref="account.view_invoice_tree" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='abnormal_date_warning']" position="after" >
-                <field name="ksef_number" 
-                    decoration-warning="ksef_process_state in ('none','queued')"
-                    decoration-info="ksef_process_state in ('processing','waiting')"
-                    decoration-success="ksef_process_state in ('completed','imported')"
-                    decoration-danger="ksef_process_state in ('error','offline')"
-                    optional="show" />
-                <field name="ksef_rodzaj_faktury" 
-                    optional="show" />
-                <field name="ksef_process_state" 
-                    optional="show" />
-            </xpath>
+				<field name="ksef_number" 
+					decoration-warning="ksef_process_state in ('none','queued')"
+					decoration-info="ksef_process_state in ('processing','waiting')"
+					decoration-success="ksef_process_state in ('completed','imported')"
+					decoration-danger="ksef_process_state in ('error','offline')"
+					optional="show" />
+				<field name="ksef_rodzaj_faktury" 
+					optional="show" />
+				<field name="ksef_process_state" 
+					optional="show" />
+			</xpath>
         </field>
     </record>
 
@@ -213,14 +213,10 @@
 						<group string="Typ faktury KSeF">
 							<field name="ksef_issue_mode" />
 							<separator />
-							<field name="ksef_p16"
-								   help="P_16: Czy faktura jest duplikatem. Wartość 1 – duplikat, 2 – nie jest duplikatem."
-								   placeholder="1 lub 2"/>
+							<field name="ksef_p16" />
 							<field name="ksef_p17"
-								   help="P_17: Rodzaj faktury (np. zaliczkowa, końcowa, rozliczeniowa). Wartość 1 – podstawowa, 2 – inny typ."
 								   placeholder="1 lub 2"/>
 							<field name="ksef_p23"
-								   help="P_23: Czy występuje odwrotne obciążenie VAT (mechanizm podzielonej płatności). 1 – tak, 2 – nie."
 								   placeholder="1 lub 2"/>
 							<field name="ksef_is_advance"
 								   help="Czy faktura jest zaliczkowa (ZAL)"/>
@@ -234,15 +230,9 @@
 						
 						<!-- Grupa 3: Specjalne procedury VAT -->
 						<group string="Specjalne procedury VAT">
-							<field name="ksef_p18"
-								   help="P_18: Czy faktura dotyczy dostawy towarów w trybie uproszczonym. 1 – tak, 2 – nie."
-								   placeholder="1 lub 2"/>
-							<field name="ksef_p18a"
-								   help="P_18a: Czy dotyczy procedury marży. 1 – tak, 2 – nie."
-								   placeholder="1 lub 2"/>
-							<field name="ksef_p19n"
-								   help="P_19n: Czy faktura dokumentuje świadczenie usług turystyki opodatkowanych na zasadach marży."
-								   placeholder="Zaznacz, jeśli dotyczy"/>
+							<field name="ksef_p18" />
+							<field name="ksef_p18a" />
+							<field name="ksef_p19n" />
 							<field name="ksef_pmarzyn"
 								   help="Czy dotyczy procedury marży VAT (pole specjalne KSeF)."
 								   placeholder="Zaznacz, jeśli dotyczy"/>
@@ -250,9 +240,7 @@
 						
 						<!-- Grupa 4: Podmioty specjalne -->
 						<group string="Podmioty specjalne">
-							<field name="ksef_p22n"
-								   help="P_22n: Czy faktura dotyczy podmiotów publicznych (JST)."
-								   placeholder="Zaznacz, jeśli dotyczy"/>
+							<field name="ksef_p22n" />
 							<field name="ksef_is_jst"
 								   help="Czy podmiot to jednostka samorządu terytorialnego (JST)."
 								   placeholder="Zaznacz, jeśli dotyczy"/>

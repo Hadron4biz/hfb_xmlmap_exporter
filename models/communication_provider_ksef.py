@@ -554,6 +554,7 @@ class CommunicationLog(models.Model):
 		
 		# 3. Ostateczność - pierwszy aktywny użytkownik z uprawnieniami administratora
 		admin_user = self.env['res.users'].search([
+			('company_id', '=', self.company_id.id ),
 			('share', '=', False),  # Nie portal
 			('active', '=', True)
 		], order='id', limit=1)
@@ -614,7 +615,7 @@ class CommunicationLog(models.Model):
 			</p>
 			"""
 
-		mail = self.env['mail.mail'].create({
+		mail = self.env['mail.mail'].with_company(self.company_id).create({
 			'subject': f'🚨 KSeF – Alert komunikacji ({provider.name})',
 			'body_html': body,
 			'email_to': recipient.email,
@@ -686,7 +687,7 @@ class CommunicationLog(models.Model):
 			</p>
 			"""
 
-		mail = self.env['mail.mail'].create({
+		mail = self.env['mail.mail'].with_company(self.company_id).create({
 			'subject': f'📊 KSeF – Raport dzienny ({provider.name})',
 			'body_html': body,
 			'email_to': recipient.email,
@@ -724,7 +725,7 @@ class CommunicationLog(models.Model):
 			</p>
 			"""
 
-		mail = self.env['mail.mail'].create({
+		mail = self.env['mail.mail'].with_company(self.company_id).create({
 			'subject': f'⚠️  KSeF – Problem środowiska ({provider.name})',
 			'body_html': body,
 			'email_to': recipient.email,
@@ -912,6 +913,7 @@ class CommunicationLog(models.Model):
 		_logger.info("[KSeF Env Check] Starting environment health check")
 
 		providers = self.env['communication.provider'].search([
+			('company_id', '=', self.company_id.id),
 			('provider_type', '=', 'ksef'),
 			('active', '=', True)
 		])
@@ -1445,11 +1447,13 @@ class CommunicationLog(models.Model):
 			return
 
 		self.env["ir.attachment"].create({
+			'company_id': move.company_id.id,
 			"name": "UPO.xml",
 			"type": "binary",
 			"datas": base64.b64encode(upo_binary),
 			"res_model": "account.move",
 			"res_id": move.id,
+			
 		})
 
 	# =============================================================================
@@ -1655,6 +1659,7 @@ class CommunicationLog(models.Model):
 				'provider_message': f"Import faktury {invoice.get('invoiceNumber', '')} (KSeF: {ksef_number})",
 				# Przekaż zakres dat do childa
 				'ksef_import_days_back': self.ksef_import_days_back,
+				'company_id': self.company_id.id,
 			}
 
 			# Jeśli nie mamy tokenów, najpierw auth
@@ -1662,7 +1667,7 @@ class CommunicationLog(models.Model):
 				child_vals['ksef_operation'] = 'auth'
 				child_vals['ksef_next_operation'] = 'import_invoice'
 
-			self.env['communication.log'].create(child_vals)
+			self.env['communication.log'].with_company(self.company_id).create(child_vals)
 			created_count += 1
 
 		# 8. Dodaj statystyki do aktualizacji
@@ -2820,7 +2825,8 @@ class CommunicationLog(models.Model):
 				raise ValueError(f"Document {self.document_id} not found")
 			
 			# Utwórz załącznik
-			attachment = self.env['ir.attachment'].create({
+			attachment = self.env['ir.attachment'].with_company(self.company_id).create({
+				'company_id': self.company_id.id,
 				'name': f"UPO_{upo_reference or 'unknown'}.xml",
 				'datas': base64.b64encode(xml_content),
 				'res_model': self.document_model,
@@ -3662,8 +3668,9 @@ class CommunicationLog(models.Model):
 					'amount_total': invoice_data.get('gross_amount', 0),
 					'currency_id': self.env.ref('base.PLN').id if invoice_data.get('currency') == 'PLN' else None,
 					'state': 'draft',
+					'company_id': self.company_id.id,
 				}
-				move = self.env['account.move'].create(move_vals)
+				move = self.env['account.move'].with_company(self.company_id).create(move_vals)
 				_logger.info(f"[KSeF] Created new account.move {move.id} for KSeF {ksef_number}")
 			else:
 				# Zaktualizuj istniejący
@@ -3675,6 +3682,7 @@ class CommunicationLog(models.Model):
 			
 			# 4. Utwórz załącznik POWIĄZANY Z account.move
 			attachment_vals = {
+				'company_id': move.company_id.id,
 				'name': f"KSeF_{ksef_number}.xml",
 				'datas': invoice_xml_base64,
 				'res_model': 'account.move',
@@ -3684,7 +3692,7 @@ class CommunicationLog(models.Model):
 				'description': f"Faktura KSeF {ksef_number} zaimportowana {fields.Datetime.now()}",
 			}
 			
-			attachment = self.env['ir.attachment'].create(attachment_vals)
+			attachment = self.env['ir.attachment'].with_company(move.company_id).create(attachment_vals)
 			_logger.info(f"[KSeF] Saved invoice {ksef_number} as attachment {attachment.id} linked to move {move.id}")
 			
 			# 5. Zaktualizuj communication.log z ID dokumentu
@@ -3768,6 +3776,7 @@ class CommunicationLog(models.Model):
 		
 		# Szukaj partnera po NIP
 		partner = self.env['res.partner'].search([
+			('company_id', '=', self.company_id.id),
 			('vat', 'ilike', f'%{nip}%')
 		], limit=1)
 		
@@ -3778,8 +3787,9 @@ class CommunicationLog(models.Model):
 				'vat': f"PL{nip}" if len(nip) == 10 else nip,
 				'company_type': 'company',
 				'supplier_rank': 1,
+				'company_id': self.company_id.id
 			}
-			partner = self.env['res.partner'].create(partner_vals)
+			partner = self.env['res.partner'].with_company(self.company_id).create(partner_vals)
 			_logger.info(f"[KSeF] Created new partner {partner.id} for NIP {nip}")
 		
 		return partner.id
@@ -4406,6 +4416,7 @@ class CommunicationLog(models.Model):
 							'ksef_import_days_back': self.ksef_import_days_back,
 							#'ksef_download_dir': self.ksef_download_dir,
 							'provider_message': f"Import invoice {invoice.get('invoiceNumber', '')} (KSeF: {ksef_number})",
+							'company_id': self.company_id.id,
 						})
 						created_child_ids.append(child_log.id)
 						_logger.info(f"[KSeF] Created child log {child_log.id} for KSeF {ksef_number}")
@@ -4497,6 +4508,7 @@ class CommunicationLog(models.Model):
 								'ksef_status': 'pending',
 								'ksef_next_execution': fields.Datetime.now(),
 								'parent_id': self.id,
+								'company_id': self.company_id.id,
 							})
 					
 					update_vals = {
@@ -4773,6 +4785,7 @@ class CommunicationLog(models.Model):
 		
 		# Albo szukaj ostatniego udanego auth w logach
 		last_auth_log = self.env['communication.log'].search([
+			('company_id', '=', provider.company_id.id),
 			('provider_id', '=', provider.id),
 			('ksef_operation', '=', 'auth'),
 			('status', '=', 'success'),
@@ -4822,6 +4835,7 @@ class CommunicationLog(models.Model):
 			('ksef_operation', '=', 'import_list'),
 			('state', 'not in', ['completed', 'failed', 'error']),
 			('create_date', '>=', cutoff_time),
+			('company_id', '=', provider.company_id.id)
 		], limit=1)
 		
 		if existing_jobs:
@@ -4890,6 +4904,7 @@ class CommunicationLog(models.Model):
 				
 				# Wykonane przez system
 				'executed_by': self.env.ref('base.user_root').id,
+				'company_id': self.company_id.id,
 			}
 			provider_tokens = self._get_provider_tokens(provider)
 			if provider_tokens and self._are_tokens_valid(provider_tokens):
@@ -4959,6 +4974,14 @@ class CommunicationProviderKsef(models.Model):
 	_name = "communication.provider.ksef"
 	_inherit = ["mail.thread", "mail.activity.mixin"]
 	_description = "Provider KSeF FA(3) z JET API i obsługą Java JAR"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
 
 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	# ROZSZERZENIE SPOZA DOKUMENTACJI FSEF (fragment - do uzupełnienia)
@@ -5570,6 +5593,7 @@ class CommunicationProviderKsef(models.Model):
 		Znajduje lub tworzy communication.provider powiązany z tą konfiguracją.
 		"""
 		provider = self.env['communication.provider'].search([
+			('company_id', '=', self.company_id.id),
 			('provider_type', '=', 'ksef'),
 			('provider_config_id', '=', self.id),
 			('provider_model', '=', 'communication.provider.ksef')
@@ -5584,6 +5608,7 @@ class CommunicationProviderKsef(models.Model):
 				'provider_config_id': self.id,
 				'provider_model': 'communication.provider.ksef',
 				'active': self.active,
+				'company_id': self.company_id.id,
 			})
 		
 		return provider

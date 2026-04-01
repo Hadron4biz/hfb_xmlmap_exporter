@@ -51,6 +51,14 @@ class XmlValidationLog(models.Model):
 	_description = "Raport walidacji XSD dokumentu"
 	_order = "create_date desc"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	move_id = fields.Many2one("account.move", string="Faktura", ondelete="cascade", index=True)
 	template_id = fields.Many2one("xml.export.template", string="Szablon", ondelete="set null")
 	validation_date = fields.Datetime(string="Data walidacji", default=fields.Datetime.now)
@@ -68,6 +76,7 @@ class XmlValidationLog(models.Model):
 		# wymuszenie automatycznej daty i użytkownika
 		vals.setdefault("validation_date", fields.Datetime.now())
 		vals.setdefault("user_id", self.env.uid)
+		vals.setdefault("company_id", self.env.company.id)
 		return super().create(vals)
 
 	#def write(self, vals):

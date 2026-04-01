@@ -117,6 +117,7 @@ class XmlExportTemplate(models.Model):
 				"schema_location": tpl.get("schema_location"),
 				"model_id": model_id.id,
 				"state": "imported",
+				'company_id': self.company_id.id,
 			})
 
 		# ===========================================
@@ -167,6 +168,7 @@ class XmlExportTemplate(models.Model):
 				"xsd_min_occurs": int(node_data.get("xsd_min_occurs", 1)),
 				"xsd_max_occurs": int(node_data.get("xsd_max_occurs", 1)),
 				"xsd_nillable": bool(node_data.get("xsd_nillable")),
+				'company_id': self.company_id.id,
 			}
 
 			new_node = self.env["xml.export.node"].create(node_vals)

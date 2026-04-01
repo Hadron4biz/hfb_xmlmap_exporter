@@ -177,6 +177,7 @@ class AccountMove(models.Model):
 
 			logs = self.env["communication.log"].search(
 				[
+					("company_id", "=", move.company_id.id),
 					("document_model", "=", "account.move"),
 					("document_id", "=", move.id),
 					("provider_id.provider_type", "=", "ksef"),
@@ -237,6 +238,7 @@ class AccountMove(models.Model):
 				("document_id", "=", self.id),
 				("file_data", "!=", False),
 				("provider_id.provider_type", "=", "ksef"),
+				('company_id', '=',  self.company_id.id),
 			],
 			order="create_date desc",
 			limit=1,
@@ -545,7 +547,10 @@ class AccountMove(models.Model):
 		report_template = self.get_ksef_report_template()
 
 		report_action = self.env["ir.actions.report"].search(
-			[("report_name", "=", report_template)],
+			[
+				("report_name", "=", report_template),
+				('company_id', '=', provider.company_id.id ),
+			],
 			limit=1
 		)
 		if report_action:
@@ -574,6 +579,7 @@ class AccountMove(models.Model):
 		# ---------------------------------------------------------
 		existing_offline = self.env["communication.log"].search(
 			[
+				('company_id', '=', self.company_id.id ),
 				("document_model", "=", "account.move"),
 				("document_id", "=", self.id),
 				("provider_id.provider_type", "=", "ksef"),

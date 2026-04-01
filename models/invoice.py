@@ -349,6 +349,7 @@ class AccountMove(models.Model):
 				"user_id": self.env.user.id,
 				"error_log": "\n".join(user_messages[:50]) if user_messages else "",
 				"xml_snapshot": xml_bytes,
+				'company_id': self.company_id.id,
 			})
 		except Exception as e:
 			_logger.warning(f"⚠️  Nie udało się zapisać logu walidacji: {e}")
@@ -448,6 +449,7 @@ class AccountMove(models.Model):
 				"validation_date": fields.Datetime.now(),
 				"user_id": self.env.user.id,
 				"error_log": "\n".join(missing[:50]),
+				'company_id': self.company_id.id,
 			})
 		except Exception as e:
 			_logger.warning(f"⚠️ Nie udało się zapisać logu walidacji logicznej: {e}")
@@ -537,6 +539,7 @@ class AccountMove(models.Model):
 		# ----------------------------------------------------------------------
 		file_name = f"{template.name}_{self.id}.xml"
 		log_vals = {
+			'company_id': self.company_id.id,
 			"direction": "export",
 			"state": "generated",
 			"provider_id": provider.id,

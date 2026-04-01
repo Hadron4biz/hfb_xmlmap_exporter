@@ -56,6 +56,14 @@ class CommunicationLog(models.Model):
 	_inherit = ["mail.thread", "mail.activity.mixin"]
 	_order = "create_date desc"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	document_model = fields.Char(string="Model dokumentu")
 	document_id = fields.Integer(string="ID dokumentu")
 	external_id = fields.Char(string="Zewnętrzne ID dokumentu", tracking=True)

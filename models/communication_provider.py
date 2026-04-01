@@ -61,6 +61,14 @@ class CommunicationProvider(models.Model):
 	_inherit = ["mail.thread", "mail.activity.mixin"]
 	_order = "name"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	# -------------------------------------------------------------------------
 	# IDENTYFIKACJA PROVIDERA
 	# -------------------------------------------------------------------------
@@ -290,7 +298,7 @@ class CommunicationProvider(models.Model):
 			if record.provider_model:
 				#dynamic_config_name
 				_logger.info(f"\n[SELECTION _compute_provider_model] record.provider_model = {record.provider_model}")
-				for config in self.env[record.provider_model].search([('active','!=', False)]):
+				for config in self.env[record.provider_model].search([('active','!=', False),('company_id', '=', record.company_id.id)]):
 					_logger.info(f"\n[SELECTION _compute_provider_model] FOUND name = {config.name}")
 					if release.version_info[0] == 18:
 						# Kod dla Odoo 18

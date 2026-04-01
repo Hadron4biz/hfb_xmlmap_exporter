@@ -72,6 +72,14 @@ class XmlExportTemplate(models.Model):
 	_description = "Szablon eksportu XML (mapowanie pól do XSD)"
 	_order = "name"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	# Identyfikacja
 	name = fields.Char(required=True)
 	uuid = fields.Char(string='UUID', translate=False, store=True)
@@ -332,6 +340,7 @@ class XmlExportTemplate(models.Model):
 					"xsd_type_kind": "simple",
 					"xsd_min_occurs": 0 if attr.get("use") != "required" else 1,
 					"xsd_max_occurs": 1,
+					'company_id': self.company_id.id,
 				})
 
 			for grp in container.findall("xsd:attributeGroup", ns):
@@ -453,6 +462,7 @@ class XmlExportTemplate(models.Model):
 					else int(el.get("maxOccurs", "1"))
 				),
 				"xsd_nillable": el.get("nillable") == "true",
+				'company_id': self.company_id.id,
 			}
 
 			# -----------------------------
@@ -464,7 +474,10 @@ class XmlExportTemplate(models.Model):
 			if type_name:
 				clean = type_name.split(":")[-1]
 				xsd_type_rec = self.env["xml.xsd.type"].search(
-					[("name", "=", clean)], limit=1
+					[
+						("name", "=", clean),
+						('company_id', '=', self.company_id.id),
+					], limit=1
 				)
 
 			if xsd_type_rec:
@@ -693,6 +706,7 @@ class XmlExportTemplate(models.Model):
 				"xsd_nillable": el.get("nillable") == "true",
 				"loop_mode": loop_mode,
 				"emit_empty": "if-required",
+				'company_id': self.company_id.id,
 			}
 			
 			# Określ rodzaj typu
@@ -757,6 +771,7 @@ class XmlExportTemplate(models.Model):
 							"xsd_type_kind": "simple",
 							"emit_empty": "if-required",
 							"loop_mode": "none",
+							'company_id': self.company_id.id,
 						})
 
 			# --- Typ inline (complexType wewnątrz elementu) ---
@@ -786,6 +801,7 @@ class XmlExportTemplate(models.Model):
 							"xsd_type_kind": "simple",
 							"emit_empty": "if-required",
 							"loop_mode": "none",
+							'company_id': self.company_id.id,
 						})
 
 				# --- SimpleType inline (enum, restriction) ---
@@ -1066,7 +1082,8 @@ class XmlExportTemplate(models.Model):
 			return xml_bytes
 
 		# 7. Zapis jako załącznik
-		attachment = self.env['ir.attachment'].create({
+		attachment = self.env['ir.attachment'].with_company( record.company_id).create({
+			'company_id': record.company_id.id,
 			'name': f"{self.name}-{record.id}.xml",
 			'type': 'binary',
 			'datas': base64.b64encode(xml_bytes),
@@ -1183,7 +1200,7 @@ class XmlExportTemplate(models.Model):
 					domain = []
 				
 				_logger.info(f"RESOLVE_LOOP: Searching {model_name} with domain {domain}")
-				collection = self.env[model_name].search(domain, order=node.loop_order, limit=node.loop_limit)
+				collection = self.env[model_name].with_company(self.company_id).search(domain, order=node.loop_order, limit=node.loop_limit)
 				_logger.info(f"RESOLVE_LOOP: Found {len(collection)} records via domain")
 				return collection
 				
@@ -2011,6 +2028,14 @@ class XmlExportNamespace(models.Model):
 	_description = "Przestrzeń nazw XML (prefiks ↔ URI)"
 	_order = "sequence, id"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
+
 	template_id = fields.Many2one("xml.export.template", required=True, ondelete="cascade", index=True)
 	sequence = fields.Integer(default=10)
 	prefix = fields.Char(required=True, help="Nazwa prefiksu, np. 'tns', 'xsi'.")
@@ -2025,6 +2050,14 @@ class XmlExportNode(models.Model):
 	_name = "xml.export.node"
 	_description = "Węzeł eksportu XML / XPath"
 	_order = "sequence, id"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
 
 	# Powiązanie z szablonem i hierarchią
 	template_id = fields.Many2one("xml.export.template", required=True, ondelete="cascade", index=True)
@@ -2303,6 +2336,14 @@ class XmlXsdType(models.Model):
 	_description = "XSD Type Definition"
 	_order = "name"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	name = fields.Char(required=True)
 	category = fields.Selection([
 		('simple', 'Simple Type'),
@@ -2317,11 +2358,18 @@ class XmlXsdType(models.Model):
 	template_id = fields.Many2one('xml.export.template', ondelete='cascade')
 	element_ids = fields.One2many('xml.xsd.element', 'type_id', string="Child Elements")
 
-
 class XmlXsdElement(models.Model):
 	_name = "xml.xsd.element"
 	_description = "XSD Element Definition"
 	_order = "id"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
 
 	name = fields.Char(required=True)
 	type = fields.Char()
@@ -2329,8 +2377,6 @@ class XmlXsdElement(models.Model):
 	min_occurs = fields.Integer(default=1)
 	max_occurs = fields.Char(default='1')
 	is_attribute = fields.Boolean(default=False)
-
-
 
 
 #EoF
