@@ -35,7 +35,7 @@
 	"summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
 	"version": "18.1.0",
 	"license": "AGPL-3",
-	"author": "Andrzej Wiśniewski",
+	"author": "Hadron for Business",
 	"website": "https://ksef.odoo.com",
 	"depends": [
 		"base",
@@ -80,15 +80,6 @@
 		"views/cron.xml",
 
 	],
-	'assets': {
-		#'web.assets_backend': [
-		#	'hfb_xmlmap_exporter/static/src/js/reload_after_notification.js',
-		#],
-        #'web.tests_assets': [ 
-        #    'hfb_xmlmap_exporter/static/tests/__init__.js',
-        #    'hfb_xmlmap_exporter/static/tests/ksef_cron_tests.js',
-        #],
-	},
 	"demo": [
 		"data/communication_channel_demo.xml",
 	],
