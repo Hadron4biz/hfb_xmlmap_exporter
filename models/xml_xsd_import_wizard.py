@@ -54,6 +54,14 @@ class XmlXsdImportWizard(models.TransientModel):
 	_name = "xml.xsd.import.wizard"
 	_description = "Wizard: Import plików XSD (import/include)"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
+
 	template_id = fields.Many2one(
 		"xml.export.template",
 		string="Szablon",
@@ -138,6 +146,7 @@ class XmlXsdImportWizard(models.TransientModel):
 					"res_model": "xml.export.template",
 					"res_id": Template.id,
 					"mimetype": "application/xml",
+					"company_id": self.company_id.id
 				})
 				Template.xsd_type_attachment_ids = [(4, att.id)]
 				downloaded += 1
@@ -167,6 +176,14 @@ class XmlXsdImportWizard(models.TransientModel):
 class XmlXsdImportLine(models.TransientModel):
 	_name = "xml.xsd.import.line"
 	_description = "Pozycja pliku XSD do importu"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
 
 	wizard_id = fields.Many2one("xml.xsd.import.wizard", ondelete="cascade")
 	url = fields.Char(string="Adres pliku XSD", required=True)

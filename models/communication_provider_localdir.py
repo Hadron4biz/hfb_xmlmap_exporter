@@ -193,6 +193,14 @@ class CommunicationLog(models.Model):
 class CommunicationProviderLocalDir(models.Model):
 	_name = "communication.provider.localdir"
 	_description = "Local Directory Provider"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
 	
 	# -------------------------------------------------------------------------
 	# IDENTYFIKACJA
@@ -530,6 +538,7 @@ class CommunicationProviderLocalDir(models.Model):
 				'file_name': os.path.basename(file_path),
 				'file_data': base64.b64encode(file_content),
 				'receive_date': fields.Datetime.now(),
+				'company_id': self.company_id.id,
 			}
 			
 			log = self.env['communication.log'].create(log_vals)

@@ -157,7 +157,8 @@ class CommunicationProviderKsef(models.Model):
 		if self.qr_report_template_id:
 			# Sprawdź, czy szablon istnieje w ir.actions.report
 			report = self.env['ir.actions.report'].search([
-				('report_name', '=', self.qr_report_template_id.key)
+				('report_name', '=', self.qr_report_template_id.key),
+				('company_id', '=', self.company_id.id),
 			], limit=1)
 			
 			if not report:

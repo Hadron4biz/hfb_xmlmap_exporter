@@ -154,10 +154,3 @@ Dla sprzedaży w KSeF minimalny zestaw produkcyjny to:
 
 Pozostałe szablony są rozszerzeniami funkcjonalnymi.
 
-
-# Dostępne szablony w wersji 1.0
-
-W niniejszej wersji modułu znajdują się wybrane z szablonów jako przykłady - gotowe do użycia. 
-Szablony są w wersji uproszczonej i przygotowane do ich rozwijania i modyfikacji.
-Jeśli planowane jest ich użycie, zalecane jest ich staranna weryfikacja pod kątem spełnienia pożądanych wymagań.
-

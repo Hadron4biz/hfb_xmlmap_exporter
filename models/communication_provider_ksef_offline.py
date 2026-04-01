@@ -85,6 +85,14 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 	_name = "communication.provider.ksef.offline"
 	_description = "KSeF Offline Logic (Overlay)"
 
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=True,  # <-- wymagane
+		default=lambda self: self.env.company,
+		ondelete='cascade'
+	)
+
 	# -------------------------------------------------------------------------
 	# 1. WEJŚCIE W TRYB OFFLINE (DECYZJA UŻYTKOWNIKA)
 	# -------------------------------------------------------------------------
@@ -127,6 +135,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 
 		# --- NOWY LOG OFFLINE ---
 		offline_log = self.env["communication.log"].create({
+			'company_id': invoice.company_id.id,
 			"document_model": "account.move",
 			"document_id": invoice.id,
 			"direction": "export",
@@ -199,6 +208,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 			("state", "=", "offline_pending"),
 			("direction", "=", "export"),
 			("provider_id.provider_type", "=", "ksef"),
+			('company_id', '=', self.company_id.id),
 		])
 
 		for log in logs:
@@ -253,7 +263,10 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 		"""
 		try:
 			provider = self.env["communication.provider"].search(
-				[("provider_type", "=", "ksef")],
+				[
+					("provider_type", "=", "ksef"),
+					('company_id', '=', self.company_id.id),
+				],
 				limit=1,
 			)
 			if not provider:

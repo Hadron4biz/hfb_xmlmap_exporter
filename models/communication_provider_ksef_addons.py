@@ -477,7 +477,7 @@ class CommunicationLog(models.Model):
 			# Szukaj faktury do skorygowania
 			corrected_invoice = self.env['account.move'].search([
 				('ksef_number', '=', corrected_ksef_number),
-				('company_id', '=', self.env.company.id),
+				('company_id', '=', self.company_id.id),
 			], limit=1)
 			
 			if corrected_invoice:
@@ -529,7 +529,7 @@ class CommunicationLog(models.Model):
 		if 'journal_id' not in values:
 			journal = self.env['account.journal'].search([
 				('type', '=', 'purchase'),
-				('company_id', '=', self.env.company.id),
+				('company_id', '=', self.company_id.id),
 			], limit=1)
 			if journal:
 				values['journal_id'] = journal.id
@@ -902,7 +902,7 @@ class CommunicationLog(models.Model):
 			
 			# 11. Utwórz partnera
 			try:
-				partner = self.env['res.partner'].create(partner_vals)
+				partner = self.env['res.partner'].with_company( self.company_id).create(partner_vals)
 				
 				# Dodaj informację o źródle w komentarzu
 				source_info = f"\n\n--- Import z KSeF ---\nFaktura: {self.ksef_invoice_number}\nData: {fields.Datetime.now()}"
@@ -921,7 +921,7 @@ class CommunicationLog(models.Model):
 				_logger.error("❌ Error creating partner: %s", create_error, exc_info=True)
 				# Fallback: utwórz partnera z minimalnymi danymi
 				try:
-					minimal_partner = self.env['res.partner'].create({
+					minimal_partner = self.env['res.partner'].with_company( self.company_id).create({
 						'name': nazwa,
 						'vat': f"PL{nip}",
 						'company_type': 'company',
@@ -1062,7 +1062,7 @@ class CommunicationLog(models.Model):
 			if 'journal_id' not in invoice_values:
 				journal = self.env['account.journal'].search([
 					('type', '=', 'purchase'),
-					('company_id', '=', self.env.company.id),
+					('company_id', '=', log.company_id.id),
 				], limit=1)
 				if journal:
 					invoice_values['journal_id'] = journal.id
@@ -1081,7 +1081,7 @@ class CommunicationLog(models.Model):
 
 				if kod_waluty:
 					currency = self.env['res.currency'].search([
-						('name', 'in', kod_waluty)
+						('name', 'in', kod_waluty),
 					], limit=1)
 
 				if not currency:
@@ -1146,7 +1146,8 @@ class CommunicationLog(models.Model):
 					log._auto_match_refund_lines(invoice, invoice.reversed_entry_id)
 				
 				#_logger.info(f"#👉 ZAPISZ XML JAKO ZAŁĄCZNIK KSeF_{log.ksef_invoice_number}.xml log.ksef_status = {log.ksef_status}")
-				attachment = self.env['ir.attachment'].create({
+				attachment = self.env['ir.attachment'].with_company( invoice.company_id).create({
+					'company_id': invoice.company_id.id,
 					'name': f"KSeF_{log.ksef_invoice_number}.xml",
 					'res_model': 'account.move',
 					'res_id': invoice.id,
@@ -1788,7 +1789,6 @@ class CommunicationLog(models.Model):
 					('ref', '=', corrected_number),
 					('ksef_number', '=', corrected_number),
 					('move_type', '=', 'in_invoice'),
-					('company_id', '=', self.env.company.id),
 				], limit=1)
 				
 				if corrected_invoice:
@@ -2018,7 +2018,7 @@ class CommunicationLog(models.Model):
 			tax = self.env['account.tax'].search([
 				('amount', '=', tax_rate),
 				('type_tax_use', 'in', ['purchase', 'all']),
-				('company_id', '=', self.env.company.id),
+				('company_id', '=', self.company_id.id),
 				('active', '=', True),
 			], limit=1)
 			
@@ -2039,7 +2039,7 @@ class CommunicationLog(models.Model):
 			tax = self.env['account.tax'].search([
 				('name', 'ilike', term),
 				('type_tax_use', 'in', ['purchase', 'all']),
-				('company_id', '=', self.env.company.id),
+				('company_id', '=', self.company_id.id),
 				('active', '=', True),
 			], limit=1)
 			
@@ -2063,7 +2063,7 @@ class CommunicationLog(models.Model):
 					tax = self.env['account.tax'].search([
 						('name', 'ilike', odoo_name),
 						('type_tax_use', 'in', ['purchase', 'all']),
-						('company_id', '=', self.env.company.id),
+						('company_id', '=', self.company_id.id),
 						('active', '=', True),
 					], limit=1)
 					
@@ -2086,6 +2086,7 @@ class CommunicationLog(models.Model):
 			'|',
 			('vat', 'ilike', f'%{clean_nip}%'),
 			('vat', 'ilike', f'%PL{clean_nip}%'),
+			('company_id', '=', self.company_id.id)
 		], limit=1)
 		
 		return partner

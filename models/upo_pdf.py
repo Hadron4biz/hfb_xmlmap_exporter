@@ -44,19 +44,27 @@ _logger = logging.getLogger(__name__)
 
 
 class ReportKsefUpo(models.AbstractModel):
-    _name = 'report.hfb_xmlmap_exporter.report_ksef_upo'
+	_name = 'report.hfb_xmlmap_exporter.report_ksef_upo'
 
-    def _get_report_values(self, docids, data=None):
-        docs = self.env['account.move'].browse(docids)
-        doc = docs[0]
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
 
-        return {
-            'doc_ids': docids,
-            'doc_model': 'account.move',
-            'docs': docs,
-            'o': doc,
-            'upo': doc._get_ksef_upo_data(),
-        }
+	def _get_report_values(self, docids, data=None):
+		docs = self.env['account.move'].browse(docids)
+		doc = docs[0]
+
+		return {
+			'doc_ids': docids,
+			'doc_model': 'account.move',
+			'docs': docs,
+			'o': doc,
+			'upo': doc._get_ksef_upo_data(),
+		}
 
 class AccountMove(models.Model):
 	_inherit = 'account.move'

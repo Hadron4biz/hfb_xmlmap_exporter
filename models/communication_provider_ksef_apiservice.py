@@ -1305,6 +1305,7 @@ class ProviderKsefApiService:
 		rekord = self.log.document_id
 
 		attachment = self.log.env['ir.attachment'].create({
+			'company_id': rekord.company_id.id,
 			'name': filename,
 			'type': 'binary',
 			'datas': base64.b64encode(upo_binary),
@@ -1312,10 +1313,6 @@ class ProviderKsefApiService:
 			'res_id': rekord,
 			'mimetype': 'application/xml',
 		})
-
-		#_logger.info(
-		#	f"\n✅ ATTACHMENTS _attach_upo {attachment}"
-		#)
 
 		return attachment
 """
