@@ -6,9 +6,7 @@ i zgodność z wymaganiami Ministerstwa Finansów.
 
 Dokument ten opisuje proces instalacji środowiska Java, konfiguracji oraz integracji klienta z Odoo.
 
-===============================================================================
 ## Spis treści / Table of Contents
-===============================================================================
 
 1. [Wymagania / Prerequisites](#wymagania--prerequisites)
 2. [Instalacja Java / Java Installation](#instalacja-java--java-installation)
@@ -17,18 +15,79 @@ Dokument ten opisuje proces instalacji środowiska Java, konfiguracji oraz integ
 5. [Testowanie / Testing](#testowanie--testing)
 6. [Rozwiązywanie problemów / Troubleshooting](#rozwiązywanie-problemów--troubleshooting)
 
-===============================================================================
 ## 1. Wymagania / Prerequisites
-===============================================================================
 
 - System operacyjny / Operating System: Linux (Debian/Ubuntu)
 - Java Development Kit (JDK) 17 lub nowszy / JDK 17 or newer
 - Maven (do kompilacji / for compilation)
 - Użytkownik odoo z dostępem do wykonywania plików JAR / odoo user with JAR execution permissions
 
-===============================================================================
+### Pliki źródłowe 
+Wraz z modułem dostarczany jest przykładowy klient Java powstały na bazie kodu klienta publikowanego przez Ministerstwo Finansów RP.
+Kod źródłowy znajduje się na ścieżce /static/src/java
+
+	├── build.gradle.kts
+	├── klient.info
+	├── pl
+	│   └── ksef
+	│       ├── auth
+	│       │   └── Main.java
+	│       ├── invoice
+	│       │   ├── GetReceivedInvoices.java
+	│       │   └── Invoice.java
+	│       └── session
+	│           ├── CheckSessionStatus.java
+	│           ├── DownloadUPO.java
+	│           ├── SessionClose.java
+	│           └── Session.java
+	└── settings.gradle.kts
+
+W pierwszej kolejności należy przygotować dostęp do środowiska Gradle zalecana wersja 4.4.1
+Przykładowe pliki konfiguracyjne:
+	build.gradle.kts
+	settings.gradle.kts
+
+#### Przykładowa treść pliku konfiguracji - wyłacznie do testowania. Do pracy klienta Java z Odoo, nie jest to potrzebne i nie należy tego pliku tworzyć.
+Plik ksef-auth.yml
+	ksef:
+	  api:
+		publicmfkey: /opt/ksef/certs/ksef-public.pem
+		baseUrl: https://api-test.ksef.mf.gov.pl/v2
+
+	  auth:
+		keystore:
+		  path: /opt/ksef/certs/auth/user-ksef-java-auth.p12
+		  password: "Alfabet!2025KSeF"
+		  alias: ksef-auth
+
+	  sign:
+		keystore:
+		  path: /opt/ksef/certs/sign/user-ksef-java-sign.p12
+		  password: "Alfabet!2025KSeF"
+		  alias: ksef-sign
+
+	  timeouts:
+		connectSeconds: 10
+		readSeconds: 30
+
+	  context:
+		nip: "7492091229"
+
+	  baseUrl: https://ksef-test.mf.gov.pl/api/v2
+
+	  online:
+		schema:
+		  systemCode: KSeF
+		  formCode: FA
+		  version: 3
+
+	logging:
+	  level: INFO
+
+Przykłady użycia znajdują się w pliku 
+	klient.info
+
 ## 2. Instalacja Java / Java Installation
-===============================================================================
 
 ### 2.1. Instalacja JDK 17 / Install JDK 17
 	sudo apt update
