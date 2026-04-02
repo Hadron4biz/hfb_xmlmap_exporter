@@ -31,7 +31,7 @@
 # property of the author.
 #################################################################################
 {
-	"name": "eXtensible Exchange Template Base Provider",
+	"name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 19",
 	"summary": "Mapowanie pól modeli Odoo 19 do struktury XML na podstawie XSD + eksport z walidacją.",
 	"version": "19.1.0",
 	"license": "AGPL-3",
