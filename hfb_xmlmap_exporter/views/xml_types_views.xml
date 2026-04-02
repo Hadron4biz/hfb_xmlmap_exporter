@@ -3,13 +3,13 @@
     <field name="name">xml.xsd.type.tree</field>
     <field name="model">xml.xsd.type</field>
     <field name="arch" type="xml">
-      <list>
+      <tree>
         <field name="name"/>
         <field name="category"/>
         <field name="base_type"/>
         <field name="pattern"/>
         <field name="enumeration"/>
-      </list>
+      </tree>
     </field>
   </record>
 
@@ -30,12 +30,12 @@
           <notebook>
             <page string="Elementy podrzędne">
               <field name="element_ids">
-                <list editable="bottom">
+                <tree editable="bottom">
                   <field name="name"/>
                   <field name="type"/>
                   <field name="min_occurs"/>
                   <field name="max_occurs"/>
-                </list>
+                </tree>
               </field>
             </page>
           </notebook>

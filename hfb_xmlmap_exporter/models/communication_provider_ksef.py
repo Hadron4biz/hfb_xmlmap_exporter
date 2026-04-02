@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 17.2.1
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -4904,7 +4904,7 @@ class CommunicationLog(models.Model):
 				
 				# Wykonane przez system
 				'executed_by': self.env.ref('base.user_root').id,
-				'company_id': self.company_id.id,
+				'company_id': provider.company_id.id,
 			}
 			provider_tokens = self._get_provider_tokens(provider)
 			if provider_tokens and self._are_tokens_valid(provider_tokens):

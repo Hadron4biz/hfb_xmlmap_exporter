@@ -140,14 +140,14 @@
     </record>
 
     <!-- LIST VIEW -->
-    <record id="view_communication_provider_localdir_list" model="ir.ui.view">
-        <field name="name">communication.provider.localdir.list</field>
+    <record id="view_communication_provider_localdir_tree" model="ir.ui.view">
+        <field name="name">communication.provider.localdir.tree</field>
         <field name="model">communication.provider.localdir</field>
         <field name="arch" type="xml">
-            <list string="Provider LocalDir">
+            <tree string="Provider LocalDir">
                 <field name="name"/>
                 <field name="code"/>
-            </list>
+            </tree>
         </field>
     </record>
 

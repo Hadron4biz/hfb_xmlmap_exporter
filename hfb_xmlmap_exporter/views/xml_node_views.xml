@@ -93,11 +93,11 @@
 	</record>
 
     <!-- ✅ LIST VIEW -->
-    <record id="view_xml_export_node_list" model="ir.ui.view">
-        <field name="name">xml.export.node.list</field>
+    <record id="view_xml_export_node_tree" model="ir.ui.view">
+        <field name="name">xml.export.node.tree</field>
         <field name="model">xml.export.node</field>
         <field name="arch" type="xml">
-            <list string="Węzły XML"
+            <tree string="Węzły XML"
                   default_order="sequence"
                   editable="bottom"
 				  decoration-success="state == 'validated'"
@@ -107,6 +107,8 @@
 				<field name="state" optional="hide" />
                 <field name="sequence" optional="hide"/>
                 <field name="parent_id" optional="hide"/>
+				<field name="template_id" optional="hide"/>
+				<field name="template_model_id" optional="hide"/> 
                 <field name="xpath" widget="badge"/>
                 <field name="name"/>
                 <field name="xsd_type_name"/>
@@ -124,7 +126,7 @@
 					icon="fa-pencil"
 					title="Edytuj węzeł"
 					class="btn-link"/>
-            </list>
+            </tree>
         </field>
     </record>
 
@@ -205,7 +207,7 @@
     <record id="action_xml_export_node" model="ir.actions.act_window">
         <field name="name">Węzły</field>
         <field name="res_model">xml.export.node</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">tree,form</field>
         <field name="context">{}</field>
     </record>
 

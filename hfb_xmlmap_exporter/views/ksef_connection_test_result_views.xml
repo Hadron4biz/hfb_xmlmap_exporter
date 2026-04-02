@@ -9,14 +9,14 @@
                 </group>
 
                 <field name="step_ids" >
-                    <list string="Kroki testu" editable="top"
+                    <tree string="Kroki testu" editable="top"
 						decoration-success="status == 'ok'"
 						decoration-danger="status == 'error'"
 						decoration-muted="status == 'skipped'">
                         <field name="name"/>
                         <field name="status" />
                         <field name="detail"/>
-                    </list>
+                    </tree>
                 </field>
 
                 <footer>

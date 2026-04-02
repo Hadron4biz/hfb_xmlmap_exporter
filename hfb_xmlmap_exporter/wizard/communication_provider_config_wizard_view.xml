@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<!-- Rozszerzenie widoku formularza communication.provider -->
+	<record id="view_communication_provider_form_inherit_wizard" model="ir.ui.view">
+		<field name="name">communication.provider.form.inherit.wizard</field>
+		<field name="model">communication.provider</field>
+		<field name="inherit_id" ref="view_communication_provider_form"/>
+		<field name="arch" type="xml">
+
+			<!-- Ukryj oryginalne pole provider_config_id -->
+			<xpath expr="//field[@name='provider_config_id']" position="attributes">
+				<attribute name="invisible">1</attribute>
+			</xpath>
+
+			<!-- Znajdź odpowiednie miejsce - najlepiej w istniejącej grupie -->
+			<xpath expr="//field[@name='provider_type']" position="after">
+
+				<!-- Ukryte pole modelu -->
+				<field name="provider_model" invisible="1"/>
+
+				<!-- Nowy wiersz w istniejącej strukturze -->
+				<separator string="Konfiguracja providera"/>
+
+				<!-- Pole i przycisk w strukturze grupy Odoo -->
+				<field name="provider_config_name" 
+					   widget="static" 
+					   string="Wybrana konfiguracja"
+					   help="Aktualnie wybrana konfiguracja dla tego providera"
+					   class="oe_inline"/>
+				<button name="action_open_config_wizard" 
+						string="Wybierz" 
+						type="object" 
+						class="btn-primary btn-sm" 
+						icon="fa-cog" 
+						invisible="provider_type == False" />
+			   <separator />
+				<!-- Ostrzeżenie gdy brak konfiguracji -->
+				<div class="alert alert-warning" 
+					 invisible="provider_config_id != False"
+					 style="margin-top: 5px; margin-bottom: 5px;">
+					<i class="fa fa-exclamation-triangle"/>
+					Nie wybrano konfiguracji dla tego providera.
+				</div>
+			</xpath>
+		</field>
+	</record>
+	<!-- Rozszerzenie widoku formularza communication.provider -->
+
+	<!-- Widok listy wizarda -->
+	<record id="view_communication_provider_config_wizard_list_tree" model="ir.ui.view">
+		<field name="name">communication.provider.config.wizard.list.tree</field>
+		<field name="model">communication.provider.config.wizard.list</field>
+		<field name="arch" type="xml">
+			<tree>
+				<field name="name"/>
+			</tree>
+		</field>
+	</record>
+
+
+	<!-- Wizard -->
+	<record id="view_communication_provider_config_wizard_form" model="ir.ui.view">
+		<field name="name">communication.provider.config.wizard.form</field>
+		<field name="model">communication.provider.config.wizard</field>
+		<field name="arch" type="xml">
+			<form string="Wybór konfiguracji providera">
+				<sheet>
+					<!-- Nagłówek informacyjny -->
+					<div class="alert alert-info" role="alert" style="margin-bottom: 15px;">
+						<i class="fa fa-info-circle"/>
+						Wybierz konfigurację dla <b><field name="provider_id" widget="static" readonly="1"/></b>
+					</div>
+
+					<group>
+						<group string="Dostępne konfiguracje">
+							<field name="selected_config_id" 
+								   widget="selection"
+								   options="{'no_create': True, 'no_create_edit': True}"
+								   placeholder="-- Kliknij aby wybrać konfigurację --"
+								   class="oe_inline"/>
+						</group>
+					</group>
+
+					<!-- Dodatkowa informacja gdy lista jest pusta -->
+					<div class="alert alert-warning" 
+						 role="alert" 
+						 invisible="selected_config_id != False"
+						 style="margin-top: 15px;">
+						<i class="fa fa-exclamation-triangle"/>
+						Nie wybrano jeszcze konfiguracji. Wybierz z listy powyżej.
+					</div>
+				</sheet>
+
+				<footer>
+					<button name="action_confirm" 
+							string="Zatwierdź wybór" 
+							type="object" 
+							class="btn-primary"
+							invisible="selected_config_id == False" />
+					<button string="Anuluj" 
+							class="btn-secondary" 
+							special="cancel"/>
+				</footer>
+			</form>
+		</field>
+	</record>
+
+	<record id="action_communication_provider_config_wizard" model="ir.actions.act_window">
+		<field name="name">Wybierz konfigurację</field>
+		<field name="res_model">communication.provider.config.wizard</field>
+		<field name="view_mode">form</field>
+		<field name="target">new</field>
+		<field name="context">{}</field>
+	</record>
+</odoo>

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 softtabstop=0 shiftwidth=4 smarttab expandtab fileformat=unix
 #################################################################################
 #
 # Odoo, Open ERP Source Management Solution
-# Copyright (C) 2017-2026 Hadron for Business sp. z o.o. (http://hadronforbusiness.com)
+# Copyright (C) 17-25 Hadron for business sp. z o.o. (http://www.hadron.eu.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,18 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################################
-# UWAGA / NOTICE:
-# "XET" oraz nazwa "Hadron for Business" są zastrzeżonymi znakami towarowymi
-# "XET" and "Hadron for Business" are trademarks of Hadron for Business sp. z o.o.
-#
-# Sam kod jest objęty licencją AGPLv3, ale koncepcje, pomysły i rozwiązania
-# biznesowe w nim zawarte nie są objęte tą licencją i pozostają własnością
-# autora.
-# The code is licensed under AGPLv3, but the concepts, ideas and business
-# solutions contained herein are not covered by this license and remain the
-# property of the author.
-#################################################################################
 from . import wizard_template_name
 from . import wizard_xsd_upload
 from . import wizard_template_import_json
+from . import communication_provider_config_wizard
 #EoF

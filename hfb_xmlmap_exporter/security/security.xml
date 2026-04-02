@@ -5,16 +5,16 @@
 	</record>
 
 	<!-- Reguła globalna: pozwól czytać provider wszystkim -->
-	<record id="rule_communication_provider_read" model="ir.rule">
-		<field name="name">communication.provider public read</field>
-		<field name="model_id" ref="model_communication_provider"/>
-		<field name="groups" eval="[(4, ref('base.group_user'))]"/>
-		<field name="domain_force">[(1, '=', 1)]</field>
-		<field name="perm_read" eval="True"/>
-		<field name="perm_write" eval="False"/>
-		<field name="perm_create" eval="False"/>
-		<field name="perm_unlink" eval="False"/>
-	</record>
+    <record id="rule_communication_provider_read" model="ir.rule">
+        <field name="name">communication.provider public read</field>
+        <field name="model_id" ref="model_communication_provider"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
 
 </odoo>
 

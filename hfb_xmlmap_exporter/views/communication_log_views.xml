@@ -8,7 +8,7 @@
 		<field name="name">communication.log.tree</field>
 		<field name="model">communication.log</field>
 		<field name="arch" type="xml">
-			<list default_order="create_date desc" 
+			<tree default_order="create_date desc" 
 				decoration-muted="state=='draft'" 
 				decoration-info="state in ('generated','validated','queued')" 
 				decoration-it="state=='superseded'"
@@ -24,7 +24,7 @@
 				<field name="ksef_invoice_number"/>
 				<!--field name="ksef_http_status"/-->
 				<!--field name="ksef_api_status_code"/-->
-			</list>
+			</tree>
 		</field>
 	</record>
 	<!-- ==============================================================
@@ -40,6 +40,7 @@
 						<field name="file_data" invisible="1" />
 						<field name="direction" invisible="1" />
 						<field name="ksef_operation" invisible="1" />
+						<field name="provider_type" invisible="1"/>
 						
 						<button name="action_send_manual"
 								type="object"
@@ -165,7 +166,10 @@
 
 					</notebook>
 				</sheet>
-		       	<chatter />
+				<div class="oe_chatter">
+					<field name="message_follower_ids"/>
+					<field name="message_ids"/>
+				</div>
 			</form>
 		</field>
 	</record>
@@ -176,7 +180,7 @@
 	<record id="action_communication_logs" model="ir.actions.act_window">
 		<field name="name">Logi komunikacji</field>
 		<field name="res_model">communication.log</field>
-		<field name="view_mode">list,form</field>
+		<field name="view_mode">tree,form</field>
 		<!--field name="search_view_id" ref="view_communication_log_search"/-->
 		<field name="help" type="html">
 			<p>Rejestr komunikacji eksportu/importu dokumentów.</p>

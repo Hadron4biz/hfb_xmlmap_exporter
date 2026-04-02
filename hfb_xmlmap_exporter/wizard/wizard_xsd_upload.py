@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 17.2.1
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -39,42 +39,51 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
 class XmlTemplateXsdUploadWizard(models.TransientModel):
-    _name = "xml.template.xsd.upload.wizard"
-    _description = "Wgraj schemę XSD i podepnij do szablonu"
+	_name = "xml.template.xsd.upload.wizard"
+	_description = "Wgraj schemę XSD i podepnij do szablonu"
 
-    template_id = fields.Many2one(
-        "xml.export.template",
-        required=True,
-        ondelete="cascade",
-        string="Szablon"
-    )
-    xsd_file = fields.Binary(string="Plik XSD", required=True)
-    xsd_filename = fields.Char(string="Nazwa pliku", required=True)
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
 
-    def action_apply(self):
-        self.ensure_one()
-        if not self.xsd_file or not self.xsd_filename:
-            raise ValidationError(_("Wskaż plik XSD."))
+	template_id = fields.Many2one(
+		"xml.export.template",
+		required=True,
+		ondelete="cascade",
+		string="Szablon"
+	)
+	xsd_file = fields.Binary(string="Plik XSD", required=True)
+	xsd_filename = fields.Char(string="Nazwa pliku", required=True)
 
-        # Utwórz attachment
-        attachment = self.env["ir.attachment"].create({
-            "name": self.xsd_filename,
-            "datas": self.xsd_file,
-            "res_model": "xml.export.template",
-            "res_id": self.template_id.id,
-            "mimetype": "application/xml",
-        })
+	def action_apply(self):
+		self.ensure_one()
+		if not self.xsd_file or not self.xsd_filename:
+			raise ValidationError(_("Wskaż plik XSD."))
 
-        # Podłącz do szablonu
-        self.template_id._set_xsd_attachment(attachment)
+		# Utwórz attachment
+		attachment = self.env["ir.attachment"].with_company( self.company_id).create({
+			'company_id': self.company_id.id,
+			"name": self.xsd_filename,
+			"datas": self.xsd_file,
+			"res_model": "xml.export.template",
+			"res_id": self.template_id.id,
+			"mimetype": "application/xml",
+		})
 
-        # Wróć do formularza szablonu
-        return {
-            "type": "ir.actions.act_window",
-            "res_model": "xml.export.template",
-            "res_id": self.template_id.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+		# Podłącz do szablonu
+		self.template_id._set_xsd_attachment(attachment)
+
+		# Wróć do formularza szablonu
+		return {
+			"type": "ir.actions.act_window",
+			"res_model": "xml.export.template",
+			"res_id": self.template_id.id,
+			"view_mode": "form",
+			"target": "current",
+		}
 
 #EoF

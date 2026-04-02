@@ -5,17 +5,17 @@
 		 WIDOK LIST (TREE)
 		 ============================================================== -->
 	<record id="view_communication_provider_tree" model="ir.ui.view">
-		<field name="name">communication.provider.list</field>
+		<field name="name">communication.provider.tree</field>
 		<field name="model">communication.provider</field>
 		<field name="arch" type="xml">
-			<list>
+			<tree>
 				<field name="name"/>
 				<field name="code"/>
 				<field name="provider_type"/>
 				<field name="provider_config_id" />
 				<field name="active"/>
 				<field name="description"/>
-			</list>
+			</tree>
 		</field>
 	</record>
 
@@ -63,7 +63,10 @@
                             
 						</group>
 					</group>
-					<chatter />
+					<div class="oe_chatter">
+						<field name="message_follower_ids"/>
+						<field name="message_ids"/>
+					</div>
 				</sheet>
 			</form>
 		</field>
@@ -75,7 +78,7 @@
 	<record id="action_communication_providers" model="ir.actions.act_window">
 		<field name="name">Providerzy</field>
 		<field name="res_model">communication.provider</field>
-		<field name="view_mode">list,form</field>
+		<field name="view_mode">tree,form</field>
 	</record>
 
 </odoo>

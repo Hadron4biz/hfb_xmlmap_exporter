@@ -2,11 +2,11 @@
 <odoo>
 
 	<!-- LISTA: Szablony XML -->
-	<record id="view_xml_export_template_list" model="ir.ui.view">
-		<field name="name">xml.export.template.list</field>
+	<record id="view_xml_export_template_tree" model="ir.ui.view">
+		<field name="name">xml.export.template.tree</field>
 		<field name="model">xml.export.template</field>
 		<field name="arch" type="xml">
-			<list string="Szablony XML" >
+			<tree string="Szablony XML" >
 				<field name="state" invisible="1" />
 				<field name="name"/>
 				<field name="model_id"/>
@@ -17,7 +17,7 @@
 				<field name="xsd_attachment_id"/>
 				<field name="validate_on_export"/>
 				<field name="active"/>
-			</list>
+			</tree>
 		</field>
 	</record>
 
@@ -55,7 +55,7 @@
 		<field name="arch" type="xml">
 			<form string="Szablon eksportu XML">
 				<header>
-
+					<field name="state" invisible="1"/>
 					<field name="xsd_attachment_id" invisible="1"/>
 
 					<button name="action_open_xsd_upload_wizard"
@@ -162,13 +162,15 @@
 						<page string="Węzły (XPath)">
 							<field name="node_ids">
 							<!-- LISTA WĘZŁÓW -->
-							<list string="Węzły (XPath)" 
+							<tree string="Węzły (XPath)" 
 								editable="bottom" 
 								default_order="sequence,id"
 								decoration-success="state == 'validated'"
 								decoration-danger="state == 'error'"
 								>
-								<!--field name="state" invisible="1" /-->
+								<field name="state" invisible="1" />
+								<field name="template_id" invisible="1"/>
+								<field name="template_model_id" invisible="1"/>
 								<field name="id" string="id" />
 								<field name="sequence" string="Seq" />
 								<field name="name"/>
@@ -182,7 +184,7 @@
 									icon="fa-pencil"
 									title="Edytuj węzeł"
 									class="btn-link"/>
-							</list>
+							</tree>
 
 							<!-- FORMULARZ WĘZŁA -->
 							<form string="Węzeł">
@@ -190,6 +192,8 @@
 								<group string="Identyfikacja">
 									<field name="sequence"/>
 									<field name="parent_id"/>
+									<field name="template_id" invisible="1"/>
+									<field name="template_model_id" invisible="1"/>
 									<field name="node_kind"/>
 									<field name="name" required="1"/>
 									<field name="ns_prefix"/>
@@ -231,12 +235,12 @@
 
 						<page string="Typy XSD">
 							<field name="xsd_type_ids" context="{'default_template_id': id}">
-								<list>
+								<tree>
 									<field name="name"/>
 									<field name="category"/>
 									<field name="base_type"/>
 									<field name="pattern"/>
-								</list>
+								</tree>
 							</field>
 							<footer>
 								<button name="action_import_xsd_types"
@@ -249,23 +253,20 @@
 
 						<page string="Pliki Typów XSD">
                             <field name="xsd_type_attachment_ids" context="{'default_template_id': id}" />
-                                <!--list>
+                                <!--tree>
                                     <field name="name"/>
                                     <field name="category"/>
                                     <field name="base_type"/>
                                     <field name="pattern"/>
-                                </list>
+                                </tree>
                             </field-->
                         </page>
-
-
-
 					</notebook>
-
 				</sheet>
-
-               <chatter /> 
-
+				<div class="oe_chatter">
+					<field name="message_follower_ids"/>
+					<field name="message_ids"/>
+				</div>
 			</form>
 		</field>
 	</record>

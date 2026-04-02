@@ -33,3 +33,9 @@ access_communication_provider_ksef_u,communication.provider.ksef,model_communica
 
 access_communication_provider_ksef_offline,communication.provider.ksef.offline,model_communication_provider_ksef_offline,base.group_user,1,1,1,1
 
+access_communication_provider_config_wizard_user,communication.provider.config.wizard.user,model_communication_provider_config_wizard,base.group_user,1,1,1,1
+access_communication_provider_config_wizard_system,communication.provider.config.wizard.system,model_communication_provider_config_wizard,base.group_system,1,1,1,1
+
+access_communication_provider_config_wizard_list_user,communication.provider.config.wizard.list.user,model_communication_provider_config_wizard_list,base.group_user,1,1,1,1
+access_communication_provider_config_wizard_list_system,communication.provider.config.wizard.list.system,model_communication_provider_config_wizard_list,base.group_system,1,1,1,1
+

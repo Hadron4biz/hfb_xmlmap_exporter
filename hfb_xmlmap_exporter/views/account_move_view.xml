@@ -44,7 +44,7 @@
 		<field name="name">account.move.validation.log.tree</field>
 		<field name="model">xml.validation.log</field>
 		<field name="arch" type="xml">
-			<list string="Walidacje XML" 
+			<tree string="Walidacje XML" 
 				decoration-success="state=='valid'"
 				decoration-danger="state=='invalid'"
 				decoration-muted="state=='none'"
@@ -53,7 +53,7 @@
 				<field name="template_id"/>
 				<field name="state"/>
 				<field name="user_id"/>
-			</list>
+			</tree>
 		</field>
 	</record>
 
@@ -84,7 +84,7 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_invoice_tree" />
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='abnormal_date_warning']" position="after" >
+            <xpath expr="//field[@name='move_type']" position="after" >
 				<field name="ksef_number" 
 					decoration-warning="ksef_process_state in ('none','queued')"
 					decoration-info="ksef_process_state in ('processing','waiting')"
@@ -148,7 +148,7 @@
 			</xpath>
 
 			<!-- pola do pozycji w fakturze -->
-			<xpath expr="//field[@name='invoice_line_ids']/list" position="inside">
+			<xpath expr="//field[@name='invoice_line_ids']/tree" position="inside">
 				<field name="ksef_line_no"
 					   readonly="1"
 					   optional="show"
@@ -167,11 +167,11 @@
 			<!-- dedykowane zakładki -->
 			<xpath expr="//notebook" position="inside">
 				 <page id="xml_export_tab" name="xml_export_tab" string="Szablon Eksportu" >
-					<group>
-						<field name="xml_export_template_id" options="{'no_create_edit': False}" />
+						<group>
+							<field name="xml_export_template_id" options="{'no_create_edit': False}" />
+						</group>
 						<separator string="Historia walidacji"/>
 						<field name="validation_log_ids" nolabel="1" context="{'default_move_id': id}"/>
-					</group>
 				</page>
 
 				<page id="xml_export_ksef_tab" name="xml_export_ksef_tab" string="KSeF">

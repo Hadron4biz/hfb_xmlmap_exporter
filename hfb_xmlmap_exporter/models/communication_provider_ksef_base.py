@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 17.2.1
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -428,10 +428,12 @@ class AccountMoveKsef(models.Model):
 	@api.depends('payment_state', 'state')
 	def _compute_ksef_payments(self):
 		for move in self:
+			# 🚩🚩🚩 UWAGA 🚩🚩🚩
 			# Wyszukaj płatności powiązane z tą fakturą poprzez pole invoice_ids
-			# ToDo: poza Odoo 18 może być to poważnym problemem
-			payments = self.env['account.payment'].search([('invoice_ids', 'in', move.id)])	###XXX
-			move.ksef_reconciled_payments = payments 										###XXX
+			# ToDo:	poza Odoo 18+ może być to poważnym problemem
+			# 		dla Odoo 17- należy wskazać reconciled_invoice_ids lub inne pole
+			payments = None #self.env['account.payment'].search([('reconciled_invoice_ids', 'in', move.id)])	###XXX
+			move.ksef_reconciled_payments = payments 													###XXX
 
 	# --------------------------------------------------------------- Kursy walut
 	ksef_kurswaluty = fields.Float(
