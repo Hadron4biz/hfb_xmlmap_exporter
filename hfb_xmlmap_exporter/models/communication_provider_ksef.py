@@ -2190,6 +2190,7 @@ class CommunicationLog(models.Model):
 				if result.get('success'):
 					# Zapisz payload itp.
 					next_operation = self._determine_next_operation_based_on_result(operation, result)
+					self.mark_received()
 				else:
 					# Obsługa błędu
 					next_operation = 'failed'
@@ -2200,6 +2201,7 @@ class CommunicationLog(models.Model):
 				if result.get('success'):
 					# Po pobraniu pojedynczej faktury, przejdź do restore_invoice
 					next_operation = "restore_invoice"
+					self.mark_status_checked()
 				else:
 					next_operation = 'failed'
 
@@ -2207,7 +2209,7 @@ class CommunicationLog(models.Model):
 				result = self._execute_ksef_python_operation(provider)
 				if result.get('success'):
 					next_operation = 'completed'
-
+					
 			else:
 				return {"success": False, "error": f"Unsupported Python operation: {operation}"}
 			
