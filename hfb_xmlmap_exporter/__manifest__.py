@@ -87,6 +87,7 @@
 	'assets': {
 	},
 	'images': [
+		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
 	],
 	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
