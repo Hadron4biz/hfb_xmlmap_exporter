@@ -84,14 +84,6 @@
 		</field>
 	</record>
 
-	<record id="action_xml_export_node_form" model="ir.actions.act_window">
-		<field name="name">Edytuj węzeł XML</field>
-		<field name="res_model">xml.export.node</field>
-		<field name="view_mode">form</field>
-		<field name="view_id" ref="hfb_xmlmap_exporter.view_xml_export_node_form"/>
-		<field name="target">new</field>
-	</record>
-
     <!-- ✅ LIST VIEW -->
     <record id="view_xml_export_node_list" model="ir.ui.view">
         <field name="name">xml.export.node.list</field>
@@ -203,6 +195,14 @@
         </field>
     </record>
 
+    <record id="action_xml_export_node_form" model="ir.actions.act_window">
+        <field name="name">Edytuj węzeł XML</field>
+        <field name="res_model">xml.export.node</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="hfb_xmlmap_exporter.view_xml_export_node_form"/>
+        <field name="target">new</field>
+    </record>
+
     <!-- ✅ AKCJA I MENU (opcjonalne, np. serwisowe) -->
     <record id="action_xml_export_node" model="ir.actions.act_window">
         <field name="name">Węzły</field>
@@ -210,11 +210,5 @@
         <field name="view_mode">list,form</field>
         <field name="context">{}</field>
     </record>
-
-    <menuitem id="menu_xml_export_node"
-              name="Węzły [node]"
-              parent="menu_xml_export_config"
-              action="action_xml_export_node"
-              sequence="55"/>
 
 </odoo>

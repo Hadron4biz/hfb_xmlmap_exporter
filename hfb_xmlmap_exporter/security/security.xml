@@ -1,7 +1,7 @@
 <odoo>
 	<record id="group_xml_export_admin" model="res.groups">
 		<field name="name">XML Export Administrator</field>
-		<field name="category_id" ref="base.module_category_tools"/>
+		<field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
 	</record>
 
 	<!-- Reguła globalna: pozwól czytać provider wszystkim -->

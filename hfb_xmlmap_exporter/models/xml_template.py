@@ -124,8 +124,15 @@ class XmlExportTemplate(models.Model):
 
 	@api.model
 	def create(self, vals):
-		if not vals.get("uuid"):
-			vals["uuid"] = str(uuid.uuid4())
+		# Obsługa pojedynczego rekordu
+		if isinstance(vals, dict):
+			if not vals.get("uuid"):
+				vals["uuid"] = str(uuid.uuid4())
+		# Obsługa wielu rekordów
+		elif isinstance(vals, list):
+			for v in vals:
+				if isinstance(v, dict) and not v.get("uuid"):
+					v["uuid"] = str(uuid.uuid4())
 		return super().create(vals)
 
 	@api.onchange("doc_direction", "root_tag", "namespace")
