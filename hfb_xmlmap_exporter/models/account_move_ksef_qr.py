@@ -549,7 +549,6 @@ class AccountMove(models.Model):
 		report_action = self.env["ir.actions.report"].search(
 			[
 				("report_name", "=", report_template),
-				('company_id', '=', provider.company_id.id ),
 			],
 			limit=1
 		)
