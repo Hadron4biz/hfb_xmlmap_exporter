@@ -14,7 +14,7 @@ chmod 664 $(find . -type f)
 # aktualizacja repozytorium
 git add .
 git commit -m "normal commit:: $1"
-git push -u origin 18.0
+git push -u origin 16.0
 #
 chmod +x sprawdz-po-instalacji.py commit.sh
 # vim: tabstop=4 softtabstop=0 shiftwidth=4 smarttab expandtab fileformat=unix
