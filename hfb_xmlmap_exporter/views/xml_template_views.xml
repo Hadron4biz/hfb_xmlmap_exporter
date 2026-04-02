@@ -55,7 +55,7 @@
 		<field name="arch" type="xml">
 			<form string="Szablon eksportu XML">
 				<header>
-
+					<field name="state" invisible="1"/>
 					<field name="xsd_attachment_id" invisible="1"/>
 
 					<button name="action_open_xsd_upload_wizard"
@@ -171,6 +171,9 @@
 								<!--field name="state" invisible="1" /-->
 								<field name="id" string="id" />
 								<field name="sequence" string="Seq" />
+                                <field name="state" invisible="1" />
+                                <field name="template_id" invisible="1"/>
+                                <field name="template_model_id" invisible="1"/>
 								<field name="name"/>
 								<field name="xpath"/>
 								<field name="xsd_type_name"/>								
@@ -187,6 +190,9 @@
 							<!-- FORMULARZ WĘZŁA -->
 							<form string="Węzeł">
 								<group>
+                                <field name="state" invisible="1" />
+                                <field name="template_id" invisible="1"/>
+                                <field name="template_model_id" invisible="1"/>
 								<group string="Identyfikacja">
 									<field name="sequence"/>
 									<field name="parent_id"/>
