@@ -31,12 +31,11 @@
 # property of the author.
 #################################################################################
 {
-	"name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo",
-	"summary": "Integracja KSeF, wymiana danych XML, szablony XET, eksport/import faktur, komunikacja z systemami zewnętrznymi",
-	"version": "18.1.0",
+	"name": "eXtensible Exchange Template Base Provider",
+	"summary": "Mapowanie pól modeli Odoo 19 do struktury XML na podstawie XSD + eksport z walidacją.",
+	"version": "19.1.0",
 	"license": "AGPL-3",
-	"author": "Hadron for Business",
-	'category': 'Accounting/Invoicing',
+	"author": "Andrzej Wiśniewski",
 	"website": "https://ksef.odoo.com",
 	"depends": [
 		"base",
@@ -53,6 +52,8 @@
 		"views/xml_node_views.xml",
 		"views/xml_template_views.xml",
 		"views/actions.xml",
+
+		# --- Wizard's ---
 		"wizard/template_name_wizard_views.xml",
 		"wizard/wizard_xsd_upload_views.xml",
 		"views/account_move_view.xml",
@@ -60,7 +61,6 @@
 
 		# --- dane, które odwołują się do modeli ---
 		"views/xml_types_views.xml",
-		#"data/communication_provider_data.xml",
 
 		# --- a po nich widoki modeli ---
 		"views/communication_log_views.xml",
@@ -80,12 +80,16 @@
 		"views/report_invoice_ksef_qr.xml",
 		"views/cron.xml",
 
+		# --- przykładowa konfiguracja ---
+		#
+
 	],
+	'assets': {
+	},
 	"demo": [
 		"data/communication_channel_demo.xml",
 	],
 	'images': [
-		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
 	],
 	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',

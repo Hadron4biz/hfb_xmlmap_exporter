@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 19.0.1
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -66,6 +66,14 @@ def _sanitize_token(val, allow_dot=False):
 class XmlTemplateNameWizard(models.TransientModel):
 	_name = "xml.template.name.wizard"
 	_description = "Kreator nazwy szablonu (z wersją) i wskazania XSD"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
 
 	# 1) Plik schemy (wymagany)
 	xsd_attachment_id = fields.Many2one(
@@ -166,7 +174,7 @@ class XmlTemplateNameWizard(models.TransientModel):
 
 		# (2) utworzenie minimalnego szablonu
 		template_vals = {
-			"name": self.preview_name,                 # lub inna Twoja zmienna z nazwą
+			"name": self.preview_name,				 # lub inna Twoja zmienna z nazwą
 			"xsd_attachment_id": self.xsd_attachment_id.id,
 			"model_id": self.model_id.id if 'model_id' in self._fields else False,
 			"root_tag": self.root_tag if 'root_tag' in self._fields else False,
@@ -177,14 +185,14 @@ class XmlTemplateNameWizard(models.TransientModel):
 		# usuwamy klucze z False, żeby nie nadpisać niczego zbędnie
 		template_vals = {k: v for k, v in template_vals.items() if v}
 
-		template = self.env["xml.export.template"].create(template_vals)
+		template = self.env["xml.export.template"].with_company( self.company_id).create(template_vals)
 		# Po podpięciu XSD — złóż nazwę, jeśli pusta/niepoprawna:
 		if hasattr(template, "_ensure_name_after_xsd_and_direction"):
 			template._ensure_name_after_xsd_and_direction()
 
 		# (3) KLUCZOWE: po podpięciu XSD dopilnuj automatycznego złożenia nazwy,
-		#     jeśli jest pusta/niepoprawna wg formatu.
-		#     Metoda jest w modelu xml.export.template (dodana wcześniej).
+		#	 jeśli jest pusta/niepoprawna wg formatu.
+		#	 Metoda jest w modelu xml.export.template (dodana wcześniej).
 		if hasattr(template, "_ensure_name_after_xsd_and_direction"):
 			template._ensure_name_after_xsd_and_direction()
 
@@ -209,6 +217,7 @@ class XmlTemplateNameWizard(models.TransientModel):
 			"name": self.preview_name,
 			"xsd_attachment_id": self.xsd_attachment_id.id,
 			"active": True,
+			'company_id': self.company_id.id,
 		}
 		tmpl = self.env["xml.export.template"].create(template_vals)
 

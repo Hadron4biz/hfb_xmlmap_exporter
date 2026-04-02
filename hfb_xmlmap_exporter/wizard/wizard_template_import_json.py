@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 19.0.1
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -51,6 +51,14 @@ _logger = logging.getLogger(__name__)
 class XmlTemplateImportJsonWizard(models.TransientModel):
 	_name = "xml.template.import_json.wizard"
 	_description = "Import JSON Template 2.0 → XML Template"
+
+	company_id = fields.Many2one(
+		'res.company',
+		string='Firma',
+		required=False,  # <-- opcjonalne
+		default=lambda self: self.env.company,
+		ondelete='set null'
+	)
 
 	json_file = fields.Binary("Plik JSON")
 	json_filename = fields.Char("Nazwa JSON")
@@ -191,7 +199,8 @@ class XmlTemplateImportJsonWizard(models.TransientModel):
 		# 3. Odtworzenie XSD
 		# ============================================================
 		if tpl.get("schema_b64") and tpl.get("schema_filename"):
-			att = self.env["ir.attachment"].create({
+			att = self.env["ir.attachment"].with_company( template.company_id).create({
+				'company_id': template.company_id.id,
 				"name": tpl["schema_filename"],
 				"type": "binary",
 				"datas": tpl["schema_b64"],

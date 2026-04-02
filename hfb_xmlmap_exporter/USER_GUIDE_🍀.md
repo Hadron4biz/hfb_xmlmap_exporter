@@ -37,8 +37,6 @@
 ### Wymagane uprawnienia / Required Permissions
 - Dostęp do konsoli systemowej (dla instalacji zależności) / System console access (for dependency installation)
 - Uprawnienia administratora w Odoo / Odoo administrator privileges
-- Certyfikaty do autentykacji i podpisu wystawione w środowisku Aplikacji Podatnika KSeF 2.0 https://ksef.podatki.gov.pl/informacje-ogolne-ksef-20/certyfikaty-ksef/
-  https://github.com/CIRFMF/ksef-docs/blob/main/certyfikaty-KSeF.md
 
 ---
 
