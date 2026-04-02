@@ -107,6 +107,8 @@
 				<field name="state" optional="hide" />
                 <field name="sequence" optional="hide"/>
                 <field name="parent_id" optional="hide"/>
+                <field name="template_id" optional="hide"/>
+                <field name="template_model_id" optional="hide"/> 
                 <field name="xpath" widget="badge"/>
                 <field name="name"/>
                 <field name="xsd_type_name"/>
