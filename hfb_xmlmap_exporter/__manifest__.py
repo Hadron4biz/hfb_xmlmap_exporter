@@ -35,7 +35,7 @@
 	"summary": "Mapowanie pól modeli Odoo 19 do struktury XML na podstawie XSD + eksport z walidacją.",
 	"version": "19.1.0",
 	"license": "AGPL-3",
-	"author": "Andrzej Wiśniewski",
+	"author": "Hadron for Business, Andrzej Wiśniewski",
 	"website": "https://ksef.odoo.com",
 	"depends": [
 		"base",
