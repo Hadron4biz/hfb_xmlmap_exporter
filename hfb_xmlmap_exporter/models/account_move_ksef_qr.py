@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #################################################################################
-""" @version 16.1.2
+""" @version 16.1.3
 	@owner  Hadron for Business
 	@author Andrzej Wiśniewski
 	@date   2026.01.28
