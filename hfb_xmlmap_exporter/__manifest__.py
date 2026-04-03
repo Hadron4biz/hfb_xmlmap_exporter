@@ -31,13 +31,13 @@
 # property of the author.
 #################################################################################
 {
-	"name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo",
-	"summary": "Integracja KSeF, wymiana danych XML, szablony XET, eksport/import faktur, komunikacja z systemami zewnętrznymi",
-	"version": "18.1.0",
-	"license": "AGPL-3",
-	"author": "Hadron for Business",
-	'category': 'Accounting/Invoicing',
-	"website": "https://ksef.odoo.com",
+    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 18",
+    "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
+    "version": "18.1.2",
+    "license": "AGPL-3",
+    "author": "Hadron for Business, Andrzej Wiśniewski",
+    'category': 'Accounting/Invoicing',
+    "website": "https://ksef.odoo.com",
 	"depends": [
 		"base",
 		"mail",
@@ -53,6 +53,8 @@
 		"views/xml_node_views.xml",
 		"views/xml_template_views.xml",
 		"views/actions.xml",
+
+		# --- Wizard's ---
 		"wizard/template_name_wizard_views.xml",
 		"wizard/wizard_xsd_upload_views.xml",
 		"views/account_move_view.xml",
@@ -60,7 +62,6 @@
 
 		# --- dane, które odwołują się do modeli ---
 		"views/xml_types_views.xml",
-		#"data/communication_provider_data.xml",
 
 		# --- a po nich widoki modeli ---
 		"views/communication_log_views.xml",
@@ -80,12 +81,23 @@
 		"views/report_invoice_ksef_qr.xml",
 		"views/cron.xml",
 
+		# --- przykładowa konfiguracja ---
+		#"data/communication_provider_data.xml",
+
 	],
+	'assets': {
+		#'web.assets_backend': [
+		#	'hfb_xmlmap_exporter/static/src/js/reload_after_notification.js',
+		#],
+        #'web.tests_assets': [ 
+        #    'hfb_xmlmap_exporter/static/tests/__init__.js',
+        #    'hfb_xmlmap_exporter/static/tests/ksef_cron_tests.js',
+        #],
+	},
 	"demo": [
 		"data/communication_channel_demo.xml",
 	],
 	'images': [
-		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
 	],
 	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
