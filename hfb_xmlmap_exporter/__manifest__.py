@@ -31,12 +31,13 @@
 # property of the author.
 #################################################################################
 {
-	"name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 19",
-	"summary": "Mapowanie pól modeli Odoo 19 do struktury XML na podstawie XSD + eksport z walidacją.",
-	"version": "19.1.0",
-	"license": "AGPL-3",
-	"author": "Hadron for Business, Andrzej Wiśniewski",
-	"website": "https://ksef.odoo.com",
+    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 19",
+    "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
+    "version": "19.1.2",
+    "license": "AGPL-3",
+    "author": "Hadron for Business, Andrzej Wiśniewski",
+    'category': 'Accounting/Invoicing',
+    "website": "https://ksef.odoo.com",
 	"depends": [
 		"base",
 		"mail",
