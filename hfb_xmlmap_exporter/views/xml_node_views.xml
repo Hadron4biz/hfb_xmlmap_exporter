@@ -187,6 +187,42 @@
 									<field name="context_key" placeholder="klucz z kontekstu eksportu" />
 								</group>
 							</group>
+
+							<!-- Ścieżka relacji -->
+							<group invisible="value_source != 'related'">
+								<field name="src_rel_path" placeholder="np. partner_id.vat lub move_id.invoice_date"/>
+							</group>
+
+							<!-- Stała -->
+							<field name="value_fixed"
+								   invisible="value_source != 'constant'"
+								   placeholder="Wartość stała (np. 'PL')"/>
+
+							<!-- Wyrażenie -->
+							<field name="value_expr"
+								   invisible="value_source != 'expression'"
+								   placeholder="np. record.amount_total or '0.00'"/>
+
+							<!-- Kontekst -->
+							<group invisible="value_source != 'context'">
+								<field name="src_rel_path" placeholder="np. company_id, user_id, date_today"/>
+							</group>
+
+							<!-- Sekwencja -->
+							<group invisible="value_source != 'sequence'">
+								<field name="value_sequence_name" placeholder="Nazwa sekwencji Odoo"/>
+							</group>
+
+							<!-- Załącznik -->
+							<group invisible="value_source != 'attachment_b64'">
+								<field name="value_attachment_field" placeholder="Pole binarne (base64)"/>
+							</group>
+
+							<!-- Literal XML -->
+							<group invisible="value_source != 'literal_xml'">
+								<field name="value_literal" widget="text" placeholder="Fragment XML bez escapowania"/>
+							</group>
+
                         </page>
 
                         <page string="Dokumentacja XSD">
