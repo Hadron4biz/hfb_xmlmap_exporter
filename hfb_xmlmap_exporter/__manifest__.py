@@ -32,67 +32,67 @@
 #################################################################################
 {
     "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 17",
-    "summary": "Integracja KSeF, wymiana danych XML, szablony XET, eksport/import faktur, komunikacja z systemami zewnętrznymi",
-    "version": "17.1.2",
+    "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
+    "version": "17.2.3",
     "license": "AGPL-3",
-    "author": "Hadron for Business",
+    "author": "Hadron for Business, Andrzej Wiśniewski",
     'category': 'Accounting/Invoicing',
     "website": "https://ksef.odoo.com",
-    "depends": [
-        "base",
-        "mail",
-        "sale",
-        "account",
-    ],
-    "data": [
-        # --- security zawsze pierwsze ---
-        "security/security.xml",
-        "security/ir.model.access.csv",
+	"depends": [
+		"base",
+		"mail",
+		"sale",
+		"account",
+	],
+	"data": [
+		# --- security zawsze pierwsze ---
+		"security/security.xml",
+		"security/ir.model.access.csv",
 
-        # --- widoki modeli, które tworzą modele ---
-        "views/xml_node_views.xml",
-        "views/xml_template_views.xml",
-        "views/actions.xml",
-        "wizard/template_name_wizard_views.xml",
-        "wizard/wizard_xsd_upload_views.xml",
-        "views/account_move_view.xml",
-        "wizard/wizard_template_import_json.xml",
+		# --- widoki modeli, które tworzą modele ---
+		"views/xml_node_views.xml",
+		"views/xml_template_views.xml",
+		"views/actions.xml",
 
-        # --- dane, które odwołują się do modeli ---
-        "views/xml_types_views.xml",
-        #"data/communication_provider_data.xml",
+		# --- Wizard's ---
+		"wizard/template_name_wizard_views.xml",
+		"wizard/wizard_xsd_upload_views.xml",
+		"views/account_move_view.xml",
+		"wizard/wizard_template_import_json.xml",
 
-        # --- a po nich widoki modeli ---
-        "views/communication_log_views.xml",
-        "views/communication_provider_views.xml",
-        "views/communication_provider_localdir_views.xml",
-        "views/communication_provider_ksef_views.xml",
-        'views/xml_xsd_import_wizard_views.xml',
+		# --- dane, które odwołują się do modeli ---
+		"views/xml_types_views.xml",
 
-        # --- menu dla wszystkich operacji ---
-        "views/menu.xml",
+		# --- a po nich widoki modeli ---
+		"views/communication_log_views.xml",
+		"views/communication_provider_views.xml",
+		"views/communication_provider_localdir_views.xml",
+		"views/communication_provider_ksef_views.xml",
+		'views/xml_xsd_import_wizard_views.xml',
+
+		# --- menu dla wszystkich operacji ---
+		"views/menu.xml",
         "views/communication_provider_localdir_menu.xml",
         "views/communication_provider_ksef_menu.xml",
-        "wizard/wizard_template_import_json_menu.xml",
+		"wizard/wizard_template_import_json_menu.xml",
 
-        # --- addons
-        "views/upo_pdf_templates.xml",
-        "views/report_invoice_ksef_qr.xml",
-        "views/cron.xml",
+		# --- addons
+		"views/upo_pdf_templates.xml",
+		"views/report_invoice_ksef_qr.xml",
+		"views/cron.xml",
 
-		# --- patch dla niedziałającego pola Many2oneReference w Odoo 17-
-		"wizard/communication_provider_config_wizard_view.xml",
+		# --- przykładowa konfiguracja ---
+		#
 
-    ],
-    "demo": [
-        "data/communication_channel_demo.xml",
-    ],
-    'images': [
-        'static/description/Banner.png',
-        'hfb_xmlmap_exporter/static/description/icon.png',
-    ],
-    'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
-    "application": True,
-    "installable": True,
+	],
+	'assets': {
+	},
+	'images': [
+		'static/description/Banner.png',
+		'hfb_xmlmap_exporter/static/description/icon.png',
+	],
+	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
+	"application": True,
+	"installable": True,
 }
 #EoF
