@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################################
-""" @version 16.1.2
+""" @version 16.1.3
 	@owner  Hadron for Business
 	@author andrzej wiśniewski warp3r
 	@date   2025.10.15
@@ -2174,6 +2174,7 @@ class CommunicationLog(models.Model):
 				if result.get('success'):
 					# Zapisz payload itp.
 					next_operation = self._determine_next_operation_based_on_result(operation, result)
+					self.mark_received()
 				else:
 					# Obsługa błędu
 					next_operation = 'failed'
@@ -2184,6 +2185,7 @@ class CommunicationLog(models.Model):
 				if result.get('success'):
 					# Po pobraniu pojedynczej faktury, przejdź do restore_invoice
 					next_operation = "restore_invoice"
+					self.mark_status_checked()
 				else:
 					next_operation = 'failed'
 
