@@ -1,0 +1,8 @@
+<AuthTokenRequest xmlns="urn:ksef:auth:request">
+  <Challenge>20251214-CR-3122F0A000-54B5688496-E4</Challenge>
+  <ContextIdentifier>
+    <Type>nip</Type>
+    <Value>7492091229</Value>
+  </ContextIdentifier>
+  <SubjectIdentifierType>certificateSubject</SubjectIdentifierType>
+</AuthTokenRequest>

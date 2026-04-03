@@ -1,0 +1,13 @@
+HTTP/2 401 
+date: Sat, 13 Dec 2025 23:28:11 GMT
+content-length: 0
+www-authenticate: Bearer
+x-azure-ref: 20251213T232811Z-155cf7f7f56gzf7vhC1WAW1qqw0000000df0000000007nst
+x-cache: CONFIG_NOCACHE
+set-cookie: visid_incap_3145183=uXNQRZ7eTAaGz0rc8C9Rx4v2PWkAAAAAQUIPAAAAAADjMT4ekYZmPSdx0DYrzFcy; expires=Sun, 13 Dec 2026 22:30:02 GMT; HttpOnly; path=/; Domain=.mf.gov.pl; Secure; SameSite=None
+set-cookie: nlbi_3145183=p0vPPT4j/ngla1OxrQ6yoAAAAABH19lmjFgGkCM6ZHY/X9Ef; HttpOnly; path=/; Domain=.mf.gov.pl; Secure; SameSite=None
+set-cookie: incap_ses_519_3145183=ZLbucZqqqiT6PApNJNwzB4v2PWkAAAAAjTRnnhkv9zXoGviGzRC/4g==; path=/; Domain=.mf.gov.pl; Secure; SameSite=None
+strict-transport-security: max-age=31536000
+x-cdn: Imperva
+x-iinfo: 1-171941142-171941148 NNNY CT(1 6 0) RT(1765668491634 225) q(0 0 0 -1) r(0 0) U6
+

@@ -1,0 +1,84 @@
+Dwa tryby działania:
+1. Pojedynczy dokument przez Nr KSeF
+bash
+# Legacy mode (command line)
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --ksef-number "7491003186-20251222-010040BD5D51-78" \
+  --download ./invoices
+
+# Odoo mode (JSON input)
+{
+  "operation": "import_invoices",
+  "config": {...},
+  "context": {...},
+  "params": {
+    "ksef_number": "7491003186-20251222-010040BD5D51-78",
+    "download_dir": "/tmp/invoices"
+  }
+}
+2. Lista dokumentów oczekujących
+bash
+# Legacy mode (command line) - tylko metadane
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --output /tmp/metadata.json
+
+# Legacy mode - z pobieraniem wszystkich faktur
+java -jar ksef-get-received-invoices.jar \
+  --session-runtime /tmp/auth_runtime_context.json \
+  --download-all ./invoices \
+  --output /tmp/metadata.json
+
+# Odoo mode (JSON input) - tylko lista
+{
+  "operation": "import_invoices",
+  "config": {...},
+  "context": {...},
+  "params": {
+    "days_back": 30,
+    "page_size": 50
+  }
+}
+
+# Odoo mode - z pobieraniem
+{
+  "operation": "import_invoices",
+  "config": {...},
+  "context": {...},
+  "params": {
+    "days_back": 30,
+    "page_size": 50,
+    "download_all": true,
+    "download_dir": "/tmp/invoices"
+  }
+}
+Kluczowe pola w odpowiedzi:
+Tryb 1 (single_document):
+json
+{
+  "mode": "single_document",
+  "ksefNumber": "7491003186-20251222-010040BD5D51-78",
+  "invoiceSize": 12345,
+  "invoiceXmlBase64": "...base64...",
+  "savedTo": "/path/to/file.xml",
+  "xmlValid": true
+}
+Tryb 2 (document_list):
+json
+{
+  "mode": "document_list",
+  "invoiceCount": 15,
+  "invoices": [
+    {
+      "ksefNumber": "7491003186-20251222-010040BD5D51-78",
+      "invoiceNumber": "FV/2024/123",
+      "invoicingDate": "2024-01-15",
+      "subjectBy": {...},
+      "processingStatus": "DELIVERED"
+    }
+  ],
+  "downloadResults": [...],
+  "successCount": 14,
+  "errorCount": 1
+}

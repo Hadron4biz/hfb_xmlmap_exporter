@@ -1,0 +1,145 @@
+https://ksef.podatki.gov.pl/pliki-do-pobrania-ksef-20/
+
+
+ksef-fa-standard
+ksef-fa-uproszczona
+ksef-fa-zaliczkowa
+ksef-fa-rozliczeniowa
+ksef-fa-korygujaca
+ksef-fz-zakup
+ksef-fp-paragonowa
+ksef-marza
+
+ksef-fa-standard-v1
+ksef-fa-standard-v2
+ksef-fa-vatue-2026
+ksef-fa-korekta-krotka
+ksef-fa-korekta-danych
+
+
+models/xml_template.py
+wizard/wizard_template_import_json.py
+wizard/wizard_template_import_json.py
+models/xml_export_template.py
+
+
+
+🌳 CAŁA STRUKTURA — ZBIORCZO
+xml.export.template
+├── ns_ids[]              (xml.export.namespace)
+├── xsd_type_ids[]        (xml.xsd.type)
+└── node_ids[]            (xml.export.node)
+       └── parent/child hierarchy
+            ├── node (root)
+            │     ├── node (child)
+            │     │     ├── node (child)
+            │     │     └── ...
+            │     ├── node (child)
+            │     └── ...
+            └── node (siblings)
+
+Najważniejsze zależności
+A. Szablon → węzły → hierarchia
+template.node_ids → node.parent_id → node.child_ids
+
+B. Szablon → namespace
+template.ns_ids
+
+C. Szablon → XSD type
+template.xsd_type_ids
+
+            
+            
+🌳 AKTUALNA STRUKTURA DRZEWA SZABLONU (wg logu)
+Faktura (id=11524, root)
+Faktura
+├── Naglowek
+│   ├── KodFormularza
+│   │   ├── kodSystemowy
+│   │   └── wersjaSchemy
+│   ├── WariantFormularza
+│   ├── DataWytworzeniaFa
+│   └── SystemInfo
+│
+├── Podmiot1
+│   ├── DaneIdentyfikacyjne
+│   │   ├── NIP
+│   │   └── Nazwa
+│   ├── Adres
+│   │   ├── KodKraju
+│   │   └── AdresL1
+│   └── PrefiksPodatnika
+│
+├── Podmiot2
+│   ├── DaneIdentyfikacyjne
+│   │   ├── BrakID
+│   │   └── Nazwa
+│   ├── Adres
+│   │   ├── KodKraju
+│   │   └── AdresL1
+│   ├── NrKlienta
+│   ├── JST
+│   └── GV
+│
+├── Fa
+│   ├── FaWiersz
+│   │   ├── P_7
+│   │   ├── P_8A
+│   │   ├── P_8B
+│   │   ├── P_9A
+│   │   ├── P_11
+│   │   ├── P_12
+│   │   └── NrWierszaFa
+│   │
+│   ├── KodWaluty
+│   ├── P_1
+│   ├── P_1M
+│   ├── P_2
+│   ├── P_6
+│   ├── P_13_1
+│   ├── P_14_1
+│   ├── P_15
+│   ├── RodzajFaktury
+│   └── Adnotacje
+│       ├── P_16
+│       ├── P_17
+│       ├── P_18
+│       ├── P_18A
+│       ├── Zwolnienie
+│       │   └── P_19N
+│       ├── NoweSrodkiTransportu
+│       │   └── P_22N
+│       ├── P_23
+│       └── PMarzy
+│           └── P_PMarzyN
+
+
+PRZETWÓRZ_NODE(node, record, parent_element):
+
+1. jeśli node.kind == 'attribute':
+       oblicz wartość
+       ustaw atrybut na parent_element
+       STOP
+
+2. jeśli node.kind == 'text':
+       oblicz wartość
+       ustaw parent_element.text
+       STOP
+
+3. jeśli node.loop_mode:
+       pobierz kolekcję (relpath)
+       dla każdego elementu:
+            utwórz elementXML
+            przetwarzaj jego dzieci (rekurencja)
+       STOP
+
+4. (element normalny)
+       utwórz elementXML jako child parent_element
+       oblicz wartość i ustaw elementXML.text (jeśli istnieje)
+
+5. DLA KAŻDEGO dziecka tego node (wg sequence):
+       PRZETWÓRZ_NODE(child, record, elementXML)
+
+6. Zwróć elementXML
+            
+            

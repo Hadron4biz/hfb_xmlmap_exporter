@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Akcja (uniwersalna dla 14–19) -->
+  <record id="action_xml_template_name_wizard" model="ir.actions.act_window">
+    <field name="name">Kreator nazwy szablonu</field>
+    <field name="res_model">xml.template.name.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <!-- Formularz wizarda: klasyczny układ, bez nowego UI -->
+  <record id="view_xml_template_name_wizard_form" model="ir.ui.view">
+    <field name="name">xml.template.name.wizard.form</field>
+    <field name="model">xml.template.name.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Kreator nazwy szablonu" create="false" edit="false">
+        <group>
+          <group string="Schemat">
+            <field name="xsd_attachment_id" required="1"/>
+          </group>
+          <group string="Odoo">
+            <field name="odoo_version_major"/>
+            <field name="odoo_version_minor" placeholder="np. 0"/>
+          </group>
+        </group>
+
+        <group>
+          <group string="System docelowy">
+            <field name="system_id" placeholder="np. peppol / ubl / efaktura / x12 / custom"/>
+            <field name="system_ver" placeholder="np. 3.0 / bis3 / 2.3 / 4010 / 2025.10"/>
+          </group>
+          <group string="Dokument">
+            <field name="doc_type"/>
+          </group>
+        </group>
+
+        <group string="Wersja szablonu">
+          <field name="tpl_ver_major"/>
+          <field name="tpl_ver_minor"/>
+          <field name="tpl_ver_patch"/>
+        </group>
+
+        <group string="Podgląd (tylko odczyt)">
+          <field name="preview_name" readonly="1" nolabel="1" class="oe_inline"/>
+        </group>
+
+        <footer>
+          <!-- oe_highlight: bardziej kompatybilne w dół niż btn-primary -->
+          <button name="action_confirm" type="object" string="Potwierdź" class="oe_highlight"/>
+          <button string="Anuluj" special="cancel" class="oe_link"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+</odoo>
