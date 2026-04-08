@@ -9,22 +9,19 @@ Instrukcja dotyczy certyfikatów:
 ## 1. Wymagania wstępne
 
 ### 1.1. Obsługiwany algorytm
-Certyfikaty muszą być oparte o algorytm RSA.
+Certyfikaty generowane przez Aplikację Podatnika KSeF 2.0 używają algorytmu **ECDSA** (krzywa prime256v1). 
+**Jest to prawidłowy i obsługiwany algorytm** – konwersja do formatu .p12 działa bez problemu.
 
-Certyfikaty ECDSA / EC (np. id-ecPublicKey) nie są obsługiwane przez aktualny mechanizm uwierzytelniania i spowodują błąd podczas operacji AUTH.
+Uwaga: wcześniejsze wersje dokumentacji wskazywały na wymóg algorytmu RSA – jest to nieaktualne. 
+Aplikacja MF KSeF 2.0 generuje wyłącznie certyfikaty ECDSA i są one w pełni funkcjonalne.
 
-### 1.2. Sprawdzenie algorytmu certyfikatu
-Dla każdego certyfikatu (AUTH oraz SIGN) wykonaj:
+### 1.2. Sprawdzenie algorytmu certyfikatu (opcjonalnie)
+Dla każdego certyfikatu (AUTH oraz SIGN) możesz wykonać:
 
 openssl x509 -in certyfikat-api-auth.crt -text -noout | grep "Public Key Algorithm"
 
 **Poprawny wynik:**
-Public Key Algorithm: rsaEncryption
-
-**Jeżeli wynik to:**
-id-ecPublicKey
-
-➡ certyfikat nie może zostać użyty – należy wygenerować nowy certyfikat RSA w aplikacji MF KSeF.
+Public Key Algorithm: id-ecPublicKey
 
 ## 2. Pliki wejściowe
 
