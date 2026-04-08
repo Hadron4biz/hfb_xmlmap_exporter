@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.3
+"""@version 18.1.0
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -124,7 +124,7 @@ class XmlExportTemplate(models.Model):
 
 	@api.model
 	def create(self, vals):
-		if not vals.get("uuid"):
+		if vals and not vals.get("uuid"):
 			vals["uuid"] = str(uuid.uuid4())
 		return super().create(vals)
 

@@ -80,25 +80,18 @@
 		"views/upo_pdf_templates.xml",
 		"views/report_invoice_ksef_qr.xml",
 		"views/cron.xml",
+		"wizard/ksef_certificate_import_wizard_view.xml",
 
 		# --- przykładowa konfiguracja ---
 		#"data/communication_provider_data.xml",
 
 	],
 	'assets': {
-		#'web.assets_backend': [
-		#	'hfb_xmlmap_exporter/static/src/js/reload_after_notification.js',
-		#],
-        #'web.tests_assets': [ 
-        #    'hfb_xmlmap_exporter/static/tests/__init__.js',
-        #    'hfb_xmlmap_exporter/static/tests/ksef_cron_tests.js',
-        #],
 	},
 	"demo": [
 		"data/communication_channel_demo.xml",
 	],
 	'images': [
-		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
 	],
 	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',

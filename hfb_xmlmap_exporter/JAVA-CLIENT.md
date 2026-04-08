@@ -57,13 +57,13 @@ Plik ksef-auth.yml
 	  auth:
 		keystore:
 		  path: /opt/ksef/certs/auth/user-ksef-java-auth.p12
-		  password: "TU-WPROWADŹ-HASŁO-CERTYFIKATU"
+		  password: "Alfabet!2025KSeF"
 		  alias: ksef-auth
 
 	  sign:
 		keystore:
 		  path: /opt/ksef/certs/sign/user-ksef-java-sign.p12
-		  password: "TU-WPROWADŹ-HASŁO-CERTYFIKATU"
+		  password: "Alfabet!2025KSeF"
 		  alias: ksef-sign
 
 	  timeouts:
@@ -71,7 +71,7 @@ Plik ksef-auth.yml
 		readSeconds: 30
 
 	  context:
-		nip: "TU-WPROWADŹ-NIP"
+		nip: "7492091229"
 
 	  baseUrl: https://ksef-test.mf.gov.pl/api/v2
 

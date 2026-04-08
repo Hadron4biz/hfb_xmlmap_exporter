@@ -33,3 +33,5 @@ access_communication_provider_ksef_u,communication.provider.ksef,model_communica
 
 access_communication_provider_ksef_offline,communication.provider.ksef.offline,model_communication_provider_ksef_offline,base.group_user,1,1,1,1
 
+access_ksef_certificate_import_wizard_user,ksef.certificate.import.wizard user,model_ksef_certificate_import_wizard,base.group_user,1,1,1,0
+access_ksef_certificate_import_wizard_system,ksef.certificate.import.wizard system,model_ksef_certificate_import_wizard,base.group_system,1,1,1,1
