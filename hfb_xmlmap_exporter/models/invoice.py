@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.0
+"""@version 18.1.3
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -47,7 +47,6 @@ from markupsafe import Markup, escape
 
 import logging
 _logger = logging.getLogger(__name__)
-
 
 """
 Faktura (account.move) 
@@ -354,7 +353,6 @@ class AccountMove(models.Model):
 		except Exception as e:
 			_logger.warning(f"⚠️  Nie udało się zapisać logu walidacji: {e}")
 
-
 		return {
 			"type": "ir.actions.act_window",
 			"res_model": "account.move",
@@ -390,6 +388,28 @@ class AccountMove(models.Model):
 				"exec_reload": True,
 			},
 		}
+
+	# ------------------------------------------------------------------------------------------------------
+	# Wymuszenie wysyłki jeśli jest możliwe
+	# ------------------------------------------------------------------------------------------------------
+	def action_send_manual(self):
+		domain = [
+			( 'document_id', '=', self.id),
+			( 'document_model', '=', 'account.move' )
+		]
+		log = self.env['communication.log'].sudo().search(domain, limit=1)
+		comm_status = 'none'
+		if log:
+			comm_status = log.state
+			log.sudo().action_send_manual()
+
+		_logger.info(
+			f"\n action_send_manual document: {self.name}"
+			f"\n ksef_process_state {self.ksef_process_state} "
+			f'\n communication.log {log}'
+			f'\n comm_status {comm_status}'
+			f"\n___________________________________________________________________________________________"
+		)
 
 	########################################################################################################
 
@@ -639,7 +659,6 @@ class AccountMove(models.Model):
 		# ... do implementacji po analizie dalszej części schematu
 		
 		return fa_data
-
 
 
 #EoF
