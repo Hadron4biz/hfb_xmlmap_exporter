@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ==========================================================
+             PROVIDER KSeF – Konfiguracja produkcyjna (demo)
+        ========================================================== -->
+        <record id="provider_ksef_production" model="communication.provider.ksef">
+            <field name="name">KSeF Produkcja</field>
+            <field name="code">ksef_prod</field>
+            <field name="active">True</field>
+            <field name="base_url">https://ksef.mf.gov.pl/api/online</field>
+            <field name="qr_code_url">https://ksef.mf.gov.pl/qr</field>
+            <field name="environment">production</field>
+            <field name="auth_type">certificate</field>  <!-- lub jet_token / session_token -->
+            <field name="description">Produkcyjne środowisko KSeF z certyfikatem</field>
+            
+            <!-- Pola dla certyfikatu (przykład – puste, do uzupełnienia przez użytkownika) -->
+            <field name="company_nip">1234567890</field>
+            <field name="auth_keystore_p12" eval="False"/>
+            <field name="auth_keystore_password" eval="False"/>
+            <field name="sign_keystore_p12" eval="False"/>
+            <field name="sign_keystore_password" eval="False"/>
+            
+            <!-- Opcje -->
+            <field name="validate_before_send">True</field>
+            <field name="auto_check_status">True</field>
+            <field name="status_check_delay">5</field>
+            <field name="debug_mode">False</field>
+            
+            <!-- Import -->
+            <field name="import_enabled">False</field>
+            <field name="import_days_back">7</field>
+            <field name="import_page_size">100</field>
+        </record>
+        
+        <!-- ==========================================================
+             PROVIDER KSeF – Środowisko testowe (demo)
+        ========================================================== -->
+        <record id="provider_ksef_test" model="communication.provider.ksef">
+            <field name="name">KSeF Test (Demo)</field>
+            <field name="code">ksef_test</field>
+            <field name="active">True</field>
+            <field name="base_url">https://ksef-test.mf.gov.pl/api/online</field>
+            <field name="qr_code_url">https://ksef-test.mf.gov.pl/qr</field>
+            <field name="environment">test</field>
+            <field name="auth_type">session_token</field>
+            <field name="description">Środowisko testowe KSeF – token sesyjny</field>
+            
+            <field name="company_nip">1234567890</field>
+            <field name="validate_before_send">True</field>
+            <field name="debug_mode">True</field>
+        </record>
+        
+        <!-- ==========================================================
+             PROVIDER LocalDir – Eksport lokalny (demo)
+        ========================================================== -->
+        <record id="provider_localdir_export" model="communication.provider.localdir">
+            <field name="name">Eksport lokalny</field>
+            <field name="code">local_export</field>
+            <field name="output_path">/odoo/data/exports/</field>
+            <field name="file_naming">date_name</field>  <!-- lub 'name_date', 'custom' -->
+            <field name="subdirectory_format">%Y/%m</field>
+            <field name="auto_create_dirs">True</field>
+            <field name="overwrite_existing">False</field>
+            <field name="delete_after_import">False</field>
+        </record>
+        
+        <!-- ==========================================================
+             PROVIDER LocalDir – Import/Export dwukierunkowy (demo)
+        ========================================================== -->
+        <record id="provider_localdir_bidirectional" model="communication.provider.localdir">
+            <field name="name">Import/Eksport lokalny</field>
+            <field name="code">local_bidi</field>
+            <field name="output_path">/odoo/data/exports/</field>
+            <field name="input_path">/odoo/data/imports/</field>
+            <field name="import_pattern">*.xml</field>
+            <field name="file_naming">name_date</field>
+            <field name="auto_create_dirs">True</field>
+            <field name="overwrite_existing">True</field>
+            <field name="delete_after_import">True</field>
+        </record>
+        
+        <!-- ==========================================================
+             REKORDY BAZOWE communication.provider (łącznik)
+             Te rekordy łączą się z powyższymi konfiguracjami
+        ========================================================== -->
+        
+        <!-- Provider KSeF – łączenie z konfiguracją -->
+        <record id="communication_provider_ksef" model="communication.provider">
+            <field name="name">KSeF (Produkcja)</field>
+            <field name="code">ksef_prod</field>
+            <field name="provider_type">ksef</field>
+            <field name="provider_model">communication.provider.ksef</field>
+            <field name="provider_config_id" ref="provider_ksef_production"/>
+            <field name="active">True</field>
+            <field name="trigger_type">manual</field>
+            <field name="batch_size">50</field>
+            <field name="auto_retry">True</field>
+            <field name="retry_attempts">3</field>
+            <field name="retry_delay">300</field>
+        </record>
+        
+        <!-- Provider KSeF testowy -->
+        <record id="communication_provider_ksef_test" model="communication.provider">
+            <field name="name">KSeF (Test)</field>
+            <field name="code">ksef_test</field>
+            <field name="provider_type">ksef</field>
+            <field name="provider_model">communication.provider.ksef</field>
+            <field name="provider_config_id" ref="provider_ksef_test"/>
+            <field name="active">True</field>
+            <field name="trigger_type">manual</field>
+        </record>
+        
+        <!-- Provider LocalDir -->
+        <record id="communication_provider_localdir" model="communication.provider">
+            <field name="name">Eksport lokalny</field>
+            <field name="code">local_export</field>
+            <field name="provider_type">localdir</field>
+            <field name="provider_model">communication.provider.localdir</field>
+            <field name="provider_config_id" ref="provider_localdir_export"/>
+            <field name="active">True</field>
+            <field name="trigger_type">cron</field>
+            <field name="batch_time">3600</field>
+            <field name="batch_size">100</field>
+        </record>
+        
+        <!-- Provider LocalDir dwukierunkowy -->
+        <record id="communication_provider_localdir_bidi" model="communication.provider">
+            <field name="name">Import/Eksport lokalny</field>
+            <field name="code">local_bidi</field>
+            <field name="provider_type">localdir</field>
+            <field name="provider_model">communication.provider.localdir</field>
+            <field name="provider_config_id" ref="provider_localdir_bidirectional"/>
+            <field name="active">True</field>
+            <field name="trigger_type">cron</field>
+            <field name="batch_time">1800</field>
+        </record>
+        
+    </data>
+</odoo>
