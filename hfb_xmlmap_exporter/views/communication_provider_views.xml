@@ -53,6 +53,7 @@
 							<field name="dynamic_config_name" />
 						</group>
 						<group>
+							<field name="active" />
 							<field name="trigger_type" />
 							<field name="cron_id" />
 							<field name="batch_time" />

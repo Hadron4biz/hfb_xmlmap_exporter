@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.0.1
+"""@version 19.1.3
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -5017,7 +5017,7 @@ class CommunicationProviderKsef(models.Model):
 	)
 
 	alert_phone = fields.Char(
-		related="alert_contact_id.phone",
+		related="alert_contact_id.mobile",
 		store=False
 	)
 
@@ -5675,15 +5675,15 @@ class CommunicationProviderKsef(models.Model):
 						"Dla autoryzacji JET API wymagane są zarówno klucz jak i token API"
 					)
 	
-	@api.constrains('auth_type', 'auth_keystore_p12', 'sign_keystore_p12')
-	def _check_certificate_credentials(self):
-		"""Walidacja dla certyfikatu"""
-		for record in self:
-			if record.auth_type == 'certificate':
-				if not record.auth_keystore_p12 or not record.sign_keystore_p12:
-					raise ValidationError(
-						"Dla autoryzacji certyfikatem wymagane są oba keystore (AUTH i SIGN)"
-					)
+	#@api.constrains('auth_type', 'auth_keystore_p12', 'sign_keystore_p12')
+	#def _check_certificate_credentials(self):
+	#	"""Walidacja dla certyfikatu"""
+	#	for record in self:
+	#		if record.auth_type == 'certificate':
+	#			if not record.auth_keystore_p12 or not record.sign_keystore_p12:
+	#				raise ValidationError(
+	#					"Dla autoryzacji certyfikatem wymagane są oba keystore (AUTH i SIGN)"
+	#				)
 
 	# -------------------------------------------------------------------------
 	# PROVIDER TEST

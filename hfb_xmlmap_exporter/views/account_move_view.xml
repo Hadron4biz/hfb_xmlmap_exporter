@@ -325,8 +325,8 @@
 						type="object"
 						string="Zatwierdź wysłanie"
 						class="btn-success"
-						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state != 'valid'"/>
-
+						invisible="log_count or (move_type in ['in_invoice', 'in_refund'] or xsd_validation_state != 'valid')"/>
+				
 				<button name="action_issue_ksef_offline"
 						type="object"
 						string="Wystaw fakturę OFFLINE"
@@ -337,9 +337,15 @@
 				<button name="action_create_ksef_correction"
 					   type="object"
 					   string="Korekta KSeF"
-					   class="btn-primary"
+					   class="btn-info"
 					   confirm="Wystawienie korekty KSeF dla tej faktury VAT spowoduje rozliczeniej bieżacej notą księgową i utworzenie nowej faktury w której dokonasz korekt. Czy chcesz kontynuować?"
 					   invisible="move_type in ['in_invoice', 'in_refund'] or not ksef_number and xsd_validation_state in ['none','invalid']" />
+
+				<button name="action_send_manual"
+						type="object"
+                        string="Force Send 🚀"
+                        class="btn-danger"
+                        invisible="ksef_process_state in ['error','completed','imported','offline','none']"/>
 
 			</xpath>
 

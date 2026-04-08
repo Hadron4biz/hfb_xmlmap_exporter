@@ -33,4 +33,5 @@
 from . import wizard_template_name
 from . import wizard_xsd_upload
 from . import wizard_template_import_json
+from . import ksef_certificate_import_wizard
 #EoF

@@ -71,6 +71,7 @@
 							</group>
 							<group>
 								<group string="Konfiguracja certyfikatu">
+
 									<field name="auth_keystore_p12"/>
 									<field name="auth_keystore_password" placeholder="Hasło do certyfikatu" password="1"/>
 
@@ -143,7 +144,6 @@
 							</group>
 							
 						</page>
-
 
 						<page string="Import Configuration" name="import_config">
 							<group string="Automatic Import Settings">

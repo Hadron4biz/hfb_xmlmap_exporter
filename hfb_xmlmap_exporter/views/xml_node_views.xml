@@ -215,7 +215,6 @@
 								<field name="value_literal" widget="text" placeholder="Fragment XML bez escapowania"/>
 							</group>
 
-
                         </page>
 
                         <page string="Dokumentacja XSD">
@@ -236,7 +235,7 @@
         <field name="name">Edytuj węzeł XML</field>
         <field name="res_model">xml.export.node</field>
         <field name="view_mode">form</field>
-        <field name="view_id" ref="hfb_xmlmap_exporter.view_xml_export_node_form"/>
+        <field name="view_id" ref="view_xml_export_node_form"/>
         <field name="target">new</field>
     </record>
 

@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.0.1
+"""@version 19.1.3
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -124,15 +124,8 @@ class XmlExportTemplate(models.Model):
 
 	@api.model
 	def create(self, vals):
-		# Obsługa pojedynczego rekordu
-		if isinstance(vals, dict):
-			if not vals.get("uuid"):
-				vals["uuid"] = str(uuid.uuid4())
-		# Obsługa wielu rekordów
-		elif isinstance(vals, list):
-			for v in vals:
-				if isinstance(v, dict) and not v.get("uuid"):
-					v["uuid"] = str(uuid.uuid4())
+		if vals and not vals.get("uuid"):
+			vals["uuid"] = str(uuid.uuid4())
 		return super().create(vals)
 
 	@api.onchange("doc_direction", "root_tag", "namespace")
