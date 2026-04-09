@@ -274,7 +274,7 @@ class AccountMove(models.Model):
 		_logger.info(f"🧩 Walidacja faktury {self.name} względem schemy XSD z szablonu {template.name}")
 
 		try:
-			xml_bytes = template.generate_xml(self, in_memory=True)
+			xml_bytes = template.sudo().generate_xml(self, in_memory=True)
 			if not xml_bytes:
 				raise UserError(_("Nie udało się wygenerować pliku XML z szablonu."))
 		except Exception as e:
@@ -512,7 +512,7 @@ class AccountMove(models.Model):
 		# 1. Generujemy XML (in_memory=True)
 		# ----------------------------------------------------------------------
 		try:
-			xml_bytes = template.generate_xml(self, in_memory=True)
+			xml_bytes = template.sudo().generate_xml(self, in_memory=True)
 			if not xml_bytes:
 				raise UserError(_("Nie udało się wygenerować XML z szablonu."))
 
