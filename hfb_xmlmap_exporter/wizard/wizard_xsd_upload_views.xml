@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_xml_template_xsd_upload_wizard_form" model="ir.ui.view">
+    <field name="name">xml.template.xsd.upload.wizard.form</field>
+    <field name="model">xml.template.xsd.upload.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Wgraj schemę XSD" create="false" edit="false">
+        <group>
+          <field name="template_id" readonly="1"/>
+          <field name="xsd_file" filename="xsd_filename" required="1"/>
+          <field name="xsd_filename" required="1"/>
+        </group>
+        <footer>
+          <button name="action_apply" type="object" string="Zapisz i zastosuj" class="oe_highlight"/>
+          <button string="Anuluj" special="cancel" class="oe_link"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_xml_template_xsd_upload_wizard" model="ir.actions.act_window">
+    <field name="name">Wgraj XSD</field>
+    <field name="res_model">xml.template.xsd.upload.wizard</field>
+    <field name="view_mode">form,tree</field>
+    <field name="target">new</field>
+  </record>
+</odoo>

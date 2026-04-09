@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ACTION -->
+    <record id="action_communication_provider_localdir" model="ir.actions.act_window">
+        <field name="name">Provider LocalDir</field>
+        <field name="res_model">communication.provider.localdir</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- MENU -->
+    <menuitem id="menu_communication_provider_localdir"
+              name="Provider LocalDir"
+              parent="menu_communication_provider"
+              action="action_communication_provider_localdir"
+			  groups="base.group_system"
+              sequence="30"/>
+
+</odoo>

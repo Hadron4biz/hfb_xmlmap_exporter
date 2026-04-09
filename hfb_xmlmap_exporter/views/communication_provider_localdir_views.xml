@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    
+    <!-- Widok formularza dziedziczący bazowy widok communication.log -->
+    <record id="view_communication_log_form_localdir_buttons" model="ir.ui.view">
+        <field name="name">communication.log.form.localdir.buttons</field>
+        <field name="model">communication.log</field>
+        <field name="inherit_id" ref="hfb_xmlmap_exporter.view_communication_log_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Dodaj przyciski w headerze -->
+            <xpath expr="//sheet" position="inside">
+                <div class="oe_button_box" name="button_box">
+                    
+                    <!-- Przycisk "Wyślij do LocalDir" -->
+                    <button name="action_send_localdir" 
+                            type="object"
+                            string="Wyślij do LocalDir"
+                            class="oe_stat_button btn-primary"
+                            icon="fa-upload"
+                            invisible="[('provider_id.provider_type', '!=', 'localdir'), ('state', 'not in', ['generated', 'queued', 'draft'])]">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Wyślij</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Przycisk "Sprawdź status LocalDir" -->
+                    <button name="action_check_localdir_status" 
+                            type="object"
+                            string="Sprawdź status LocalDir"
+                            class="oe_stat_button btn-secondary"
+                            icon="fa-search"
+                            invisible="[('provider_id.provider_type', '!=', 'localdir'), ('state', '!=', 'sent')]">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Status</span>
+                        </div>
+                    </button>
+                    
+                    
+                </div>
+            </xpath>
+            
+            
+        </field>
+    </record>
+
+
+    <!-- ==========================================================
+         FORM VIEW – PROVIDER LocalDir (Odoo 18+)
+         ========================================================== -->
+    <!-- Widok formularza communication.provider.localdir -->
+    <record id="view_communication_provider_localdir_form" model="ir.ui.view">
+        <field name="name">communication.provider.localdir.form</field>
+        <field name="model">communication.provider.localdir</field>
+        <field name="arch" type="xml">
+            <form string="Konfiguracja LocalDir">
+                <header>
+					<button name="provider_test" 
+							type="object"
+							string="Testuj konfigurację"
+							class="oe_highlight"
+							icon="fa-play"/>
+							
+					<field name="active" widget="boolean_toggle" 
+						   class="oe_button_box" 
+						   invisible="1"/>
+                </header>
+                
+                <sheet>
+					<div class="oe_button_box" name="button_box">
+						<button type="object" name="provider_test" 
+								class="oe_stat_button"
+								icon="fa-play">
+							<div class="o_stat_info">
+								<span class="o_stat_text">Test</span>
+							</div>
+						</button>
+					</div>
+                    <group string="Podstawowe">
+                        <field name="name" required="1"/>
+                        <field name="code" required="1"/>
+                    </group>
+
+					<notebook>
+						<page string="Eksport">
+							<group>
+								<field name="output_path" required="1"/>
+								
+								<field name="file_naming" widget="radio"/>
+								
+								<field name="subdirectory_format"/>
+								
+								<div class="row">
+									<field name="auto_create_dirs" class="col-6"/>
+									<field name="overwrite_existing" class="col-6"/>
+								</div>
+							</group>
+						</page>
+						
+						<page string="Import" attrs="{ 'invisible': [( 'input_path', '=', False)]}">
+							<group>
+								<field name="input_path"/>
+								
+								<field name="import_pattern"/>
+								
+								<field name="delete_after_import"/>
+								
+								<div class="alert alert-info mt-4" role="alert">
+									<i class="fa fa-info-circle"/> 
+									<strong>Import automatyczny:</strong> 
+									System będzie regularnie sprawdzał ten katalog 
+									i importował nowe pliki.
+								</div>
+							</group>
+						</page>
+						
+						<page string="Test">
+							<group>
+								<div class="alert alert-warning" role="alert">
+									<i class="fa fa-warning"/> 
+									<strong>Przed użyciem przetestuj konfigurację.</strong>
+								</div>
+								
+								<div class="text-center mt-4">
+									<button name="provider_test" 
+											type="object"
+											string="Pełny test konfiguracji"
+											class="btn-primary btn-lg"
+											icon="fa-play"/>
+											
+								</div>
+							</group>
+						</page>
+					</notebook>                    
+                </sheet>
+                
+            </form>
+        </field>
+    </record>
+
+    <!-- LIST VIEW -->
+    <record id="view_communication_provider_localdir_list" model="ir.ui.view">
+        <field name="name">communication.provider.localdir.list</field>
+        <field name="model">communication.provider.localdir</field>
+        <field name="arch" type="xml">
+            <tree string="Provider LocalDir">
+                <field name="name"/>
+                <field name="code"/>
+            </tree>
+        </field>
+    </record>
+
+</odoo>

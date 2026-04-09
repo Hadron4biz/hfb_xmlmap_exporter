@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<!-- FORMULARZ WIZARDA -->
+	<record id="view_ksef_certificate_import_wizard_form" model="ir.ui.view">
+		<field name="name">ksef.certificate.import.wizard.form</field>
+		<field name="model">ksef.certificate.import.wizard</field>
+		<field name="arch" type="xml">
+			<form string="Import certyfikatów KSeF">
+				<header>
+
+					<field name="state" invisible="1"/>
+
+					<button name="action_validate_and_convert" 
+							string="Importuj i konwertuj" 
+							type="object" 
+							class="btn-primary"
+							confirm="Czy na pewno chcesz zaimportować te certyfikaty? Istniejące zostaną nadpisane."/>
+					<button name="action_cancel" 
+							string="Anuluj" 
+							type="object" 
+							class="btn-secondary"/>
+				</header>
+				
+				<sheet>
+					<div class="alert alert-info" role="alert" style="margin-bottom: 16px;">
+						<i class="fa fa-info-circle"/> 
+						<strong>KSeF - Import certyfikatów</strong><br/>
+						Ten kreator pomoże Ci przekonwertować certyfikaty pobrane z aplikacji MF KSeF<br/>
+						do formatu wymaganego przez system (.p12).
+					</div>
+					
+					<group>
+						<field name="config_id" 
+							   options="{'no_create': True}" 
+							   placeholder="Wybierz konfigurację KSeF..."/>
+					</group>
+					
+					<notebook>
+						<!-- KARTA 1: WYBÓR BACKENDU -->
+						<page string="1. Wybór backendu">
+							<group>
+								<div class="alert alert-warning" role="alert">
+									<i class="fa fa-exclamation-triangle"/>
+									<strong>Wybór backendu determinuje liczbę wymaganych certyfikatów!</strong>
+								</div>
+								
+								<field name="api_backend" widget="radio"/>
+								
+								<group string="Python HTTP Client" 
+									   attrs="{'invisible': [('api_backend', '!=', 'python')]}" >
+									<div class="alert alert-success">
+										<i class="fa fa-check-circle"/>
+										<strong>✅ Zalecany dla Odoo 18</strong><br/>
+										• Wymaga tylko <strong>JEDNEGO</strong> certyfikatu (AUTH)<br/>
+										• System samodzielnie podpisuje dokumenty<br/>
+										• Szybsza komunikacja, mniej zależności<br/>
+										• Łatwiejsza konfiguracja
+									</div>
+								</group>
+								
+								<group string="Java Client" 
+									   attrs="{'invisible': [('api_backend', '!=', 'java')]}" >
+									<div class="alert alert-info">
+										<i class="fa fa-coffee"/>
+										<strong>Java Client (z zewnętrznym JAR)</strong><br/>
+										• Wymaga <strong>DWÓCH</strong> certyfikatów (AUTH + SIGN)<br/>
+										• Używa zewnętrznych plików JAR do komunikacji<br/>
+										• Podpis realizowany przez JAR<br/>
+										• Wybierz tylko jeśli masz skonfigurowane JAR-y
+									</div>
+								</group>
+							</group>
+						</page>
+						
+						<!-- KARTA 2: AUTH (zawsze wymagany) -->
+						<page string="2. Certyfikat AUTH">
+							<group>
+								<group string="Pliki certyfikatu AUTH (wymagane)">
+									<field name="auth_cert_file" 
+										   filename="auth_cert_filename"
+										   widget="binary"
+										   accept=".crt,.pem"
+										   help="Plik certyfikat-api-auth.crt pobrany z MF KSeF"/>
+									<field name="auth_key_file" 
+										   filename="auth_key_filename"
+										   widget="binary"
+										   accept=".key,.pem"
+										   help="Plik certyfikat-api-auth.key pobrany z MF KSeF"/>
+									<field name="auth_key_password" 
+										   password="1"
+										   placeholder="Hasło klucza (opcjonalnie)"/>
+								</group>
+								<group string="Informacje">
+									<div class="alert alert-warning">
+										<strong>⚠️ Uwaga:</strong><br/>
+										• Jeśli klucz nie ma hasła, pozostaw pole puste<br/>
+										• Pliki muszą być w formacie PEM<br/>
+										• Certyfikat musi mieć algorytm RSA
+									</div>
+								</group>
+							</group>
+						</page>
+						
+						<!-- KARTA 3: SIGN (tylko dla Java) -->
+						<page string="3. Certyfikat SIGN" 
+							  attrs="{'invisible': [('api_backend', '!=', 'java')]}">
+							<group>
+								<group string="Pliki certyfikatu SIGN (wymagane dla Java)">
+									<field name="sign_cert_file" 
+										   filename="sign_cert_filename"
+										   widget="binary"
+										   accept=".crt,.pem"
+										   help="Plik certyfikat-api-sign.crt pobrany z MF KSeF"/>
+									<field name="sign_key_file" 
+										   filename="sign_key_filename"
+										   widget="binary"
+										   accept=".key,.pem"
+										   help="Plik certyfikat-api-sign.key pobrany z MF KSeF"/>
+									<field name="sign_key_password" 
+										   password="1"
+										   placeholder="Hasło klucza (opcjonalnie)"/>
+								</group>
+								<group string="Informacje">
+									<div class="alert alert-warning">
+										<strong>⚠️ Uwaga:</strong><br/>
+										• Wymagane tylko dla backendu Java<br/>
+										• Jeśli używasz Pythona, możesz pominąć tę sekcję<br/>
+										• Certyfikat musi mieć algorytm RSA
+									</div>
+								</group>
+							</group>
+						</page>
+						
+						<!-- KARTA 4: OPCJE -->
+						<page string="4. Zabezpieczenia">
+							<group>
+								<group string="Hasło dla plików .p12">
+									<field name="p12_password" 
+										   password="1"
+										   required="1"
+										   placeholder="Hasło dla plików .p12"/>
+									<field name="p12_password_confirm" 
+										   password="1"
+										   required="1"
+										   placeholder="Potwierdź hasło"/>
+								</group>
+								<group string="Opcje">
+									<field name="overwrite_existing"/>
+								</group>
+							</group>
+							<group>
+								<div class="alert alert-info">
+									<strong>💡 Informacja:</strong><br/>
+									To hasło będzie używane w konfiguracji KSeF.<br/>
+									Zapamiętaj je - będzie potrzebne do komunikacji z API.<br/>
+									Dla backendu Java oba pliki .p12 będą miały to samo hasło.
+								</div>
+							</group>
+						</page>
+						
+						<!-- KARTA 5: LOG -->
+						<page string="Log operacji" >
+							<field name="validation_log" 
+								   widget="ace" 
+								   options="{'mode': 'text'}"
+								   style="height: 400px; font-family: monospace;"/>
+							<field name="error_message" 
+								   attrs="{'invisible': [('error_message', '=', False)]}"
+								   style="color: red;"/>
+						</page>
+					</notebook>
+					
+					<!-- Status sukcesu -->
+					<div class="alert alert-success" 
+						 role="alert" 
+						 style="margin-top: 16px;"
+						 attrs="{'invisible': [('state', '!=', 'done')]}">
+						<i class="fa fa-check-circle"/> 
+						<strong>✅ Import zakończony sukcesem!</strong><br/>
+						<field name="validation_log" nolabel="1"/>
+						<div class="mt-2">
+							<button name="action_open_config" 
+									string="Otwórz konfigurację" 
+									type="object" 
+									class="btn-primary"/>
+						</div>
+					</div>
+					
+					<!-- Status błędu -->
+					<div class="alert alert-danger" 
+						 role="alert" 
+						 style="margin-top: 16px;"
+						 attrs="{'invisible': [('state', '!=', 'error')]}">
+						<i class="fa fa-exclamation-circle"/> 
+						<strong>❌ Wystąpił błąd:</strong><br/>
+						<field name="error_message"/>
+						<div class="mt-2">
+							<field name="validation_log" nolabel="1"/>
+						</div>
+					</div>
+				</sheet>
+			</form>
+		</field>
+	</record>
+	
+	<!-- AKCJA WIZARDA -->
+	<record id="action_ksef_certificate_import_wizard" model="ir.actions.act_window">
+		<field name="name">🔐 Import certyfikatów KSeF</field>
+		<field name="res_model">ksef.certificate.import.wizard</field>
+		<field name="view_mode">form</field>
+		<field name="target">new</field>
+		<field name="binding_view_types">form</field>
+		<field name="help" type="html">
+			<p class="o_view_nocontent_smiling_face">
+				Importuj certyfikaty KSeF
+			</p>
+			<p>
+				Ten kreator pomoże Ci przekonwertować certyfikaty pobrane z aplikacji MF KSeF
+				do formatu .p12 wymaganego przez system.
+			</p>
+			<p>
+				<strong>Python backend</strong> - wystarczy jeden certyfikat (AUTH)<br/>
+				<strong>Java backend</strong> - wymagane dwa certyfikaty (AUTH + SIGN)
+			</p>
+		</field>
+	</record>
+
+	<record id="view_communication_provider_ksef_form_inherit" model="ir.ui.view">
+		<field name="name">communication.provider.ksef.form.inherit</field>
+		<field name="model">communication.provider.ksef</field>
+		<field name="inherit_id" ref="view_communication_provider_ksef_form"/>
+		<field name="arch" type="xml">
+				<xpath expr="//field[@name='auth_keystore_p12']" position="before">
+					<button name="%(action_ksef_certificate_import_wizard)d" 
+							type="action" 
+							string="🔐 Importuj certyfikaty" 
+							class="btn-primary"
+							context="{'default_config_id': id}"/>
+				</xpath>
+		</field>
+	</record>
+
+
+</odoo>

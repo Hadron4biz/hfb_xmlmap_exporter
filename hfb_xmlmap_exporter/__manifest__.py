@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+#################################################################################
+#
+# Odoo, Open ERP Source Management Solution
+# Copyright (C) 17-25 Hadron for business sp. z o.o. (http://www.hadron.eu.com)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#################################################################################
+{
+	"name": "eXtensible Exchange Template Base Provider",
+	"summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
+	"version": "15.1.3",
+	"license": "AGPL-3",
+	"author": "Andrzej Wiśniewski",
+	"website": "https://wisand.eu",
+	"depends": [
+		"base",
+		"mail",
+		"sale",
+		"account",
+	],
+	"data": [
+		# --- security zawsze pierwsze ---
+		"security/security.xml",
+		"security/ir.model.access.csv",
+
+		# --- widoki modeli, które tworzą modele ---
+		"views/xml_node_views.xml",
+		"views/xml_template_views.xml",
+		"views/actions.xml",
+		"wizard/template_name_wizard_views.xml",
+		"wizard/wizard_xsd_upload_views.xml",
+		"views/account_move_view.xml",
+		"wizard/wizard_template_import_json.xml",
+
+		# --- dane, które odwołują się do modeli ---
+		"views/xml_types_views.xml",
+		#"data/communication_provider_data.xml",
+
+		# --- a po nich widoki modeli ---
+		"views/communication_log_views.xml",
+		"views/communication_provider_views.xml",
+		"views/communication_provider_localdir_views.xml",
+		"views/communication_provider_ksef_views.xml",
+		'views/xml_xsd_import_wizard_views.xml',
+
+		# --- menu dla wszystkich operacji ---
+		"views/menu.xml",
+        "views/communication_provider_localdir_menu.xml",
+        "views/communication_provider_ksef_menu.xml",
+		"wizard/wizard_template_import_json_menu.xml",
+
+		# --- addons
+		"views/upo_pdf_templates.xml",
+		"views/report_invoice_ksef_qr.xml",
+		"views/cron.xml",
+		"wizard/communication_provider_config_wizard_view.xml",
+		"wizard/ksef_certificate_import_wizard_view.xml",
+	],
+	'assets': {
+		'web.assets_backend': [
+			'hfb_xmlmap_exporter/static/src/js/reload_after_notification.js',
+		],
+	},
+	"demo": [
+		"data/communication_channel_demo.xml",
+	],
+	'images': [
+		'static/description/Banner.png',
+		'hfb_xmlmap_exporter/static/description/icon.png',
+	],
+	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
+	"assets": {},
+	"application": True,
+	"installable": True,
+}
+#EoF
