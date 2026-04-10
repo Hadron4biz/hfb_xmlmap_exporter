@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.0.1
+"""@version 19.1.4
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -47,7 +47,6 @@ from markupsafe import Markup, escape
 
 import logging
 _logger = logging.getLogger(__name__)
-
 
 """
 Faktura (account.move) 
@@ -128,6 +127,58 @@ class AccountMove(models.Model):
 			"context": {"default_document_model": "account.move",
 						"default_document_id": self.id},
 		}
+
+	# ------------------------------------------------------------------------------------------------------
+	# Metody pomocnicze dla pól podatku: P_13_x oraz P_14_x i P_15
+	# ------------------------------------------------------------------------------------------------------
+	def _get_ksef_tax_group_data(self, ksef_tax_name):
+		"""Pomocnicza metoda szukająca danych podatkowych z większą tolerancją."""
+		self.ensure_one()
+		
+		# Próba 1: Użycie tax_totals (najdokładniejsze)
+		totals = self.tax_totals or {}
+		groups = totals.get('groups_by_subtotal', {}).get('Untaxed Amount', [])
+		
+		for group in groups:
+			g_name = str(group.get('tax_group_name', ''))
+			# Szukamy dokładnego dopasowania lub czy szukana fraza jest częścią nazwy
+			if g_name == ksef_tax_name or ksef_tax_name in g_name:
+				return {
+					'base': group.get('tax_group_base_amount', 0.0),
+					'tax': group.get('tax_group_amount', 0.0)
+				}
+
+		# Próba 2: Jeśli tax_totals zawiodło (np. błąd cache), liczymy z linii
+		relevant_lines = self.invoice_line_ids.filtered(
+			lambda l: any(ksef_tax_name in t.name or str(ksef_tax_name) in t.name for t in l.tax_ids)
+		)
+		if relevant_lines:
+			base = sum(relevant_lines.mapped('price_subtotal'))
+			# Obliczamy podatek dla tych linii korzystając z wbudowanej metody Odoo
+			taxes = relevant_lines.tax_ids.compute_all(base, self.currency_id, 1.0, product=relevant_lines[0].product_id, partner=self.partner_id)
+			return {
+				'base': base,
+				'tax': sum(t['amount'] for t in taxes['taxes'])
+			}
+			
+		return None
+
+	def get_ksef_p13(self, ksef_tax_name):
+		res = self._get_ksef_tax_group_data(ksef_tax_name)
+		return res['base'] if res else None
+
+	def get_ksef_p14(self, ksef_tax_name):
+		res = self._get_ksef_tax_group_data(ksef_tax_name)
+		return res['tax'] if res else None
+
+	def get_ksef_p15(self):
+		"""Sumuje wszystkie podatki z tax_totals lub linii."""
+		self.ensure_one()
+		totals = self.tax_totals or {}
+		groups = totals.get('groups_by_subtotal', {}).get('Untaxed Amount', [])
+		if groups:
+			return sum(float(g.get('tax_group_amount', 0.0)) for g in groups)
+		return self.amount_tax # Ostateczność
 
 	########################################################################################################
 	# pomocnicze
@@ -354,7 +405,6 @@ class AccountMove(models.Model):
 		except Exception as e:
 			_logger.warning(f"⚠️  Nie udało się zapisać logu walidacji: {e}")
 
-
 		return {
 			"type": "ir.actions.act_window",
 			"res_model": "account.move",
@@ -390,6 +440,28 @@ class AccountMove(models.Model):
 				"exec_reload": True,
 			},
 		}
+
+	# ------------------------------------------------------------------------------------------------------
+	# Wymuszenie wysyłki jeśli jest możliwe
+	# ------------------------------------------------------------------------------------------------------
+	def action_send_manual(self):
+		domain = [
+			( 'document_id', '=', self.id),
+			( 'document_model', '=', 'account.move' )
+		]
+		log = self.env['communication.log'].sudo().search(domain, limit=1)
+		comm_status = 'none'
+		if log:
+			comm_status = log.state
+			log.sudo().action_send_manual()
+
+		_logger.info(
+			f"\n action_send_manual document: {self.name}"
+			f"\n ksef_process_state {self.ksef_process_state} "
+			f'\n communication.log {log}'
+			f'\n comm_status {comm_status}'
+			f"\n___________________________________________________________________________________________"
+		)
 
 	########################################################################################################
 
@@ -639,7 +711,6 @@ class AccountMove(models.Model):
 		# ... do implementacji po analizie dalszej części schematu
 		
 		return fa_data
-
 
 
 #EoF
