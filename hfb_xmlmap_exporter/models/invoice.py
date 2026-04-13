@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.4
+"""@version 18.1.5
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -134,11 +134,11 @@ class AccountMove(models.Model):
 	def _get_ksef_tax_group_data(self, ksef_tax_name):
 		"""Pomocnicza metoda szukająca danych podatkowych z większą tolerancją."""
 		self.ensure_one()
-		
+
 		# Próba 1: Użycie tax_totals (najdokładniejsze)
 		totals = self.tax_totals or {}
 		groups = totals.get('groups_by_subtotal', {}).get('Untaxed Amount', [])
-		
+
 		for group in groups:
 			g_name = str(group.get('tax_group_name', ''))
 			# Szukamy dokładnego dopasowania lub czy szukana fraza jest częścią nazwy
@@ -160,25 +160,34 @@ class AccountMove(models.Model):
 				'base': base,
 				'tax': sum(t['amount'] for t in taxes['taxes'])
 			}
-			
+
 		return None
 
 	def get_ksef_p13(self, ksef_tax_name):
 		res = self._get_ksef_tax_group_data(ksef_tax_name)
-		return res['base'] if res else None
+		return round(res['base'], 2) if res else None
 
 	def get_ksef_p14(self, ksef_tax_name):
 		res = self._get_ksef_tax_group_data(ksef_tax_name)
-		return res['tax'] if res else None
+		return round(res['tax'], 2) if res else None
 
 	def get_ksef_p15(self):
-		"""Sumuje wszystkie podatki z tax_totals lub linii."""
+		"""
+		Zwraca kwotę należności ogółem (P_15).
+		Zgodnie z FA(3), P_15 = Suma wszystkich kwot netto + suma wszystkich kwot VAT.
+		"""
 		self.ensure_one()
-		totals = self.tax_totals or {}
-		groups = totals.get('groups_by_subtotal', {}).get('Untaxed Amount', [])
-		if groups:
-			return sum(float(g.get('tax_group_amount', 0.0)) for g in groups)
-		return self.amount_tax # Ostateczność
+
+		# Sposób 1: Najbezpieczniejszy w Odoo - bezpośrednie pole z rekordu.
+		# amount_total w account.move to suma netto + podatki po wszystkich rabatach.
+		if self.amount_total:
+			return self.amount_total
+
+		# Sposób 2: Rezerwowy (jeśli amount_total byłoby z jakiegoś powodu puste)
+		# amount_untaxed (netto) + amount_tax (podatek)
+		amount_brutto = self.amount_untaxed + self.amount_tax
+		
+		return amount_brutto
 
 	########################################################################################################
 	# pomocnicze

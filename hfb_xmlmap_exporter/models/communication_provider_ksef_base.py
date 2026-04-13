@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.4
+"""@version 18.1.5
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -525,133 +525,85 @@ class AccountMoveKsef(models.Model):
 	# --- Podstawowe oznaczenia (sekcja Adnotacje) ---
 	ksef_p16 = fields.Selection(
 		[
-			('1', '1 – metoda kasowa'),
-			('2', '2 – brak metody kasowej')
+			('1', '1 – TAK (metoda kasowa)'),
+			('2', '2 – NIE (brak metody kasowej)')
 		],
 		string="Metoda kasowa (P_16)",
 		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_16 w strukturze faktury FA(3) KSeF.
-		
-		W przypadku dostawy towarów lub świadczenia usług, w odniesieniu do których
-		obowiązek podatkowy powstaje zgodnie z art. 19a ust. 5 pkt 1 lub art. 21 ust. 1 ustawy
-		- wyrazy "metoda kasowa"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
-		"""
+		help="Wartość '1' oznacza stosowanie metody kasowej (art. 21 ust. 1). Standardowo '2'."
 	)
 
 	ksef_p17 = fields.Selection(
 		[
-			('1', '1 – samofakturowanie'),
-			('2', '2 – brak samofakturowania')
+			('1', '1 – TAK (samofakturowanie)'),
+			('2', '2 – NIE (brak samofakturowania)')
 		],
 		string="Samofakturowanie (P_17)",
 		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_17 w strukturze faktury FA(3) KSeF.
-		
-		W przypadku faktur, o których mowa w art. 106d ust. 1 ustawy - wyraz "samofakturowanie";
-		należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
-		"""
+		help="Wartość '1' oznacza, że fakturę wystawia nabywca. Standardowo '2'."
 	)
 
 	ksef_p18 = fields.Selection(
 		[
-			('1', '1 – odwrotne obciążenie'),
-			('2', '2 – brak odwrotnego obciążenia')
+			('1', '1 – TAK (odwrotne obciążenie)'),
+			('2', '2 – NIE (brak odwrotnego obciążenia)')
 		],
 		string="Odwrotne obciążenie (P_18)",
 		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_18 w strukturze faktury FA(3) KSeF.
-		
-		W przypadku dostawy towarów lub wykonania usługi, dla których obowiązanym do rozliczenia
-		podatku od wartości dodanej lub podatku o podobnym charakterze jest nabywca towaru lub usługi
-		- wyrazy "odwrotne obciążenie"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
-		"""
+		help="Wartość '1' oznacza Reverse Charge. Wymaga stawki 'np' w liniach. Standardowo '2'."
 	)
 
 	ksef_p18a = fields.Selection(
 		[
-			('1', '1 – mechanizm podzielonej płatności (MPP)'),
-			('2', '2 – brak mechanizmu podzielonej płatności')
+			('1', '1 – TAK (mechanizm podzielonej płatności)'),
+			('2', '2 – NIE (brak MPP)')
 		],
 		string="Mechanizm podzielonej płatności (P_18A)",
 		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_18A w strukturze faktury FA(3) KSeF.
-		
-		W przypadku faktur, w których kwota należności ogółem przekracza kwotę 15 000 zł lub jej
-		równowartość wyrażoną w walucie obcej, obejmujących dokonaną na rzecz podatnika dostawę towarów
-		lub świadczenie usług, o których mowa w załączniku nr 15 do ustawy - wyrazy 
-		"mechanizm podzielonej płatności"; należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
-		"""
+		help="Wartość '1' dla MPP (obowiązkowy powyżej 15 tys. PLN dla zał. 15). Standardowo '2'."
 	)
 
 	ksef_p19n = fields.Selection(
 		[
-			('1', '1 – brak zwolnień'),
-			('2', '2 – występują zwolnienia')
+			('1', '1 – TAK (brak dostaw zwolnionych)'),
+			('2', '2 – NIE (występują dostawy zwolnione)')
 		],
 		string="Brak zwolnień (P_19N)",
-		default='2',
-		copy=False,
-		help="Znacznik braku dostawy towarów lub świadczenia usług zwolnionych od podatku."
+		default='1', # DLA FAKTUR VAT TO MUSI BYĆ 1
+		copy=False
 	)
 
 	ksef_p22n = fields.Selection(
 		[
-			('1', '1 – brak nowych środków transportu'),
-			('2', '2 – występują nowe środki transportu')
+			('1', '1 – TAK (brak nowych środków transportu)'),
+			('2', '2 – NIE (występują nowe środki transportu)')
 		],
 		string="Brak nowych środków transportu (P_22N)",
-		default='1',
-		copy=False,
-		help="Znacznik braku wewnątrzwspólnotowej dostawy nowych środków transportu."
+		default='1', # DLA ZWYKŁYCH FAKTUR TO MUSI BYĆ 1
+		copy=False
 	)
 
 	ksef_p23 = fields.Selection(
 		[
-			('1', '1 – procedura uproszczona (drugi w kolejności podatnik)'),
-			('2', '2 – brak procedury uproszczonej')
+			('1', '1 – TAK (procedura uproszczona - trójstronna)'),
+			('2', '2 – NIE (brak procedury uproszczonej)')
 		],
 		string="Procedura uproszczona (P_23)",
 		default='2',
 		copy=False,
-		help="""
-		Pole odpowiada elementowi P_23 w strukturze faktury FA(3) KSeF.
-		
-		W przypadku faktur wystawianych w procedurze uproszczonej przez drugiego w kolejności podatnika,
-		o którym mowa w art. 135 ust. 1 pkt 4 lit. b i c oraz ust. 2 ustawy, zawierającej adnotację,
-		o której mowa w art. 136 ust. 1 pkt 1 ustawy i stwierdzenie, o którym mowa w art. 136 ust. 1 pkt 2 ustawy,
-		należy podać wartość '1', w przeciwnym przypadku - wartość '2'.
-		"""
+		help="Dotyczy transakcji trójstronnych (drugi w kolejności podatnik). Standardowo '2'."
 	)
 
 	ksef_pmarzyn = fields.Boolean(
-		string="Procedura marży – inne przypadki (PMarzyN)",
+		string="Procedura marży (PMarzyN)",
 		copy=False,
-		help="""
-		Pole odpowiada elementowi PMarzyN w strukturze faktury FA(3) KSeF.
-
-		Oznacza zastosowanie procedury marży w innych przypadkach niż wskazane
-		w dedykowanych oznaczeniach faktury (np. P_19N, P_22N, P_23).
-
-		Wartości:
-		• zaznaczone – faktura została wystawiona w procedurze marży
-		  w innym przypadku przewidzianym przepisami VAT
-		• niezaznaczone – procedura marży nie ma zastosowania
-
-		Oznaczenie to stosowane jest pomocniczo do wskazania szczególnego
-		sposobu opodatkowania VAT, w którym podstawą opodatkowania jest marża
-		sprzedawcy. Wartość pola jest przenoszona do struktury XML
-		przekazywanej do KSeF.
-		"""
+		help="Zaznaczenie (True) przesyła informację o procedurze marży. Wymaga braku stawek VAT w sekcji P_13/P_14."
 	)
-
+	###################################################################################################################
 	ksef_is_jst = fields.Boolean(
 		string="Jednostka samorządu terytorialnego (JST)",
 		copy=False,
@@ -672,6 +624,7 @@ class AccountMoveKsef(models.Model):
 		"""
 	)
 
+	########################################################################################################
 	ksef_is_vat_group = fields.Boolean(
 		string="Grupa VAT (GV)",
 		copy=False,

@@ -210,37 +210,19 @@
 						</group>
 						
 						<!-- Grupa 2: Typy i statusy faktur -->
-						<group string="Typ faktury KSeF">
-							<field name="ksef_issue_mode" />
-							<separator />
-							<field name="ksef_p16" />
-							<field name="ksef_p17"
-								   placeholder="1 lub 2"/>
-							<field name="ksef_p23"
-								   placeholder="1 lub 2"/>
-							<field name="ksef_is_advance"
-								   help="Czy faktura jest zaliczkowa (ZAL)"/>
-							<field name="ksef_is_settlement"
-								   help="Czy faktura jest rozliczeniowa (ROZ)"/>
-							<field name="ksef_is_upr"
-								   help="Czy faktura jest uproszczona (UPR)"/>
-							<field name="ksef_correction_type"
-								   help="Typ korekty: standardowa, zaliczkowa lub rozliczeniowa"/>
-						</group>
-						
-						<!-- Grupa 3: Specjalne procedury VAT -->
-						<group string="Specjalne procedury VAT">
-							<field name="ksef_p18" />
-							<field name="ksef_p18a" />
-							<field name="ksef_p19n" />
-							<field name="ksef_pmarzyn"
-								   help="Czy dotyczy procedury marży VAT (pole specjalne KSeF)."
-								   placeholder="Zaznacz, jeśli dotyczy"/>
+						<group string="Adnotacje">
+							<field name="ksef_p16"  string="Metoda kasowa" />
+							<field name="ksef_p17"  string="Samofakturowanie" />
+							<field name="ksef_p18"  string="Odwrotne obciążenie" />
+							<field name="ksef_p18a" string="Mechanizm podzielonej płatności (MPP)" />
+							<field name="ksef_p19n" string="Brak zwolnień (P_19N)" />
+							<field name="ksef_p22n" string="Brak nowych środków transportu (P_22N)" />
+							<field name="ksef_p23"  string="Procedura uproszczona (P_23)" />
+							<field name="ksef_pmarzyn" string="Procedura marży (PMarzyN)" />
 						</group>
 						
 						<!-- Grupa 4: Podmioty specjalne -->
 						<group string="Podmioty specjalne">
-							<field name="ksef_p22n" />
 							<field name="ksef_is_jst"
 								   help="Czy podmiot to jednostka samorządu terytorialnego (JST)."
 								   placeholder="Zaznacz, jeśli dotyczy"/>
@@ -332,13 +314,13 @@
 						string="Wystaw fakturę OFFLINE"
 						class="btn-primary"
 						invisible="move_type in ['in_invoice', 'in_refund'] or ksef_issue_mode != 'online' and xsd_validation_state in ['invalid'] "
-						confirm="Wystawienie faktury w trybie OFFLINE oznacza, że KSeF był niedostępny lub spełnione są przesłanki ustawowe. Decyzja jest nieodwracalna i wiąże się z obowiązkiem późniejszego dosłania faktury do KSeF. Czy chcesz kontynuować?"/>
+						confirm="🚨 Wystawienie faktury w trybie OFFLINE oznacza, że KSeF był niedostępny lub spełnione są przesłanki ustawowe. Decyzja jest nieodwracalna i wiąże się z obowiązkiem późniejszego dosłania faktury do KSeF. Czy chcesz kontynuować?"/>
 
 				<button name="action_create_ksef_correction"
 					   type="object"
 					   string="Korekta KSeF"
 					   class="btn-info"
-					   confirm="Wystawienie korekty KSeF dla tej faktury VAT spowoduje rozliczeniej bieżacej notą księgową i utworzenie nowej faktury w której dokonasz korekt. Czy chcesz kontynuować?"
+					   confirm="⚠️  Wystawienie korekty KSeF dla tej faktury VAT spowoduje rozliczeniej bieżacej notą księgową i utworzenie nowej faktury w której dokonasz korekt. Czy chcesz kontynuować?"
 					   invisible="move_type in ['in_invoice', 'in_refund'] or not ksef_number and xsd_validation_state in ['none','invalid']" />
 
 				<button name="action_send_manual"
