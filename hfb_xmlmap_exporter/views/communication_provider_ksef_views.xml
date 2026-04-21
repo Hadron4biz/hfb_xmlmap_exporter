@@ -65,24 +65,21 @@
 						
 						<!-- KARTA 2: Certyfikat -->
 						<page string="Certyfikat" invisible="auth_type != 'certificate'">
-							<group string="Konfiguracja sesji NIP">
+							<group name="nip" string="Konfiguracja sesji NIP">
 								<field name="company_nip" readonly="0"/>
 								
 							</group>
-							<group>
-								<group string="Konfiguracja certyfikatu">
-									<field name="auth_keystore_p12"/>
-									<field name="auth_keystore_password" placeholder="Hasło do certyfikatu" password="1"/>
+							<group name="konfiguracja" string="Konfiguracja certyfikatu">
 
-									<field name="sign_keystore_p12"/>
-									<field name="sign_keystore_password" placeholder="Hasło do certyfikatu" password="1"/>
+								<field name="auth_keystore_p12"/>
+								<field name="auth_keystore_password" placeholder="Hasło do certyfikatu" password="1"/>
 
-								</group>
+								<field name="sign_keystore_p12"/>
+								<field name="sign_keystore_password" placeholder="Hasło do certyfikatu" password="1"/>
+
 							</group>
 							<group>
-								<group>
-									<field name="mf_certificate_pem" />
-								</group>
+								<field name="mf_certificate_pem" />
 							</group>
 						</page>
 						
@@ -143,7 +140,6 @@
 							</group>
 							
 						</page>
-
 
 						<page string="Import Configuration" name="import_config">
 							<group string="Automatic Import Settings">

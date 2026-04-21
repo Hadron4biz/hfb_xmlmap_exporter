@@ -39,3 +39,6 @@ access_communication_provider_config_wizard_system,communication.provider.config
 access_communication_provider_config_wizard_list_user,communication.provider.config.wizard.list.user,model_communication_provider_config_wizard_list,base.group_user,1,1,1,1
 access_communication_provider_config_wizard_list_system,communication.provider.config.wizard.list.system,model_communication_provider_config_wizard_list,base.group_system,1,1,1,1
 
+access_ksef_certificate_import_wizard_user,ksef.certificate.import.wizard user,model_ksef_certificate_import_wizard,base.group_user,1,1,1,0
+access_ksef_certificate_import_wizard_system,ksef.certificate.import.wizard system,model_ksef_certificate_import_wizard,base.group_system,1,1,1,1
+
