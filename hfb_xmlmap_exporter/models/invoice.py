@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.5
+"""@version 18.1.6
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -128,10 +128,11 @@ class AccountMove(models.Model):
 						"default_document_id": self.id},
 		}
 
+
 	# ------------------------------------------------------------------------------------------------------
 	# Metody pomocnicze dla pól podatku: P_13_x oraz P_14_x i P_15
 	# ------------------------------------------------------------------------------------------------------
-	def _get_ksef_tax_group_data(self, ksef_tax_name):
+	def ERR_get_ksef_tax_group_data(self, ksef_tax_name):
 		"""Pomocnicza metoda szukająca danych podatkowych z większą tolerancją."""
 		self.ensure_one()
 
@@ -162,6 +163,36 @@ class AccountMove(models.Model):
 			}
 
 		return None
+
+	def _get_ksef_tax_group_data(self, ksef_tax_name):
+		self.ensure_one()
+
+		# 1. Pobierz linię produktową, aby uzyskać bazę (netto)
+		# Price_subtotal w Odoo zawsze zawiera wartość netto (bez podatku),
+		# nawet jeśli podatek jest w cenie (tax_included).
+		relevant_lines = self.invoice_line_ids.filtered(
+			lambda l: any(ksef_tax_name in t.name for t in l.tax_ids)
+		)
+		if not relevant_lines:
+			return None
+		
+		base_amount = sum(relevant_lines.mapped('price_subtotal'))
+
+		# 2. Pobierz kwotę podatku bezpośrednio z linii podatkowych (tax_line_ids)
+		# Szukamy linii, gdzie tax_line_id nie jest puste
+		tax_lines = self.line_ids.filtered(
+			lambda l: l.tax_line_id and ksef_tax_name in l.tax_line_id.name
+		)
+		
+		# 'balance' w Odoo dla kredytu (zobowiązanie) jest ujemne, 
+		# więc bierzemy wartość bezwzględną
+		tax_amount = abs(sum(tax_lines.mapped('balance')))
+
+		return {
+			'base': base_amount,
+			'tax': tax_amount
+		}
+
 
 	def get_ksef_p13(self, ksef_tax_name):
 		res = self._get_ksef_tax_group_data(ksef_tax_name)
@@ -335,7 +366,7 @@ class AccountMove(models.Model):
 		template = self.xml_export_template_id
 
 		if not template:
-			raise UserError(_("Brak przypisanego szablonu eksportu XML do tej faktury."))
+			raise UserError(_("Przypisz szablon XET dla tego dokumentu."))
 
 		# 🔹 Tryb 1: Walidacja logiczna (brak XSD)
 		if not template.xsd_attachment_id:

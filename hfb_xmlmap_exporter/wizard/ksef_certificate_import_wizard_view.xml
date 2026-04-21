@@ -8,6 +8,8 @@
 		<field name="arch" type="xml">
 			<form string="Import certyfikatów KSeF">
 				<header>
+					<field name="state" invisible="1" />
+
 					<button name="action_validate_and_convert" 
 							string="Importuj i konwertuj" 
 							type="object" 
@@ -24,7 +26,10 @@
 						<i class="fa fa-info-circle"/> 
 						<strong>KSeF - Import certyfikatów</strong><br/>
 						Ten kreator pomoże Ci przekonwertować certyfikaty pobrane z aplikacji MF KSeF<br/>
-						do formatu wymaganego przez system (.p12).
+						do formatu wymaganego przez system (.p12).<br/>
+                        <strong>
+                            <a href="/hfb_xmlmap_exporter/static/description/przygotowanie-certyfikatow.html" target="_blank" >👉 Przeczytaj jak to zrobić</a>
+                        </strong>
 					</div>
 					
 					<group>
@@ -223,20 +228,19 @@
 		</field>
 	</record>
 
-	<record id="view_communication_provider_ksef_form_inherit" model="ir.ui.view">
-		<field name="name">communication.provider.ksef.form.inherit</field>
-		<field name="model">communication.provider.ksef</field>
-		<field name="inherit_id" ref="view_communication_provider_ksef_form"/>
-		<field name="arch" type="xml">
-				<xpath expr="//field[@name='auth_keystore_p12']" position="before">
-					<button name="%(action_ksef_certificate_import_wizard)d" 
-							type="action" 
-							string="🔐 Importuj certyfikaty" 
-							class="btn-primary"
-							context="{'default_config_id': id}"/>
-				</xpath>
-		</field>
-	</record>
-
+    <record id="view_communication_provider_ksef_form_inherit" model="ir.ui.view">
+        <field name="name">communication.provider.ksef.form.inherit</field>
+        <field name="model">communication.provider.ksef</field>
+        <field name="inherit_id" ref="view_communication_provider_ksef_form"/>
+        <field name="arch" type="xml">
+                <xpath expr="//group[@name='konfiguracja']" position="before">
+                    <button name="%(action_ksef_certificate_import_wizard)d" 
+                            type="action" 
+                            string="🔐 Importuj certyfikaty 🛡️ " 
+                            class="btn btn-primary w-25"
+                            context="{'default_config_id': id}"/>
+                </xpath>
+        </field>
+    </record>
 
 </odoo>
