@@ -31,5 +31,7 @@
 # property of the author.
 #################################################################################
 from . import models
+from . import reports
 from . import wizard
+
 #EoF

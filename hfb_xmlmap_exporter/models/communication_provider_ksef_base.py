@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.5
+"""@version 19.1.6
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -57,11 +57,24 @@ class SaleAdvancePaymentInv(models.TransientModel):
 	def _create_invoices(self, sale_orders):
 		invoices = super()._create_invoices(sale_orders)
 
+		_logger.info( f"\n👉👉👉 SaleAdvancePaymentInv _create_invoices: sale_orders {sale_orders} invoices {invoices} ")
+
 		# Jeżeli to zaliczka
 		if self.advance_payment_method in ('percentage', 'fixed'):
 			for invoice in invoices:
 				invoice.ksef_rodzaj_faktury = 'ZAL'
 				invoice.order_id = sale_orders.id
+
+				valid_lines = sale_orders.order_line.filtered(
+					lambda l: not l.display_type and l.product_id
+				)
+
+				invoice.write({
+					'sale_order_line_ids': [(6, 0, valid_lines.ids)]
+				})
+
+				##invoice.write({ 'sale_order_line_ids': [(6, 0, sale_orders.order_line.ids)] })
+				_logger.info( "\n📌👉 AFTER WRITE: %s", invoice.sale_order_line_ids.ids )
 
 		return invoices
 
@@ -70,6 +83,8 @@ class SaleOrder(models.Model):
 
 	def _create_invoices(self, grouped=False, final=False):
 		moves = super()._create_invoices(grouped=grouped, final=final)
+
+		_logger.info( f"\n👉👉👉 SaleOrder _create_invoices: {self.name} moves {moves} ")
 
 		for order in self:
 			related_moves = moves.filtered(lambda m: m.invoice_origin == order.name)
@@ -84,6 +99,8 @@ class SaleOrder(models.Model):
 
 			for move in related_moves:
 				move.order_id = order.id
+				move.write({ 'sale_order_line_ids': [(6, 0, order.order_line.ids)] })
+				_logger.info( "\n📌 AFTER WRITE: %s", move.sale_order_line_ids.ids )
 
 				if zal_exists:
 					move.ksef_rodzaj_faktury = 'ROZ'
@@ -225,6 +242,12 @@ class AccountMoveLineKsef(models.Model):
 #################################################################################
 class AccountMoveKsef(models.Model):
 	_inherit = "account.move"
+
+	sale_order_line_ids = fields.Many2many(
+		'sale.order.line',
+		string='KSeF Order Lines',
+		
+	)
 
 	ksef_log_id = fields.Many2one(
 		"communication.log",
@@ -799,9 +822,9 @@ class AccountMoveKsef(models.Model):
 
 	ksef_correction_type = fields.Selection([
 		('0', 'To nie jest korekta'),
-		('1', 'Korekta danych formalnych'),
-		('2', 'Korekta danych rachunkowych'),
-		('3', 'Korekta danych formalnych i rachunkowych')
+		('1', 'Korekta skutkująca w dacie ujęcia faktury pierwotnej'),
+		('2', 'Korekta skutkująca w dacie wystawienia faktury korygującej'),
+		('3', 'Korekta skutkująca w dacie innej, w tym gdy dla różnych pozycji faktury korygującej daty te są różne')
 		],
 		default='0'
 	)
@@ -978,13 +1001,13 @@ class AccountMoveKsef(models.Model):
 	def _prepare_ksef_correction_lines(self):
 		"""
 		Zwraca recordset linii faktury: [źródłowa, bieżąca], [źródłowa, bieżąca], ...
-		Wyłącznie dla faktur korekt typu KOR, typ 2/3.
+		Wyłącznie dla faktur korekt typu KOR, typ 1/2/3.
 		"""
 		self.ensure_one()
 		if (
 			self.ksef_rodzaj_faktury != 'KOR'
 			or self.move_type != 'out_invoice'
-			or self.ksef_correction_type not in ['2', '3']
+			or self.ksef_correction_type not in ['1', '2', '3']
 		):
 			return self.invoice_line_ids
 

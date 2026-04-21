@@ -80,11 +80,11 @@
 		</field>
 	</record>
 
-    <record id="view_move_tree_inherit_xsd_validate" model="ir.ui.view">
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_invoice_tree" />
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='abnormal_date_warning']" position="after" >
+	<record id="view_move_tree_inherit_xsd_validate" model="ir.ui.view">
+		<field name="model">account.move</field>
+		<field name="inherit_id" ref="account.view_invoice_tree" />
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='abnormal_date_warning']" position="after" >
 				<field name="ksef_number" 
 					decoration-warning="ksef_process_state in ('none','queued')"
 					decoration-info="ksef_process_state in ('processing','waiting')"
@@ -96,8 +96,8 @@
 				<field name="ksef_process_state" 
 					optional="show" />
 			</xpath>
-        </field>
-    </record>
+		</field>
+	</record>
 
 	<record id="view_move_form_inherit_xsd_validate" model="ir.ui.view">
 		<field name="name">account.move.form.xsd.validate</field>
@@ -267,12 +267,17 @@
 					</group>
 				</page>
 
-                <page string="Zaliczki KSeF" name="ksef_tab_zal" id="ksef_tab_zal" invisible="ksef_rodzaj_faktury in ['VAT','KOR','ZAL','KOR_ZAL']"   >
-                    <group>
-                        <field name="ksef_related_zal_ids" />
-                    </group>
-                </page>
+				<page string="Zaliczki KSeF" name="ksef_tab_zal" id="ksef_tab_zal" invisible="ksef_rodzaj_faktury in ['VAT','KOR','ZAL','KOR_ZAL']"   >
+					<group>
+						<field name="ksef_related_zal_ids" />
+					</group>
+				</page>
 
+				<page string="Wiersze Zamówienia" name="ksef_tab_order_lines" invisible="ksef_rodzaj_faktury in ['VAT','KOR','ROZ','KOR_ZAL']"   >
+					<group>
+						<field name="sale_order_line_ids" readonly="1" />
+					</group>
+				</page>
 
 			</xpath>
 
@@ -289,19 +294,19 @@
 						icon="fa-check-circle"
 						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['valid','invalid']" />
 
-                <button name="action_validate_template"
-                        string="Weryfikacja Poprawna"
-                        type="object"
-                        class="btn-primary"
-                        icon="fa-check-circle"
-                        invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','invalid'] " />
+				<button name="action_validate_template"
+						string="Weryfikacja Poprawna"
+						type="object"
+						class="btn-primary"
+						icon="fa-check-circle"
+						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','invalid'] " />
 
-                <button name="action_validate_template"
-                        string="Błędy Weryfikacji POWTÓRZ"
-                        type="object"
-                        class="btn-warning"
-                        icon="fa-check-circle"
-                        invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','valid'] " />
+				<button name="action_validate_template"
+						string="Błędy Weryfikacji POWTÓRZ"
+						type="object"
+						class="btn-warning"
+						icon="fa-check-circle"
+						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','valid'] " />
 
 				<button name="action_export_xml"
 						type="object"
@@ -325,18 +330,27 @@
 
 				<button name="action_send_manual"
 						type="object"
-                        string="Force Send 🚀"
-                        class="btn-danger"
-                        invisible="ksef_process_state in ['error','completed','imported','offline','none']"/>
+						string="Force Send 🚀"
+						class="btn-danger"
+						invisible="ksef_process_state in ['error','completed','imported','offline','none']"/>
 
 			</xpath>
 
-			<!-- dostęp do dziennika dostawcy -->
 			<xpath expr="//div[@name='button_box']" position="inside">
+				<!-- dostęp do korekt ksef -->
+				<button class="oe_stat_button"
+						type="object"
+						name="action_open_ksef_corrections"
+						icon="fa-exchange"
+						invisible="ksef_correction_count == 0" >
+					<field name="ksef_correction_count" widget="statinfo" string="Korekty"/>
+				</button>
+
+				<!-- dostęp do dziennika dostawcy -->
 				<button name="action_open_logs"
-					type="object"
-					class="oe_stat_button"
-					icon="fa-retweet">
+						type="object"
+						class="oe_stat_button"
+						icon="fa-retweet">
 					<field name="log_count" widget="statinfo" string="Dziennik Komunikacji"/>
 				</button>
 			</xpath>

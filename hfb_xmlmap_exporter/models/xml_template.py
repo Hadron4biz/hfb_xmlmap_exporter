@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.5
+"""@version 19.1.6
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -1157,7 +1157,7 @@ class XmlExportTemplate(models.Model):
 					and record._name == "account.move"
 					and record.ksef_rodzaj_faktury == "KOR"
 					and record.move_type == "out_invoice"
-					and record.ksef_correction_type in ("2", "3")
+					and record.ksef_correction_type in ("1", "2", "3")
 				):
 					collection = record._prepare_ksef_correction_lines()
 				else:
