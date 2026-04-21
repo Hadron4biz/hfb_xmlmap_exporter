@@ -1128,7 +1128,7 @@ class XmlExportTemplate(models.Model):
 					and record._name == "account.move"
 					and record.ksef_rodzaj_faktury == "KOR"
 					and record.move_type == "out_invoice"
-					and record.ksef_correction_type in ("2", "3")
+					and record.ksef_correction_type in ("1", "2", "3")
 				):
 					collection = record._prepare_ksef_correction_lines()
 				else:

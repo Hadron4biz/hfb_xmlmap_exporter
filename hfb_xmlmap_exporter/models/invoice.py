@@ -117,6 +117,65 @@ class AccountMove(models.Model):
 						"default_document_id": self.id},
 		}
 
+	# ------------------------------------------------------------------------------------------------------
+	# Metody pomocnicze dla pól podatku: P_13_x oraz P_14_x i P_15
+	# ------------------------------------------------------------------------------------------------------
+	def _get_ksef_tax_group_data(self, ksef_tax_name):
+		self.ensure_one()
+
+		# 1. Pobierz linię produktową, aby uzyskać bazę (netto)
+		# Price_subtotal w Odoo zawsze zawiera wartość netto (bez podatku),
+		# nawet jeśli podatek jest w cenie (tax_included).
+		relevant_lines = self.invoice_line_ids.filtered(
+			lambda l: any(ksef_tax_name in t.name for t in l.tax_ids)
+		)
+		if not relevant_lines:
+			return None
+
+		base_amount = sum(relevant_lines.mapped('price_subtotal'))
+
+		# 2. Pobierz kwotę podatku bezpośrednio z linii podatkowych (tax_line_ids)
+		# Szukamy linii, gdzie tax_line_id nie jest puste
+		tax_lines = self.line_ids.filtered(
+			lambda l: l.tax_line_id and ksef_tax_name in l.tax_line_id.name
+		)
+
+		# 'balance' w Odoo dla kredytu (zobowiązanie) jest ujemne, 
+		# więc bierzemy wartość bezwzględną
+		tax_amount = abs(sum(tax_lines.mapped('balance')))
+
+		return {
+			'base': base_amount,
+			'tax': tax_amount
+		}
+
+
+	def get_ksef_p13(self, ksef_tax_name):
+		res = self._get_ksef_tax_group_data(ksef_tax_name)
+		return round(res['base'], 2) if res else None
+
+	def get_ksef_p14(self, ksef_tax_name):
+		res = self._get_ksef_tax_group_data(ksef_tax_name)
+		return round(res['tax'], 2) if res else None
+
+	def get_ksef_p15(self):
+		"""
+		Zwraca kwotę należności ogółem (P_15).
+		Zgodnie z FA(3), P_15 = Suma wszystkich kwot netto + suma wszystkich kwot VAT.
+		"""
+		self.ensure_one()
+
+		# Sposób 1: Najbezpieczniejszy w Odoo - bezpośrednie pole z rekordu.
+		# amount_total w account.move to suma netto + podatki po wszystkich rabatach.
+		if self.amount_total:
+			return self.amount_total
+
+		# Sposób 2: Rezerwowy (jeśli amount_total byłoby z jakiegoś powodu puste)
+		# amount_untaxed (netto) + amount_tax (podatek)
+		amount_brutto = self.amount_untaxed + self.amount_tax
+
+		return amount_brutto
+
 	########################################################################################################
 	# pomocnicze
 	def _parse_xsd_errors_with_schema(self, raw_errors, schema_doc, xml_doc):

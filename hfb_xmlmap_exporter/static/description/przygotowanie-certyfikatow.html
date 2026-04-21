@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>KSeF – przygotowanie certyfikatów</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .step {
+            border-left: 4px solid #875A7B;
+            padding-left: 12px;
+            margin: 20px 0;
+        }
+        .img {
+            margin: 10px 0;
+        }
+        .img img {
+            max-width: 100%;
+            border: 1px solid #ccc;
+        }
+        .note {
+            background: #f4f4f4;
+            padding: 10px;
+            border-left: 4px solid #5bc0de;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Import certyfikatów KSeF (.p12)</h1>
+
+<p>Instrukcja opisuje przygotowanie certyfikatów do integracji z KSeF oraz ich wgranie w systemie.</p>
+
+<div style="background:#f8f8f8; padding:15px; border:1px solid #ddd; margin-bottom:20px;">
+    <strong>📑 Spis treści</strong>
+    <ul>
+        <li><a href="#sekcja1">1. Wybór wariantu w wizardzie</a></li>
+        <li><a href="#sekcja2">2. Aplikacja Podatnika KSeF</a></li>
+        <li><a href="#sekcja3">3. Import w wizardzie</a></li>
+        <li><a href="#sekcja4">4. Wynik operacji</a></li>
+        <li><a href="#sekcja5">5. A gdy pojawią się problemy</a></li>
+    </ul>
+</div>
+
+---
+<h2 id="sekcja1">1. Wybór wariantu w wizardzie</h2>
+
+<div class="step">
+    <strong>Krok 1:</strong> Otwórz wizard importu certyfikatów.
+</div>
+
+<div class="step">
+    <strong>Krok 2:</strong> Wybierz wariant:
+    <ul>
+        <li>Import certyfikatów AUTH</li>
+        <li>Import certyfikatów SIGN</li>
+    </ul>
+</div>
+
+<div class="img">
+    <img src="wizard_step_1.png" alt="Wybór wariantu">
+</div>
+
+<div style="text-align:right; margin-top:10px;">
+    <a href="#top" style="text-decoration:none; font-size:14px;">
+        ⬆️  Wróć na początek
+    </a>
+</div>
+---
+
+<h2 id="sekcja2">2. Aplikacja Podatnika KSeF 2.0</h2>
+
+<div class="step">
+    <strong>Krok 1:</strong> Zaloguj się do aplikacji MF KSeF.
+</div>
+
+<div class="step">
+    <strong>Krok 2:</strong> Przejdź do sekcji certyfikatów.
+</div>
+
+<div class="step">
+    <strong>Krok 3:</strong> Pobierz pliki:
+    <ul>
+        <li>certyfikat-api-auth.crt</li>
+        <li>certyfikat-api-auth.key</li>
+        <li>certyfikat-api-sign.crt</li>
+        <li>certyfikat-api-sign.key</li>
+    </ul>
+</div>
+
+<div class="img">
+    <img src="ksef_download.png" alt="Pobieranie certyfikatów">
+</div>
+
+<div class="note">
+    Upewnij się, że pliki zostały zapisane lokalnie – będą potrzebne w kolejnym kroku.
+</div>
+
+<div style="text-align:right; margin-top:10px;">
+    <a href="#top" style="text-decoration:none; font-size:14px;">
+        ⬆️  Wróć na początek
+    </a>
+</div>
+---
+
+<h2 id="sekcja3">3. Import w wizardzie (Odoo)</h2>
+
+<div class="step">
+    <strong>Krok 1:</strong> Wgraj pliki .crt i .key.
+</div>
+
+<div class="step">
+    <strong>Krok 2:</strong> Podaj hasło do keystore.
+</div>
+
+<div class="step">
+    <strong>Krok 3:</strong> Kliknij "Przetwórz".
+</div>
+
+<div class="img">
+    <img src="wizard_upload.png" alt="Upload plików">
+</div>
+
+<div style="text-align:right; margin-top:10px;">
+    <a href="#top" style="text-decoration:none; font-size:14px;">
+        ⬆️  Wróć na początek
+    </a>
+</div>
+---
+
+<h2 id="sekcja4">4. Wynik operacji</h2>
+
+<div class="step">
+    System wygeneruje pliki .p12 i zapisze je w konfiguracji integracji.
+</div>
+
+<div class="img">
+    <img src="wizard_success.png" alt="Sukces">
+</div>
+
+<div style="text-align:right; margin-top:10px;">
+    <a href="#top" style="text-decoration:none; font-size:14px;">
+        ⬆️  Wróć na początek
+    </a>
+</div>
+---
+
+<h2 id="sekcja5">5. A gdy pojawią się problemy</h2>
+
+<ul>
+    <li>Niepoprawne hasło do keystore</li>
+    <li>Niekompletne pliki (.crt bez .key)</li>
+    <li>Błędny format pliku</li>
+</ul>
+
+<div style="text-align:right; margin-top:10px;">
+    <a href="#top" style="text-decoration:none; font-size:14px;">
+        ⬆️  Wróć na początek
+    </a>
+</div>
+---
+
+</body>
+</html>

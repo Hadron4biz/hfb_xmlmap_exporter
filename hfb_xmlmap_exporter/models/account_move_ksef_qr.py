@@ -85,6 +85,40 @@ class AccountMove(models.Model):
 	_inherit = "account.move"
 
 	# -------------------------------------------------------------------------
+	# KOREKTY KSEF
+	# -------------------------------------------------------------------------
+
+	ksef_correction_ids = fields.One2many(
+		'account.move',
+		'ksef_corrects_move_id',
+		string="Faktury korygujące",
+		readonly=True,
+		copy=False,
+	)
+
+	ksef_correction_count = fields.Integer(
+		compute="_compute_ksef_correction_count",
+		string="Liczba korekt"
+	)
+
+	def _compute_ksef_correction_count(self):
+		for move in self:
+			move.ksef_correction_count = len(move.ksef_correction_ids)
+
+	def action_open_ksef_corrections(self):
+		self.ensure_one()
+		return {
+			"type": "ir.actions.act_window",
+			"name": "Faktury korygujące",
+			"res_model": "account.move",
+			"view_mode": "list,form",
+			"domain": [("id", "in", self.ksef_correction_ids.ids)],
+			"context": {
+				"default_ksef_corrects_move_id": self.id
+			}
+		}
+
+	# -------------------------------------------------------------------------
 	# KONFIGURACJA / STAN
 	# -------------------------------------------------------------------------
 

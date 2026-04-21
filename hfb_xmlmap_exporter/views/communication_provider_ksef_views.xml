@@ -54,6 +54,7 @@
 							
 							<group string="Informacje">
 								<div class="alert alert-info">
+									<h4>💡 Upewnij się, że Twoja wersja modułu wspiera ten wiariant </h4>
 									<strong>Jak uzyskać klucz JET API:</strong><br/>
 									1. Zaloguj się na Portal Podatkowy<br/>
 									2. Przejdź do: e-Usługi → Dostęp do usług API → KSeF<br/>
@@ -65,48 +66,26 @@
 						
 						<!-- KARTA 2: Certyfikat -->
 						<page string="Certyfikat" attrs="{ 'invisible': [('auth_type', '!=', 'certificate')]}">
-							<group string="Konfiguracja sesji NIP">
+							<group name="nip" string="Konfiguracja sesji NIP">
 								<field name="company_nip" readonly="0"/>
-								
 							</group>
-							<group>
-								<group string="Konfiguracja certyfikatu">
-									<field name="auth_keystore_p12" force_save="1" />
-									<field name="auth_keystore_password" 
-										placeholder="Hasło do certyfikatu Autoryzacji" 
-										password="1"/>
+							<group name="konfiguracja" string="Konfiguracja certyfikatu">
+								<field name="auth_keystore_p12" force_save="1" />
+								<field name="auth_keystore_password" 
+									placeholder="Hasło do certyfikatu Autoryzacji" 
+									password="1"/>
 
-									<field name="sign_keystore_p12" force_save="1" />
-                                    <field name="sign_keystore_password" 
-										placeholder="Hasło do certyfikatu Podpisywania" 
-										password="1"/>
+								<field name="sign_keystore_p12" force_save="1" />
+								<field name="sign_keystore_password" 
+									placeholder="Hasło do certyfikatu Podpisywania" 
+									password="1"/>
 
-								</group>
 							</group>
-							<group>
-								<group>
-									<field name="mf_certificate_pem" />
-								</group>
+							<group name="mf_certificate_pem">
+								<field name="mf_certificate_pem" />
 							</group>
 						</page>
 						
-						<!-- KARTA 3: Token sesyjny -->
-						<page string="Token sesyjny" attrs="{ 'invisible': [('auth_type', '!=', 'session_token')]}">
-							<group string="Konfiguracja sesji NIP">
-								<field name="company_nip" readonly="0"/>
-								
-							</group>
-							
-							<group string="Informacje">
-								<div class="alert alert-info">
-									<strong>Jak uzyskać token sesyjny:</strong><br/>
-									1. Zaloguj się do KSeF przez NIP<br/>
-									2. Wygeneruj token sesyjny w panelu API<br/>
-									3. Token jest ważny zwykle 1-24 godziny<br/>
-									4. Wklej token do powyższego pola
-								</div>
-							</group>
-						</page>
 						
 						<!-- KARTA 4: Opcje -->
 						<page string="Opcje">
@@ -132,20 +111,16 @@
 						
 						<!-- KARTA 6: Sesje KSeF v2 (SUPER PROSTA WERSJA) -->
 						<page string="Sesja KSeF v2">
-							<group string="Informacje o sesji">
-								<div class="alert alert-info">
-									<strong>🔧 Sesje KSeF v2 - zarządzane automatycznie</strong><br/><br/>
-									System automatycznie tworzy i zarządza sesjami API.<br/>
-									Przy wysyłce faktury: 
-									<ol>
-										<li>System sprawdza czy sesja jest aktywna</li>
-										<li>Jeśli nie - tworzy nową sesję</li>
-										<li>Wysyła fakturę przez sesję</li>
-										<li>Przechowuje informacje o sesji (tylko do monitorowania)</li>
-									</ol>
-								</div>
-							</group>
-							
+							<strong>🔧 Sesje KSeF v2 - zarządzane automatycznie</strong><br/><br/>
+							System automatycznie tworzy i zarządza sesjami API.<br/>
+							Przy wysyłce faktury: 
+							<ol>
+								<li>System sprawdza czy sesja jest aktywna</li>
+								<li>Jeśli nie - tworzy nową sesję</li>
+								<li>Wysyła fakturę przez sesję</li>
+								<li>Przechowuje informacje o sesji (tylko do monitorowania)</li>
+							</ol>
+						
 						</page>
 
 						<!-- KARTA 7: Konfiguracja importów  -->

@@ -207,33 +207,18 @@
 								   help="Oryginalna wartość z pola RodzajFaktury w XML (VAT, ZAL, ROZ, KOR, UPR, etc.)"/>
 						</group>
 						
-						<!-- Grupa 2: Typy i statusy faktur -->
-						<group string="Typ faktury KSeF">
-							<field name="ksef_issue_mode" />
-							<separator />
-							<field name="ksef_p16" />
-							<field name="ksef_p17" />
-							<field name="ksef_p23" />
-							<field name="ksef_is_advance"
-								   help="Czy faktura jest zaliczkowa (ZAL)"/>
-							<field name="ksef_is_settlement"
-								   help="Czy faktura jest rozliczeniowa (ROZ)"/>
-							<field name="ksef_is_upr"
-								   help="Czy faktura jest uproszczona (UPR)"/>
-							<field name="ksef_correction_type"
-								   help="Typ korekty: standardowa, zaliczkowa lub rozliczeniowa"/>
-						</group>
-						
-						<!-- Grupa 3: Specjalne procedury VAT -->
-						<group string="Specjalne procedury VAT">
-							<field name="ksef_p18" />
-							<field name="ksef_p18a" />
-							<field name="ksef_p19n" />
-							<field name="ksef_pmarzyn"
-								   help="Czy dotyczy procedury marży VAT (pole specjalne KSeF)."
-								   placeholder="Zaznacz, jeśli dotyczy"/>
-						</group>
-						
+                        <!-- Grupa 2: Typy i statusy faktur -->
+                        <group string="Adnotacje">
+                            <field name="ksef_p16"  string="Metoda kasowa" />
+                            <field name="ksef_p17"  string="Samofakturowanie" />
+                            <field name="ksef_p18"  string="Odwrotne obciążenie" />
+                            <field name="ksef_p18a" string="Mechanizm podzielonej płatności (MPP)" />
+                            <field name="ksef_p19n" string="Brak zwolnień (P_19N)" />
+                            <field name="ksef_p22n" string="Brak nowych środków transportu (P_22N)" />
+                            <field name="ksef_p23"  string="Procedura uproszczona (P_23)" />
+                            <field name="ksef_pmarzyn" string="Procedura marży (PMarzyN)" />
+                        </group>
+												
 						<!-- Grupa 4: Podmioty specjalne -->
 						<group string="Podmioty specjalne">
 							<field name="ksef_p22n" />
@@ -348,15 +333,24 @@
 
 			</xpath>
 
-			<!-- dostęp do dziennika dostawcy -->
-			<xpath expr="//div[@name='button_box']" position="inside">
-				<button name="action_open_logs"
-					type="object"
-					class="oe_stat_button"
-					icon="fa-retweet">
-					<field name="log_count" widget="statinfo" string="Dziennik Komunikacji"/>
-				</button>
-			</xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <!-- dostęp do korekt ksef -->
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_open_ksef_corrections"
+                        icon="fa-exchange"
+                        attrs="{'invisible': [('ksef_correction_count','=',0)]}">
+                    <field name="ksef_correction_count" widget="statinfo" string="Korekty"/>
+                </button>
+
+                <!-- dostęp do dziennika dostawcy -->
+                <button name="action_open_logs"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-retweet">
+                    <field name="log_count" widget="statinfo" string="Dziennik Komunikacji"/>
+                </button>
+            </xpath>
 
 		</field>
 	</record>

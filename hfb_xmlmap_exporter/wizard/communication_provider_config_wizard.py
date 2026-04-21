@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################################
-""" @version	18.2.0
+""" @version 16.1.6
 	@owner  Hadron for Business
 	@author andrzej wiśniewski warp3r
 	@date   2026.03.12

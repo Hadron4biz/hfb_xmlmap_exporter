@@ -67,6 +67,10 @@
 		"views/report_invoice_ksef_qr.xml",
 		"views/cron.xml",
 		"wizard/communication_provider_config_wizard_view.xml",
+		"wizard/ksef_certificate_import_wizard_view.xml",
+
+        # --- Wygląd faktury na podstawie XML z KSeF
+        "reports/ksef_invoice_report.xml",
 
 	],
 	'assets': {
