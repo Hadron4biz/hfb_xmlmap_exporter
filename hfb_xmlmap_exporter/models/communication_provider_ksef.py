@@ -5004,7 +5004,7 @@ class CommunicationProviderKsef(models.Model):
 	)
 
 	alert_phone = fields.Char(
-		related="alert_contact_id.mobile",
+		#related="alert_contact_id.mobile",
 		store=False
 	)
 
