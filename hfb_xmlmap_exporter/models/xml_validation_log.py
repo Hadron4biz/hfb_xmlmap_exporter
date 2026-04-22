@@ -72,12 +72,13 @@ class XmlValidationLog(models.Model):
 	xml_snapshot = fields.Binary(string="Zrzut XML")
 
 	@api.model_create_multi
-	def create(self, vals):
-		# wymuszenie automatycznej daty i użytkownika
-		vals.setdefault("validation_date", fields.Datetime.now())
-		vals.setdefault("user_id", self.env.uid)
-		vals.setdefault("company_id", self.env.company.id)
-		return super().create(vals)
+	def create(self, vals_list):
+		for vals in vals_list:
+			# wymuszenie automatycznej daty i użytkownika
+			vals.setdefault("validation_date", fields.Datetime.now())
+			vals.setdefault("user_id", self.env.uid)
+			vals.setdefault("company_id", self.env.company.id)
+		return super().create(vals_list)
 
 	#def write(self, vals):
 	#	raise UserError(_("Nie można edytować wpisu historii walidacji."))
