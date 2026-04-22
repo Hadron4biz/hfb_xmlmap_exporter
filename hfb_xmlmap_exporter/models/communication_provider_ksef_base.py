@@ -829,7 +829,7 @@ class AccountMoveKsef(models.Model):
 		default='0'
 	)
 	ksef_advance_refs = fields.Char('Numery faktur zaliczkowych')  # dla ROZ
-	ksef_order_value = fields.Float('Wartość zamówienia')  # dla ZAL
+	ksef_order_value = fields.Float('Wartość zamówienia ZAL')  # dla ZAL
 
 	# pole techniczne
 	ksef_corrected_ref = fields.Char(

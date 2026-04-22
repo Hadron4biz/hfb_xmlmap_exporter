@@ -23,7 +23,7 @@
 				
 				<sheet>
 					<div class="alert alert-info" role="alert" style="margin-bottom: 16px;">
-						<i class="fa fa-info-circle"/> 
+						<i class="fa fa-info-circle" title="Informacja"/> 
 						<strong>KSeF - Import certyfikatów</strong><br/>
 						Ten kreator pomoże Ci przekonwertować certyfikaty pobrane z aplikacji MF KSeF<br/>
 						do formatu wymaganego przez system (.p12).<br/>
@@ -43,7 +43,7 @@
 						<page string="1. Wybór backendu">
 							<group>
 								<div class="alert alert-warning" role="alert">
-									<i class="fa fa-exclamation-triangle"/>
+									<i class="fa fa-exclamation-triangle" title="Wybór backendu"/>
 									<strong>Wybór backendu determinuje liczbę wymaganych certyfikatów!</strong>
 								</div>
 								
@@ -51,8 +51,8 @@
 								
 								<group string="Python HTTP Client" 
 									   invisible="api_backend != 'python'">
-									<div class="alert alert-success">
-										<i class="fa fa-check-circle"/>
+									<div class="alert alert-success" role="status">
+										<i class="fa fa-check-circle" title="Python HTTP Client"/>
 										<strong>✅ Zalecany dla Odoo 18</strong><br/>
 										• Wymaga tylko <strong>JEDNEGO</strong> certyfikatu (AUTH)<br/>
 										• System samodzielnie podpisuje dokumenty<br/>
@@ -63,8 +63,8 @@
 								
 								<group string="Java Client" 
 									   invisible="api_backend != 'java'">
-									<div class="alert alert-info">
-										<i class="fa fa-coffee"/>
+									<div class="alert alert-info" role="status">
+										<i class="fa fa-coffee" title="Java Client"/>
 										<strong>Java Client (z zewnętrznym JAR)</strong><br/>
 										• Wymaga <strong>DWÓCH</strong> certyfikatów (AUTH + SIGN)<br/>
 										• Używa zewnętrznych plików JAR do komunikacji<br/>
@@ -94,7 +94,7 @@
 										   placeholder="Hasło klucza (opcjonalnie)"/>
 								</group>
 								<group string="Informacje">
-									<div class="alert alert-warning">
+									<div class="alert alert-warning" role="alert">
 										<strong>⚠️ Uwaga:</strong><br/>
 										• Jeśli klucz nie ma hasła, pozostaw pole puste<br/>
 										• Pliki muszą być w formacie PEM<br/>
@@ -124,7 +124,7 @@
 										   placeholder="Hasło klucza (opcjonalnie)"/>
 								</group>
 								<group string="Informacje">
-									<div class="alert alert-warning">
+									<div class="alert alert-warning" role="alert">
 										<strong>⚠️ Uwaga:</strong><br/>
 										• Wymagane tylko dla backendu Java<br/>
 										• Jeśli używasz Pythona, możesz pominąć tę sekcję<br/>
@@ -152,7 +152,7 @@
 								</group>
 							</group>
 							<group>
-								<div class="alert alert-info">
+								<div class="alert alert-info" role="status">
 									<strong>💡 Informacja:</strong><br/>
 									To hasło będzie używane w konfiguracji KSeF.<br/>
 									Zapamiętaj je - będzie potrzebne do komunikacji z API.<br/>
@@ -178,7 +178,7 @@
 						 role="alert" 
 						 style="margin-top: 16px;"
 						 invisible="state != 'done'">
-						<i class="fa fa-check-circle"/> 
+						<i class="fa fa-check-circle" title="Import zakończony" /> 
 						<strong>✅ Import zakończony sukcesem!</strong><br/>
 						<field name="validation_log" nolabel="1"/>
 						<div class="mt-2">
@@ -194,7 +194,7 @@
 						 role="alert" 
 						 style="margin-top: 16px;"
 						 invisible="state != 'error'">
-						<i class="fa fa-exclamation-circle"/> 
+						<i class="fa fa-exclamation-circle" title="Wystąpił błąd" /> 
 						<strong>❌ Wystąpił błąd:</strong><br/>
 						<field name="error_message"/>
 						<div class="mt-2">

@@ -71,7 +71,7 @@ class XmlValidationLog(models.Model):
 	error_log = fields.Text(string="Szczegóły błędów")
 	xml_snapshot = fields.Binary(string="Zrzut XML")
 
-	@api.model
+	@api.model_create_multi
 	def create(self, vals):
 		# wymuszenie automatycznej daty i użytkownika
 		vals.setdefault("validation_date", fields.Datetime.now())

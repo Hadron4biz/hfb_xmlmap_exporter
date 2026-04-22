@@ -62,19 +62,21 @@
 							type="object"
 							string="Wgraj schemę (XSD)"
 							class="oe_highlight"
+							icon="fa-sitemap"
 							invisible="xsd_attachment_id != False"/>
 
 					<button name="action_reset_nodes"
 							type="object"
 							string="Wyczyść węzły"
 							class="btn-danger"
+							icon="fa-trash"
 							confirm="Czy na pewno chcesz usunąć wszystkie węzły XML?"
 							invisible="xsd_attachment_id == False"/>
 
 					<button name="action_import_from_schema"
 							type="object"
 							string="Import struktury z XSD"
-							class="btn-primary"
+							class="btn-outline-secondary"
 							icon="fa-sitemap"
 							invisible="xsd_attachment_id == False"
 							confirm="Czy na pewno chcesz zaimportować strukturę z XSD? Istniejące węzły zostaną usunięte."/>
@@ -82,27 +84,54 @@
 					<button name="action_import_xsd_types"
 							type="object"
 							string="Import typów XSD"
-							class="btn-secondary"
+							class="btn-outline-secondary"
 							icon="fa-database"
-							invisible="xsd_attachment_id == False or xsd_type_count > 0"/>
+							confirm="Czy na pewno chcesz zaimportować elementy Type z XSD?"
+							invisible="xsd_attachment_id == False"/>
 
 					<button name="action_validate_template_full"
 							type="object"
 							string="Walidacja pełna"
-							class="oe_highlight"
+							class="btn-warning"
 							invisible="node_count == 0"/>
 
+					<!-- SEQUENCE -->
 					<button name="auto_sequence_nodes" 
 							string="Auto-układ sekwencji" 
 							type="object" 
-							class="btn-primary"
+							class="btn-warning"
+							confirm="To nadpisze wszystkie sekwencje i uporządkuje je automatycznie. Kontynuować?"
+							invisible="node_count == 0"/>
+
+					<button name="action_snapshot_sequence"
+							type="object"
+							string="Snapshot sequence"
+							class="btn-info"
+							icon="fa-camera"
+							invisible="node_count == 0"/>
+
+					<button name="action_increment_sequence"
+							type="object"
+							string="Sequence +10"
+							class="btn-outline-secondary"
+							icon="fa-arrow-up"
+							confirm="Zwiększyć sekwencję wszystkich węzłów o 10?"
+							invisible="node_count == 0"/>
+
+					<button name="action_restore_selected"
+							type="object"
+							icon="fa-undo"
+							title="Restore sequence"
+							class="btn-outline-secondary"
+							confirm="Przywrócić sekwencję dla wybranych węzłów?"
 							invisible="node_count == 0"/>
 
 					<button name="action_export_json"
 							type="object"
 							string="Eksportuj JSON"
-							class="oe_highlight"
+							class="btn-success"
 							icon="fa-download"
+							invisible="xsd_attachment_id == False"
 							groups="base.group_system"
 							/>
 				</header>

@@ -45,6 +45,7 @@ _logger = logging.getLogger(__name__)
 
 class ReportKsefUpo(models.AbstractModel):
 	_name = 'report.hfb_xmlmap_exporter.report_ksef_upo'
+	_description = "KSeF UPO Report"
 
 	company_id = fields.Many2one(
 		'res.company',
