@@ -217,6 +217,25 @@ class XmlExportTemplate(models.Model):
 			"name": _("Typy XSD powiązane z szablonem"),
 		}
 
+	# Sequence: SNAPSHOT — zapis aktualnej sekwencji
+	def action_snapshot_sequence(self):
+		for template in self:
+			for node in template.node_ids:
+				node.snapshot_sequence = node.sequence
+
+	# Sequence: Restore SNAPSHOT
+	def action_restore_selected(self):
+		for template in self:
+			for node in template.node_ids:
+				if node.snapshot_sequence:
+					node.sequence = node.snapshot_sequence
+
+	# Sequence: Increment (ORM-safe)
+	def action_increment_sequence(self, step=10):
+		for template in self:
+			for node in template.node_ids:
+				node.sequence = (node.sequence or 0) + step
+
 	node_count = fields.Integer(
 		string="Liczba węzłów",
 		compute="_compute_node_count",
@@ -2061,7 +2080,23 @@ class XmlExportNode(models.Model):
 
 	# Powiązanie z szablonem i hierarchią
 	template_id = fields.Many2one("xml.export.template", required=True, ondelete="cascade", index=True)
-	sequence = fields.Integer(default=10)
+
+	# WAŻNE: używaj w kodzie: nodes = template.node_ids.sorted(key=lambda n: n.sequence)
+	sequence = fields.Integer(
+		string="Sequence",
+		default=10,
+		index=True,
+		help="Kolejność generowania węzłów XML"
+	)
+	_sql_constraints = [
+		('sequence_positive', 'CHECK(sequence >= 0)', 'Sequence musi być >= 0')
+	]
+	snapshot_sequence = fields.Integer(
+		string="Snapshot Sequence",
+		copy=False,
+		help="Zapamiętana wartość sequence do przywrócenia"
+	)
+
 	parent_id = fields.Many2one("xml.export.node", string="Rodzic", ondelete="cascade", index=True, domain="[('template_id', '=', template_id)]")
 	child_ids = fields.One2many("xml.export.node", "parent_id", string="Dzieci")
 	template_model_id = fields.Many2one(

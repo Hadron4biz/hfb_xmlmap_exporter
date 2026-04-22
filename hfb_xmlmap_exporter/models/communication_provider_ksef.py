@@ -5058,7 +5058,7 @@ class CommunicationProviderKsef(models.Model):
 	import_template_id = fields.Many2one(
 		'xml.export.template', 
 		string="Szablon importu faktur",
-		required=True,
+		required=False,
 	)
 
 	qr_report_template_id = fields.Many2one(
