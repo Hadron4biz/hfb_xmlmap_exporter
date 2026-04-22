@@ -123,10 +123,11 @@ class XmlExportTemplate(models.Model):
 	)
 
 	@api.model_create_multi
-	def create(self, vals):
-		if vals and not vals.get("uuid"):
-			vals["uuid"] = str(uuid.uuid4())
-		return super().create(vals)
+	def create(self, vals_list):
+		for vals in vals_list:
+			if not vals.get("uuid"):
+				vals["uuid"] = str(uuid.uuid4())
+		return super().create(vals_list)
 
 	@api.onchange("doc_direction", "root_tag", "namespace")
 	def _onchange_recompose_name(self):

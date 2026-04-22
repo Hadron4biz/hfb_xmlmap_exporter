@@ -33,7 +33,7 @@
 {
     "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 18",
     "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-    "version": "18.1.6",
+    "version": "18.1.6.2",
     "license": "AGPL-3",
     "author": "Hadron for Business, Andrzej Wiśniewski",
     'category': 'Accounting/Invoicing',
@@ -91,6 +91,7 @@
 	],
 	'assets': {
 	},
+	'test': ['tests/test_basic.py'],
 	'images': [
 		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
