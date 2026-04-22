@@ -107,7 +107,7 @@
 								<field name="delete_after_import"/>
 								
 								<div class="alert alert-info mt-4" role="alert">
-									<i class="fa fa-info-circle"/> 
+									<i class="fa fa-info-circle" title="Informacja"/> 
 									<strong>Import automatyczny:</strong> 
 									System będzie regularnie sprawdzał ten katalog 
 									i importował nowe pliki.
@@ -118,7 +118,7 @@
 						<page string="Test">
 							<group>
 								<div class="alert alert-warning" role="alert">
-									<i class="fa fa-warning"/> 
+									<i class="fa fa-warning" title="Test"/> 
 									<strong>Przed użyciem przetestuj konfigurację.</strong>
 								</div>
 								

@@ -122,7 +122,7 @@ class XmlExportTemplate(models.Model):
 		tracking=True,
 	)
 
-	@api.model
+	@api.model_create_multi
 	def create(self, vals):
 		if vals and not vals.get("uuid"):
 			vals["uuid"] = str(uuid.uuid4())
@@ -2068,6 +2068,7 @@ class XmlExportNamespace(models.Model):
 class XmlExportNode(models.Model):
 	_name = "xml.export.node"
 	_description = "Węzeł eksportu XML / XPath"
+	_inherit = ['mail.thread']
 	_order = "sequence, id"
 
 	company_id = fields.Many2one(
@@ -2407,8 +2408,8 @@ class XmlXsdElement(models.Model):
 	)
 
 	name = fields.Char(required=True)
-	type = fields.Char()
-	type_id = fields.Many2one('xml.xsd.type', ondelete='cascade')
+	type = fields.Char(string="Rodzaj")
+	type_id = fields.Many2one('xml.xsd.type', ondelete='cascade', string="typy XSD")
 	min_occurs = fields.Integer(default=1)
 	max_occurs = fields.Char(default='1')
 	is_attribute = fields.Boolean(default=False)

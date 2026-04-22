@@ -53,7 +53,7 @@
 							</group>
 							
 							<group string="Informacje">
-								<div class="alert alert-info">
+								<div class="alert alert-info" role="status">
 									<strong>Jak uzyskać klucz JET API:</strong><br/>
 									1. Zaloguj się na Portal Podatkowy<br/>
 									2. Przejdź do: e-Usługi → Dostęp do usług API → KSeF<br/>
@@ -91,7 +91,7 @@
 							</group>
 							
 							<group string="Informacje">
-								<div class="alert alert-info">
+								<div class="alert alert-info" role="status">
 									<strong>Jak uzyskać token sesyjny:</strong><br/>
 									1. Zaloguj się do KSeF przez NIP<br/>
 									2. Wygeneruj token sesyjny w panelu API<br/>
@@ -126,7 +126,7 @@
 						<!-- KARTA 6: Sesje KSeF v2 (SUPER PROSTA WERSJA) -->
 						<page string="Sesja KSeF v2">
 							<group string="Informacje o sesji">
-								<div class="alert alert-info">
+								<div class="alert alert-info" role="status">
 									<strong>🔧 Sesje KSeF v2 - zarządzane automatycznie</strong><br/><br/>
 									System automatycznie tworzy i zarządza sesjami API.<br/>
 									Przy wysyłce faktury: 

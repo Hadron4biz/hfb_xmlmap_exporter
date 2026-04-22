@@ -68,19 +68,6 @@ class CommunicationLog(models.Model):
 	_inherit = "communication.log"
 
 	# ---------------------------------------------------------------
-	# Dane kryptograficzne sesji (wymagane dla Python full flow)
-	# ---------------------------------------------------------------
-	ksef_session_key = fields.Binary(
-		string="KSeF Session AES Key",
-		readonly=True
-	)
-
-	ksef_session_iv = fields.Binary(
-		string="KSeF Session IV",
-		readonly=True
-	)
-
-	# ---------------------------------------------------------------
 	# Techniczny status API
 	# ---------------------------------------------------------------
 	ksef_http_status = fields.Integer(
@@ -210,7 +197,7 @@ class CommunicationLog(models.Model):
 		tracking=True
 	)
 
-	invoice_hash = fields.Char(related='ksef_invoice_hash')
+	invoice_hash = fields.Char(related='ksef_invoice_hash', string='KSeF Invoice Hash')
 
 	# ============================================
 	# Pełna tabela zgodna z dokumentacją KSeF 
@@ -5239,7 +5226,6 @@ class CommunicationProviderKsef(models.Model):
 	company_nip = fields.Char(
 		related="company_id.vat_clean",
 		string="NIP Firmy",
-		required="1",
 		store=True
 	)
 	

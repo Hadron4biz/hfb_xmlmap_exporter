@@ -124,7 +124,7 @@
 
 					<!-- Original invoice for corrections -->
 					<t t-if="ksef.get('original_invoice', {}).get('number')">
-						<div class="alert alert-info">
+						<div class="alert alert-info" role="alert">
 							<strong>Faktura korygowana:</strong><br/>
 							Numer: <t t-esc="ksef.get('original_invoice', {}).get('number')"/><br/>
 							Data: <t t-esc="ksef.get('original_invoice', {}).get('date')"/><br/>
