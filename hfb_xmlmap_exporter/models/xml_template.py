@@ -124,9 +124,14 @@ class XmlExportTemplate(models.Model):
 
 	@api.model_create_multi
 	def create(self, vals_list):
+		# kompatybilność wsteczna: create(dict)
+		if isinstance(vals_list, dict):
+			vals_list = [vals_list]
+
 		for vals in vals_list:
 			if not vals.get("uuid"):
 				vals["uuid"] = str(uuid.uuid4())
+
 		return super().create(vals_list)
 
 	@api.onchange("doc_direction", "root_tag", "namespace")
@@ -232,7 +237,8 @@ class XmlExportTemplate(models.Model):
 					node.sequence = node.snapshot_sequence
 
 	# Sequence: Increment (ORM-safe)
-	def action_increment_sequence(self, step=10):
+	def action_increment_sequence(self):
+		step=10
 		for template in self:
 			for node in template.node_ids:
 				node.sequence = (node.sequence or 0) + step
