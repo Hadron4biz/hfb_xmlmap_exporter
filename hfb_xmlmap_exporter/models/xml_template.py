@@ -232,7 +232,8 @@ class XmlExportTemplate(models.Model):
 					node.sequence = node.snapshot_sequence
 
 	# Sequence: Increment (ORM-safe)
-	def action_increment_sequence(self, step=10):
+	def action_increment_sequence(self):
+		step=10
 		for template in self:
 			for node in template.node_ids:
 				node.sequence = (node.sequence or 0) + step

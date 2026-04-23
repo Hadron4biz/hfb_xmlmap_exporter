@@ -495,19 +495,29 @@ class AccountMoveKsef(models.Model):
 
 	@api.model_create_multi
 	def create(self, vals_list):
-		"""Rozszerzenie metody create dla wielu rekordów"""
+		# kompatybilność wsteczna
+		if isinstance(vals_list, dict):
+			vals_list = [vals_list]
+
+		SaleOrder = self.env['sale.order']
+
 		for vals in vals_list:
 			if vals.get('origin') and not vals.get('order_id'):
-				order = self.env['sale.order'].search(
+				company_id = vals.get('company_id') or self.env.company.id
+
+				order = SaleOrder.search(
 					[
-						('name', '=', vals.get('origin')),
-						('company_id', '=', self.company_id.id)
-					], 
+						('name', '=', vals['origin']),
+						('company_id', '=', company_id),
+					],
 					limit=1
 				)
+
 				if order:
 					vals['order_id'] = order.id
+
 		return super().create(vals_list)
+
 
 	def write(self, values):
 		if values.get('origin'):

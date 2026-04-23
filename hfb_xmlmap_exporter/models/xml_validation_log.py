@@ -73,11 +73,14 @@ class XmlValidationLog(models.Model):
 
 	@api.model_create_multi
 	def create(self, vals_list):
+		if isinstance(vals_list, dict):
+			vals_list = [vals_list]
+
 		for vals in vals_list:
-			# wymuszenie automatycznej daty i użytkownika
 			vals.setdefault("validation_date", fields.Datetime.now())
 			vals.setdefault("user_id", self.env.uid)
 			vals.setdefault("company_id", self.env.company.id)
+
 		return super().create(vals_list)
 
 	#def write(self, vals):
