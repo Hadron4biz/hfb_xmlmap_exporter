@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 17.1.6
+"""@version 17.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -122,11 +122,17 @@ class XmlExportTemplate(models.Model):
 		tracking=True,
 	)
 
-	@api.model
-	def create(self, vals):
-		if vals and not vals.get("uuid"):
-			vals["uuid"] = str(uuid.uuid4())
-		return super().create(vals)
+	@api.model_create_multi
+	def create(self, vals_list):
+		# kompatybilność wsteczna: create(dict)
+		if isinstance(vals_list, dict):
+			vals_list = [vals_list]
+
+		for vals in vals_list:
+			if not vals.get("uuid"):
+				vals["uuid"] = str(uuid.uuid4())
+
+		return super().create(vals_list)
 
 	@api.onchange("doc_direction", "root_tag", "namespace")
 	def _onchange_recompose_name(self):
@@ -216,6 +222,26 @@ class XmlExportTemplate(models.Model):
 			"domain": [("template_id", "=", self.id)],
 			"name": _("Typy XSD powiązane z szablonem"),
 		}
+
+	# Sequence: SNAPSHOT — zapis aktualnej sekwencji
+	def action_snapshot_sequence(self):
+		for template in self:
+			for node in template.node_ids:
+				node.snapshot_sequence = node.sequence
+
+	# Sequence: Restore SNAPSHOT
+	def action_restore_selected(self):
+		for template in self:
+			for node in template.node_ids:
+				if node.snapshot_sequence:
+					node.sequence = node.snapshot_sequence
+
+	# Sequence: Increment (ORM-safe)
+	def action_increment_sequence(self):
+		step=10
+		for template in self:
+			for node in template.node_ids:
+				node.sequence = (node.sequence or 0) + step
 
 	node_count = fields.Integer(
 		string="Liczba węzłów",
@@ -897,7 +923,7 @@ class XmlExportTemplate(models.Model):
 			return value
 
 		# --- TKwota → dokładnie 2 miejsca ---
-		if xsd_type == 'TKwota':
+		if xsd_type in ('TKwota', 'TKwotowy', 'TKwotowy2'):
 			return str(dec_value.quantize(
 				Decimal("0.01"),
 				rounding=ROUND_HALF_UP
@@ -2049,6 +2075,7 @@ class XmlExportNamespace(models.Model):
 class XmlExportNode(models.Model):
 	_name = "xml.export.node"
 	_description = "Węzeł eksportu XML / XPath"
+	_inherit = ['mail.thread']
 	_order = "sequence, id"
 
 	company_id = fields.Many2one(
@@ -2061,7 +2088,23 @@ class XmlExportNode(models.Model):
 
 	# Powiązanie z szablonem i hierarchią
 	template_id = fields.Many2one("xml.export.template", required=True, ondelete="cascade", index=True)
-	sequence = fields.Integer(default=10)
+
+	# WAŻNE: używaj w kodzie: nodes = template.node_ids.sorted(key=lambda n: n.sequence)
+	sequence = fields.Integer(
+		string="Sequence",
+		default=10,
+		index=True,
+		help="Kolejność generowania węzłów XML"
+	)
+	_sql_constraints = [
+		('sequence_positive', 'CHECK(sequence >= 0)', 'Sequence musi być >= 0')
+	]
+	snapshot_sequence = fields.Integer(
+		string="Snapshot Sequence",
+		copy=False,
+		help="Zapamiętana wartość sequence do przywrócenia"
+	)
+
 	parent_id = fields.Many2one("xml.export.node", string="Rodzic", ondelete="cascade", index=True, domain="[('template_id', '=', template_id)]")
 	child_ids = fields.One2many("xml.export.node", "parent_id", string="Dzieci")
 	template_model_id = fields.Many2one(
@@ -2372,8 +2415,8 @@ class XmlXsdElement(models.Model):
 	)
 
 	name = fields.Char(required=True)
-	type = fields.Char()
-	type_id = fields.Many2one('xml.xsd.type', ondelete='cascade')
+	type = fields.Char(string="Rodzaj")
+	type_id = fields.Many2one('xml.xsd.type', ondelete='cascade', string="typy XSD")
 	min_occurs = fields.Integer(default=1)
 	max_occurs = fields.Char(default='1')
 	is_attribute = fields.Boolean(default=False)

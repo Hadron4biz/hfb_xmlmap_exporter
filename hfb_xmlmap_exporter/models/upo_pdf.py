@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 17.1.6
+"""@version 17.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -45,6 +45,7 @@ _logger = logging.getLogger(__name__)
 
 class ReportKsefUpo(models.AbstractModel):
 	_name = 'report.hfb_xmlmap_exporter.report_ksef_upo'
+	_description = "KSeF UPO Report"
 
 	company_id = fields.Many2one(
 		'res.company',

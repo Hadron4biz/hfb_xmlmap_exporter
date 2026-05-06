@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 17.1.6
+"""@version 17.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -66,19 +66,6 @@ _logger = logging.getLogger(__name__)
 # =============================================================================
 class CommunicationLog(models.Model):
 	_inherit = "communication.log"
-
-	# ---------------------------------------------------------------
-	# Dane kryptograficzne sesji (wymagane dla Python full flow)
-	# ---------------------------------------------------------------
-	ksef_session_key = fields.Binary(
-		string="KSeF Session AES Key",
-		readonly=True
-	)
-
-	ksef_session_iv = fields.Binary(
-		string="KSeF Session IV",
-		readonly=True
-	)
 
 	# ---------------------------------------------------------------
 	# Techniczny status API
@@ -210,7 +197,7 @@ class CommunicationLog(models.Model):
 		tracking=True
 	)
 
-	invoice_hash = fields.Char(related='ksef_invoice_hash')
+	invoice_hash = fields.Char(related='ksef_invoice_hash', string='KSeF Invoice Hash')
 
 	# ============================================
 	# Pełna tabela zgodna z dokumentacją KSeF 
@@ -5058,7 +5045,7 @@ class CommunicationProviderKsef(models.Model):
 	import_template_id = fields.Many2one(
 		'xml.export.template', 
 		string="Szablon importu faktur",
-		required=True,
+		required=False,
 	)
 
 	qr_report_template_id = fields.Many2one(
@@ -5239,7 +5226,6 @@ class CommunicationProviderKsef(models.Model):
 	company_nip = fields.Char(
 		related="company_id.vat_clean",
 		string="NIP Firmy",
-		required="1",
 		store=True
 	)
 	

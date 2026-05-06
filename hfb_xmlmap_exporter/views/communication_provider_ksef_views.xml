@@ -125,20 +125,18 @@
 						
 						<!-- KARTA 6: Sesje KSeF v2 (SUPER PROSTA WERSJA) -->
 						<page string="Sesja KSeF v2">
-							<group string="Informacje o sesji">
-								<div class="alert alert-info">
-									<strong>🔧 Sesje KSeF v2 - zarządzane automatycznie</strong><br/><br/>
-									System automatycznie tworzy i zarządza sesjami API.<br/>
-									Przy wysyłce faktury: 
-									<ol>
-										<li>System sprawdza czy sesja jest aktywna</li>
-										<li>Jeśli nie - tworzy nową sesję</li>
-										<li>Wysyła fakturę przez sesję</li>
-										<li>Przechowuje informacje o sesji (tylko do monitorowania)</li>
-									</ol>
-								</div>
-							</group>
-							
+									<i class="fa fa-check-circle"/>
+									<strong>🔧 Sesje KSeF v2 - zarządzane automatycznie</strong>
+									<div class="alert alert-info">
+										System automatycznie tworzy i zarządza sesjami API.<br/>
+										Przy wysyłce faktury: 
+										<ol>
+											<li>System sprawdza czy sesja jest aktywna</li>
+											<li>Jeśli nie - tworzy nową sesję</li>
+											<li>Wysyła fakturę przez sesję</li>
+											<li>Przechowuje informacje o sesji (tylko do monitorowania)</li>
+										</ol>
+									</div>
 						</page>
 
 						<page string="Import Configuration" name="import_config">

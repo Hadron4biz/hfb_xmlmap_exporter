@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 17.1.6
+"""@version 17.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -377,16 +377,11 @@ class AccountMove(models.Model):
 	# -------------------------------------------------------------------------
 
 	def _get_ksef_qr_base_url(self):
-		"""
-		Pobiera bazowy URL QR z konfiguracji providera KSeF.
-
-		communication.provider.ksef.qr_code_url
-		jest JEDYNYM źródłem prawdy.
-		"""
 		self.ensure_one()
 
 		provider = self.env["communication.provider.ksef"].search(
 			[("company_id", "=", self.company_id.id)],
+			order="id desc",   # 🔑 KLUCZOWA ZMIANA
 			limit=1,
 		)
 

@@ -330,7 +330,7 @@
 
 				<button name="action_send_manual"
 						type="object"
-						string="Force Send 🚀"
+						string="Wyślij Teraz 🚀"
 						class="btn-danger"
 						invisible="ksef_process_state in ['error','completed','imported','offline','none']"/>
 

@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 17.1.6
+"""@version 17.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -71,13 +71,17 @@ class XmlValidationLog(models.Model):
 	error_log = fields.Text(string="Szczegóły błędów")
 	xml_snapshot = fields.Binary(string="Zrzut XML")
 
-	@api.model
-	def create(self, vals):
-		# wymuszenie automatycznej daty i użytkownika
-		vals.setdefault("validation_date", fields.Datetime.now())
-		vals.setdefault("user_id", self.env.uid)
-		vals.setdefault("company_id", self.env.company.id)
-		return super().create(vals)
+	@api.model_create_multi
+	def create(self, vals_list):
+		if isinstance(vals_list, dict):
+			vals_list = [vals_list]
+
+		for vals in vals_list:
+			vals.setdefault("validation_date", fields.Datetime.now())
+			vals.setdefault("user_id", self.env.uid)
+			vals.setdefault("company_id", self.env.company.id)
+
+		return super().create(vals_list)
 
 	#def write(self, vals):
 	#	raise UserError(_("Nie można edytować wpisu historii walidacji."))
