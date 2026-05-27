@@ -44,7 +44,6 @@
             <field name="base_url">https://ksef-test.mf.gov.pl/api/online</field>
             <field name="qr_code_url">https://ksef-test.mf.gov.pl/qr</field>
             <field name="environment">test</field>
-            <field name="auth_type">session_token</field>
             <field name="description">Środowisko testowe KSeF – token sesyjny</field>
             
             <field name="company_nip">1234567890</field>
