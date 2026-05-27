@@ -84,14 +84,6 @@
 		</field>
 	</record>
 
-	<record id="action_xml_export_node_form" model="ir.actions.act_window">
-		<field name="name">Edytuj węzeł XML</field>
-		<field name="res_model">xml.export.node</field>
-		<field name="view_mode">form</field>
-		<field name="view_id" ref="hfb_xmlmap_exporter.view_xml_export_node_form"/>
-		<field name="target">new</field>
-	</record>
-
     <!-- ✅ LIST VIEW -->
     <record id="view_xml_export_node_tree" model="ir.ui.view">
         <field name="name">xml.export.node.tree</field>
@@ -201,6 +193,15 @@
                 </sheet>
             </form>
         </field>
+    </record>
+
+	
+    <record id="action_xml_export_node_form" model="ir.actions.act_window">
+        <field name="name">Edytuj węzeł XML</field>
+        <field name="res_model">xml.export.node</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="hfb_xmlmap_exporter.view_xml_export_node_form"/>
+        <field name="target">new</field>
     </record>
 
     <!-- ✅ AKCJA I MENU (opcjonalne, np. serwisowe) -->
