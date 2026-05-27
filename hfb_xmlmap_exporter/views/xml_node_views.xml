@@ -212,10 +212,10 @@
         <field name="context">{}</field>
     </record>
 
-    <menuitem id="menu_xml_export_node"
+    <!--menuitem id="menu_xml_export_node"
               name="Węzły [node]"
               parent="menu_xml_export_config"
               action="action_xml_export_node"
-              sequence="55"/>
+              sequence="55"/-->
 
 </odoo>
