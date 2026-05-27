@@ -33,6 +33,7 @@
 								string="PROVIDER TEST"
 								type="object"
 								class="btn-secondary"
+								title="Testuj providera"
 								icon="fa-check-circle" />
 					</header>
 					<group>

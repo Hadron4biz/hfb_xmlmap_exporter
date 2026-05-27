@@ -21,13 +21,13 @@
 				</header>
 				
 				<sheet>
-					<div class="alert alert-info" role="alert" style="margin-bottom: 16px;">
-						<i class="fa fa-info-circle"/> 
+					<div class="alert alert-info" role="status" style="margin-bottom: 16px;">
+						<i class="fa fa-info-circle" title="Informacja" aria-label="Informacja"/> 
 						<strong> KSeF - Import certyfikatów 🔐</strong><br/>
 						Ten kreator pomoże Ci przekonwertować certyfikaty pobrane z aplikacji MF KSeF<br/>
 						do formatu wymaganego przez system (.p12).<br/>
 						<strong>
-							<a href="/hfb_xmlmap_exporter/static/description/przygotowanie-certyfikatow.html" target="_blank" >👉 Przeczytaj jak to zrobić</a>
+							<a href="/hfb_xmlmap_exporter/static/description/przygotowanie-certyfikatow.html" target="_blank">👉 Przeczytaj jak to zrobić</a>
 						</strong>
 					</div>
 					
@@ -41,17 +41,25 @@
 						<!-- KARTA 1: WYBÓR BACKENDU -->
 						<page string="1. Wybór backendu">
 							<group>
-								<div class="alert alert-warning" role="alert">
-									<i class="fa fa-exclamation-triangle"/>
+								<div class="alert alert-warning" role="status" style="margin-bottom: 16px;">
+									<i class="fa fa-exclamation-triangle" title="Ostrzeżenie" aria-label="Ostrzeżenie"/>
 									<strong>Wybór backendu determinuje liczbę wymaganych certyfikatów!</strong>
 								</div>
 								
 								<field name="api_backend" widget="radio"/>
 								
-								<group string="Python HTTP Client" invisible="api_backend != 'python'" >
-									<i class="fa fa-check-circle"/>
+								<group string="Python HTTP Client" invisible="api_backend != 'python'">
+									<!--div class="alert alert-success" role="status" style="margin-top: 8px;">
+										<i class="fa fa-check-circle" title="Sukces" aria-label="Sukces"/>
+										<strong>✅ Zalecany dla Odoo</strong><br/>
+										• Wymaga tylko <strong>JEDNEGO</strong> certyfikatu (AUTH)<br/>
+										• System samodzielnie podpisuje dokumenty<br/>
+										• Szybsza komunikacja, mniej zależności<br/>
+										• Łatwiejsza konfiguracja
+									</div-->
+									<i class="fa fa-check-circle" title="Python"/>
 									<strong>✅ Zalecany dla Odoo</strong><br/>
-									<div class="alert alert-success">
+									<div class="alert alert-success" role="status" style="margin-top: 8px;">
 										<strong>
 											• Wymaga tylko <strong>JEDNEGO</strong> certyfikatu (AUTH)<br/>
 											• System samodzielnie podpisuje dokumenty<br/>
@@ -59,12 +67,21 @@
 											• Łatwiejsza konfiguracja
 										</strong>
 									</div>
+
 								</group>
 								
-								<group string="Java Client" invisible="api_backend != 'java'" >
-									<i class="fa fa-coffee"/>
+								<group string="Java Client" invisible="api_backend != 'java'">
+									<!--div class="alert alert-info" role="status" style="margin-top: 8px;">
+										<i class="fa fa-coffee" title="Java" aria-label="Java"/>
+										<strong>Java Client (z zewnętrznym JAR)</strong><br/>
+										• Wymaga <strong>DWÓCH</strong> certyfikatów (AUTH + SIGN)<br/>
+										• Używa zewnętrznych plików JAR do komunikacji<br/>
+										• Podpis realizowany przez JAR<br/>
+										• Wybierz tylko jeśli masz skonfigurowane JAR-y
+									</div-->
+									<i class="fa fa-coffee" title="Java"/>
 									<strong>Java Client (z zewnętrznym JAR)</strong><br/>
-									<div class="alert alert-info">
+									<div class="alert alert-info" role="status" >
 										<strong>
 											• Wymaga <strong>DWÓCH</strong> certyfikatów (AUTH + SIGN)<br/>
 											• Używa zewnętrznych plików JAR do komunikacji<br/>
@@ -72,6 +89,7 @@
 											• Wybierz tylko jeśli masz skonfigurowane JAR-y
 										</strong>
 									</div>
+
 								</group>
 							</group>
 						</page>
@@ -94,10 +112,18 @@
 										   password="1"
 										   placeholder="Hasło klucza (opcjonalnie)"/>
 								</group>
+								<!--group string="Informacje">
+									<div class="alert alert-warning" role="status">
+										<strong>⚠️ Uwaga:</strong><br/>
+										• Jeśli klucz nie ma hasła, pozostaw pole puste<br/>
+										• Pliki muszą być w formacie PEM<br/>
+										• Certyfikat musi mieć algorytm RSA
+									</div>
+								</group-->
 								<group string="Informacje">
-									<i class="fa fa-coffee"/>
+									<i class="fa fa-coffee" title="Informacje" />
 									<strong>⚠️ Uwaga:</strong><br/>
-									<div class="alert alert-warning">
+									<div class="alert alert-warning" role="status" >
 										<strong>
 											• Jeśli klucz nie ma hasła, pozostaw pole puste<br/>
 											• Pliki muszą być w formacie PEM<br/>
@@ -105,11 +131,12 @@
 										</strong>
 									</div>
 								</group>
+
 							</group>
 						</page>
 						
 						<!-- KARTA 3: SIGN (tylko dla Java) -->
-						<page string="3. Certyfikat SIGN" invisible="api_backend != 'java'" >
+						<page string="3. Certyfikat SIGN" invisible="api_backend != 'java'">
 							<group>
 								<group string="Pliki certyfikatu SIGN (wymagane dla Java)">
 									<field name="sign_cert_file" 
@@ -126,10 +153,18 @@
 										   password="1"
 										   placeholder="Hasło klucza (opcjonalnie)"/>
 								</group>
+								<!--group string="Informacje">
+									<div class="alert alert-warning" role="status">
+										<strong>⚠️ Uwaga:</strong><br/>
+										• Wymagane tylko dla backendu Java<br/>
+										• Jeśli używasz Pythona, możesz pominąć tę sekcję<br/>
+										• Certyfikat musi mieć algorytm RSA
+									</div>
+								</group-->
 								<group string="Informacje">
-									<i class="fa fa-check-circle"/>
+									<i class="fa fa-check-circle" title="Informacje" />
 									<strong>⚠️ Uwaga:</strong><br/>
-									<div class="alert alert-warning">
+									<div class="alert alert-warning" role="status" >
 										<strong>
 											• Wymagane tylko dla backendu Java<br/>
 											• Jeśli używasz Pythona, możesz pominąć tę sekcję<br/>
@@ -137,6 +172,7 @@
 										</strong>
 									</div>
 								</group>
+
 							</group>
 						</page>
 						
@@ -157,10 +193,18 @@
 									<field name="overwrite_existing"/>
 								</group>
 							</group>
+							<!--group>
+								<div class="alert alert-info" role="status">
+									<strong>💡 Informacja:</strong><br/>
+									To hasło będzie używane w konfiguracji KSeF.<br/>
+									Zapamiętaj je - będzie potrzebne do komunikacji z API.<br/>
+									Dla backendu Java oba pliki .p12 będą miały to samo hasło.
+								</div>
+							</group-->
 							<group>
-								<i class="fa fa-check-circle"/>
+								<i class="fa fa-check-circle" title="Informacja" />
 								<strong>💡 Informacja:</strong><br/>
-								<div class="alert alert-info">
+								<div class="alert alert-info" role="status" >
 									<strong>
 										To hasło będzie używane w konfiguracji KSeF.<br/>
 										Zapamiętaj je - będzie potrzebne do komunikacji z API.<br/>
@@ -168,10 +212,11 @@
 									</strong>
 								</div>
 							</group>
+
 						</page>
 						
 						<!-- KARTA 5: LOG -->
-						<page string="Log operacji" invisible="state in ['draft']" >
+						<page string="Log operacji" invisible="state in ['draft']">
 							<field name="validation_log" 
 								   widget="ace" 
 								   options="{'mode': 'text'}"
@@ -184,10 +229,10 @@
 					
 					<!-- Status sukcesu -->
 					<div class="alert alert-success" 
-						 role="alert" 
+						 role="status" 
 						 style="margin-top: 16px;"
-						 invisible="state != 'done'" >
-						<i class="fa fa-check-circle"/> 
+						 invisible="state != 'done'">
+						<i class="fa fa-check-circle" title="Status OK" aria-label="Status OK"/> 
 						<strong>✅ Import zakończony sukcesem!</strong><br/>
 						<field name="validation_log" nolabel="1"/>
 						<div class="mt-2">
@@ -202,8 +247,8 @@
 					<div class="alert alert-danger" 
 						 role="alert" 
 						 style="margin-top: 16px;"
-						 invisible="state != 'error'" >
-						<i class="fa fa-exclamation-circle"/> 
+						 invisible="state != 'error'">
+						<i class="fa fa-exclamation-circle" title="Błąd" aria-label="Błąd"/> 
 						<strong>❌ Wystąpił błąd:</strong><br/>
 						<field name="error_message"/>
 						<div class="mt-2">
@@ -242,15 +287,14 @@
 		<field name="model">communication.provider.ksef</field>
 		<field name="inherit_id" ref="view_communication_provider_ksef_form"/>
 		<field name="arch" type="xml">
-				<xpath expr="//group[@name='konfiguracja']" position="before">
-					<button name="%(action_ksef_certificate_import_wizard)d" 
-							type="action" 
-							string="🔐 Importuj certyfikaty 🛡️" 
-							class="btn btn-primary w-25"
-							context="{'default_config_id': id}"/>
-				</xpath>
+			<xpath expr="//group[@name='konfiguracja']" position="before">
+				<button name="%(action_ksef_certificate_import_wizard)d" 
+						type="action" 
+						string="🔐 Importuj certyfikaty 🛡️" 
+						class="btn btn-primary w-25"
+						context="{'default_config_id': id}"/>
+			</xpath>
 		</field>
 	</record>
-
 
 </odoo>

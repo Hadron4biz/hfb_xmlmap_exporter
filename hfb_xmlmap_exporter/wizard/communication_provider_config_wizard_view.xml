@@ -37,9 +37,10 @@
 			   <separator />
 				<!-- Ostrzeżenie gdy brak konfiguracji -->
 				<div class="alert alert-warning" 
+					 role="status"
 					 invisible="provider_config_id != False"
 					 style="margin-top: 5px; margin-bottom: 5px;">
-					<i class="fa fa-exclamation-triangle"/>
+					<i class="fa fa-exclamation-triangle" title="Uwaga" aria-label="Uwaga" />
 					Nie wybrano konfiguracji dla tego providera.
 				</div>
 			</xpath>
@@ -67,8 +68,8 @@
 			<form string="Wybór konfiguracji providera">
 				<sheet>
 					<!-- Nagłówek informacyjny -->
-					<div class="alert alert-info" role="alert" style="margin-bottom: 15px;">
-						<i class="fa fa-info-circle"/>
+					<div class="alert alert-info" role="status" style="margin-bottom: 15px;">
+						<i class="fa fa-info-circle" title="Wybierz" />
 						Wybierz konfigurację dla <b><field name="provider_id" widget="static" readonly="1"/></b>
 					</div>
 
@@ -84,10 +85,10 @@
 
 					<!-- Dodatkowa informacja gdy lista jest pusta -->
 					<div class="alert alert-warning" 
-						 role="alert" 
+						 role="status" 
 						 invisible="selected_config_id != False"
 						 style="margin-top: 15px;">
-						<i class="fa fa-exclamation-triangle"/>
+						<i class="fa fa-exclamation-triangle" title="Wybierz z listy" />
 						Nie wybrano jeszcze konfiguracji. Wybierz z listy powyżej.
 					</div>
 				</sheet>

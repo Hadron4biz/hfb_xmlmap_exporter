@@ -33,7 +33,7 @@
 {
     "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 17",
     "summary": "Integracja KSeF, wymiana danych XML, szablony XET, eksport/import faktur, komunikacja z systemami zewnętrznymi",
-    "version": "17.0.7.2",
+    "version": "17.0.8",
     "license": "AGPL-3",
     "author": "Hadron for Business",
     'category': 'Accounting/Invoicing',
