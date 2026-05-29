@@ -17,10 +17,10 @@
             
             <!-- Pola dla certyfikatu (przykład – puste, do uzupełnienia przez użytkownika) -->
             <field name="company_nip">1234567890</field>
-            <field name="auth_keystore_p12" eval="False"/>
-            <field name="auth_keystore_password" eval="False"/>
-            <field name="sign_keystore_p12" eval="False"/>
-            <field name="sign_keystore_password" eval="False"/>
+            <field name="auth_keystore_p12">False</field>
+            <field name="auth_keystore_password">False</field>
+            <field name="sign_keystore_p12">False</field>
+            <field name="sign_keystore_password">False</field>
             
             <!-- Opcje -->
             <field name="validate_before_send">True</field>
@@ -45,7 +45,6 @@
             <field name="qr_code_url">https://ksef-test.mf.gov.pl/qr</field>
             <field name="environment">test</field>
             <field name="description">Środowisko testowe KSeF – token sesyjny</field>
-            
             <field name="company_nip">1234567890</field>
             <field name="validate_before_send">True</field>
             <field name="debug_mode">True</field>
