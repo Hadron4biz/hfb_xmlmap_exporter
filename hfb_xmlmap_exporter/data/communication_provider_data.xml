@@ -11,17 +11,13 @@
             <field name="active">True</field>
             <field name="base_url">https://ksef.mf.gov.pl/api/online</field>
             <field name="qr_code_url">https://ksef.mf.gov.pl/qr</field>
-            <field name="environment">production</field>
+            <field name="environment">test</field>
             <field name="auth_type">certificate</field>  <!-- lub jet_token / session_token -->
-            <field name="description">Produkcyjne środowisko KSeF z certyfikatem</field>
+            <field name="description">Środowisko testowe KSeF </field>
             
             <!-- Pola dla certyfikatu (przykład – puste, do uzupełnienia przez użytkownika) -->
             <field name="company_nip">1234567890</field>
-            <field name="auth_keystore_p12">False</field>
-            <field name="auth_keystore_password">False</field>
-            <field name="sign_keystore_p12">False</field>
-            <field name="sign_keystore_password">False</field>
-            
+
             <!-- Opcje -->
             <field name="validate_before_send">True</field>
             <field name="auto_check_status">True</field>
@@ -56,7 +52,7 @@
         <record id="provider_localdir_export" model="communication.provider.localdir">
             <field name="name">Eksport lokalny</field>
             <field name="code">local_export</field>
-            <field name="output_path">/odoo/data/exports/</field>
+            <field name="output_path">/tmp</field>
             <field name="file_naming">date_name</field>  <!-- lub 'name_date', 'custom' -->
             <field name="subdirectory_format">%Y/%m</field>
             <field name="auto_create_dirs">True</field>
@@ -70,8 +66,8 @@
         <record id="provider_localdir_bidirectional" model="communication.provider.localdir">
             <field name="name">Import/Eksport lokalny</field>
             <field name="code">local_bidi</field>
-            <field name="output_path">/odoo/data/exports/</field>
-            <field name="input_path">/odoo/data/imports/</field>
+            <field name="output_path">/tmp</field>
+            <field name="input_path">/tmp</field>
             <field name="import_pattern">*.xml</field>
             <field name="file_naming">name_date</field>
             <field name="auto_create_dirs">True</field>

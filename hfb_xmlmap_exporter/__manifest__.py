@@ -42,6 +42,7 @@
         "base",
         "mail",
         "sale",
+		"sale_managment",
         "account",
     ],
     "data": [
@@ -89,7 +90,7 @@
 
     ],
     "demo": [
-        "data/communication_provider_data.xml",
+        #"data/communication_provider_data.xml",
     ],
     'images': [
         'static/description/Banner.png',

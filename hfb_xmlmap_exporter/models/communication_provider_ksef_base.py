@@ -477,18 +477,20 @@ class AccountMoveKsef(models.Model):
 	@api.depends('payment_state', 'state')
 	def _compute_ksef_payments(self):
 		for move in self:
-			# Wyszukaj płatności powiązane z tą fakturą poprzez pole invoice_ids
-			# ToDo: poza Odoo 18 może być to poważnym problemem
-			payments = self.env['account.payment'].search([('reconciled_invoice_ids', 'in', move.id)])	###XXX
-
-			"""
-			# Wyszukaj płatności powiązane z fakturą przez linie księgowe
-			payment_lines = self.env['account.move.line'].search([
-				('account_internal_type', '=', 'liquidity'),
-				('matched_debit_ids.debit_move_id.move_id', '=', move.id)
-			])
-			payments = payment_lines.mapped('payment_id')
-			"""
+			payments = self.env['account.payment']
+			# Linie rozrachunkowe faktury
+			receivable_lines = move.line_ids.filtered(
+				lambda l: l.account_id.account_type in (
+					'asset_receivable',
+					'liability_payable'
+				)
+			)
+			matched_lines = (
+				receivable_lines.mapped('matched_debit_ids.credit_move_id')
+				|
+				receivable_lines.mapped('matched_credit_ids.debit_move_id')
+			)
+			payments = matched_lines.mapped('payment_id')
 			move.ksef_reconciled_payments = payments
 
 	# --------------------------------------------------------------- Kursy walut
