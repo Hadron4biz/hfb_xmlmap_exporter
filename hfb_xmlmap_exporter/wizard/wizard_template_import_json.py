@@ -62,7 +62,7 @@ class XmlTemplateImportJsonWizard(models.TransientModel):
 
 	json_file = fields.Binary("Plik JSON")
 	json_filename = fields.Char("Nazwa JSON")
-	filename = fields.Char(related="json_filename")
+	filename = fields.Char(related="json_filename", string="Nazwa zbioru")
 
 	# ============================================================
 	#  POMOCNICZE FUNKCJE
