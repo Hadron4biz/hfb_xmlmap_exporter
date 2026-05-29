@@ -42,7 +42,7 @@
         "base",
         "mail",
         "sale",
-		"sale_managment",
+		"sale_management",
         "account",
     ],
     "data": [
