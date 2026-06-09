@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.6
+"""@version 18.1.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -78,15 +78,23 @@ class SaleAdvancePaymentInv(models.TransientModel):
 
 		return invoices
 
+
+class SaleOrderLine(models.Model):
+	_inherit = "sale.order.line"
+
+	ksef_line_no = fields.Integer(
+		store=True,
+		copy=False,
+	)
+
 class SaleOrder(models.Model):
 	_inherit = 'sale.order'
 
 	def _create_invoices(self, grouped=False, final=False):
 		moves = super()._create_invoices(grouped=grouped, final=final)
 
-		_logger.info( f"\n👉👉👉 SaleOrder _create_invoices: {self.name} moves {moves} ")
-
 		for order in self:
+			_logger.info( f"\n👉👉👉 SaleOrder _create_invoices: {order.name} moves {moves} ")
 			related_moves = moves.filtered(lambda m: m.invoice_origin == order.name)
 
 			# sprawdzamy czy istnieją ZAL
@@ -109,6 +117,17 @@ class SaleOrder(models.Model):
 					move.ksef_rodzaj_faktury = 'VAT'
 
 		return moves
+
+	def _assign_ksef_line_numbers(self):
+		for order in self:
+			existing = order.order_line.filtered(lambda l: l.ksef_line_no)
+			max_no = max(existing.mapped('ksef_line_no'), default=0)
+
+			for line in order.order_line.sorted("id"):
+				if not line.ksef_line_no:
+					max_no += 1
+					line.ksef_line_no = max_no
+
 
 #################################################################################
 # Dodatek roboczy - tymczasowy
@@ -189,18 +208,25 @@ class AccountMoveLineKsef(models.Model):
 	# opcjonalnie – do debugowania
 	ksef_raw_json = fields.Json(string="RAW FaWiersz")
 
-	ksef_line_no = fields.Integer(compute="_compute_ksef_line_no", store=True, copy=False,)
+	ksef_line_no = fields.Integer( store=True, copy=False,)
 	ksef_tax_percent = fields.Float(compute="_compute_ksef_tax_percent", store=True, copy=False,)
 	ksef_uom_code = fields.Char(compute="_compute_ksef_uom_code", store=True, copy=False,)
 
+	def action_post(self):
+		res = super().action_post()
+		self._compute_ksef_line_no()
+		return res
+
 	@api.depends("move_id", "move_id.invoice_line_ids.sequence")
 	def _compute_ksef_line_no(self):
-		moves = self.mapped("move_id")
-		for move in moves:
-			i = 1
-			for line in move.invoice_line_ids.sorted("sequence"):
-				line.ksef_line_no = i
-				i += 1
+		for move in self:
+			existing = move.invoice_line_ids.filtered(lambda l: l.ksef_line_no)
+			max_no = max(existing.mapped('ksef_line_no'), default=0)
+
+			for line in move.invoice_line_ids.sorted("id"):
+				if not line.ksef_line_no:
+					max_no += 1
+					line.ksef_line_no = max_no
 
 	@api.depends("tax_ids", "tax_ids.amount")
 	def _compute_ksef_tax_percent(self):
@@ -602,7 +628,7 @@ class AccountMoveKsef(models.Model):
 	ksef_p19n = fields.Selection(
 		[
 			('1', '1 – TAK (brak dostaw zwolnionych)'),
-			('2', '2 – NIE (występują dostawy zwolnione)')
+			('0', '––– NIE (występują dostawy zwolnione)')
 		],
 		string="Brak zwolnień (P_19N)",
 		default='1', # DLA FAKTUR VAT TO MUSI BYĆ 1
@@ -612,7 +638,7 @@ class AccountMoveKsef(models.Model):
 	ksef_p22n = fields.Selection(
 		[
 			('1', '1 – TAK (brak nowych środków transportu)'),
-			('2', '2 – NIE (występują nowe środki transportu)')
+			('0', '––– NIE (występują nowe środki transportu)')
 		],
 		string="Brak nowych środków transportu (P_22N)",
 		default='1', # DLA ZWYKŁYCH FAKTUR TO MUSI BYĆ 1
@@ -1031,13 +1057,18 @@ class AccountMoveKsef(models.Model):
 
 	def action_create_ksef_correction(self):
 		self.ensure_one()
+		# ---------------------------------------------------------------------
+		# 0. WALIDACJA
+		# ---------------------------------------------------------------------
 		if self.move_type != 'out_invoice' or self.state != 'posted' or not self.ksef_number:
 			raise UserError(_(
 				"Korektę można utworzyć tylko dla zakończonej "
 				"faktury sprzedażowej wysłanej do KSeF."
 			))
 
+		# ---------------------------------------------------------------------
 		# 1. Wywołanie standardowego wizardu Odoo (identycznie jak z UI)
+		# ---------------------------------------------------------------------
 		wizard = self.env['account.move.reversal'].with_context(
 			active_ids=[self.id],
 			active_model='account.move',
@@ -1049,7 +1080,6 @@ class AccountMoveKsef(models.Model):
 
 		wizard.modify_moves()
 
-		# 2. Pobranie utworzonych dokumentów
 		new_moves = wizard.new_move_ids
 
 		refund = new_moves.filtered(lambda m: m.move_type == 'out_refund')[:1]
@@ -1058,46 +1088,40 @@ class AccountMoveKsef(models.Model):
 		if not correction:
 			raise UserError(_("Nie udało się utworzyć faktury korekty."))
 
-		# 3. Ustawienie danych KSeF na nowej fakturze
+		# ---------------------------------------------------------------------
+		# 2. OKREŚLENIE TYPU KOREKTY
+		# ---------------------------------------------------------------------
+		correction_type = self._get_ksef_correction_type()
+
+		# ---------------------------------------------------------------------
+		# 3. METADANE KSeF
+		# ---------------------------------------------------------------------
 		correction.write({
-			'ksef_rodzaj_faktury': 'KOR',
+			'ksef_rodzaj_faktury': correction_type,
 			'ksef_corrects_move_id': self.id,
 			'ksef_numer_korygowanej': self.ksef_number,
 			'ksef_creation_datetime': fields.Datetime.now(),
 		})
 
-		# 4. Powiązanie linii korekty z oryginałem
-		orig_lines = self.invoice_line_ids.sorted('sequence')
-		corr_lines = correction.invoice_line_ids.sorted('sequence')
+		# ---------------------------------------------------------------------
+		# 4. POWIĄZANIE LINII (GENERYCZNE)
+		# ---------------------------------------------------------------------
+		self._link_correction_lines(correction)
 
-		for i, (corr_line, orig_line) in enumerate(zip(corr_lines, orig_lines), start=1):
-			line_number = str(i)
+		# ---------------------------------------------------------------------
+		# 5. HOOK SPECJALNY (ZAL / ROZ)
+		# ---------------------------------------------------------------------
+		self._apply_ksef_correction_strategy(correction)
 
-			# przypisz numer wiersza korekty (stan po)
-			corr_line.write({
-				'ksef_corrected_line_id': orig_line.id,
-				'ksef_corrects_move_id': self.id,
-				'ksef_line_correction_type': 'after',
-				'ksef_is_before_correction': False,
-				'ksef_nr_wiersza_fa': line_number,
-			})
-
-			# aktualizacja wierszy oryginału
-			orig_line.update({
-				'ksef_line_correction_type': 'before',
-				'ksef_is_before_correction': True,
-			})
-
-			# przypisz ten sam numer do oryginału, jeśli nie miał
-			if not orig_line.ksef_nr_wiersza_fa:
-				orig_line.ksef_nr_wiersza_fa = line_number
-
-
-		# 5. Powiązanie refundu ze źródłem (opcjonalne, jeśli masz takie pole)
+		# ---------------------------------------------------------------------
+		# 6. POWIĄZANIE REFUND
+		# ---------------------------------------------------------------------
 		if refund and hasattr(self, 'reversal_move_id'):
 			self.reversal_move_id = refund.id
 
-		# 6. Zwrot widoku nowej faktury korekty
+		# ---------------------------------------------------------------------
+		# 7. UI
+		# ---------------------------------------------------------------------
 		return {
 			'type': 'ir.actions.act_window',
 			'res_model': 'account.move',
@@ -1106,7 +1130,84 @@ class AccountMoveKsef(models.Model):
 			'target': 'current',
 		}
 
+	###  'KOR_ZAL': 'KOR_ZAL',
+	def _get_ksef_correction_type(self):
+		self.ensure_one()
 
+		mapping = {
+			'VAT': 'KOR',
+			'ZAL': 'KOR_ZAL',
+			'ROZ': 'KOR_ROZ',
+			'KOR': 'KOR',
+			'KOR_ZAL': 'KOR_ZAL',
+			'KOR_ROZ': 'KOR_ROZ',
+		}
+
+		return mapping.get(self.ksef_rodzaj_faktury, 'KOR')
+
+	### 2. Linkowanie linii (wydzielone)
+	def _link_correction_lines(self, correction):
+		orig_lines = self.invoice_line_ids.sorted('sequence')
+		corr_lines = correction.invoice_line_ids.sorted('sequence')
+
+		for i, (corr_line, orig_line) in enumerate(zip(corr_lines, orig_lines), start=1):
+			line_number = str(i)
+
+			corr_line.write({
+				'ksef_corrected_line_id': orig_line.id,
+				'ksef_corrects_move_id': self.id,
+				'ksef_line_correction_type': 'after',
+				'ksef_is_before_correction': False,
+				'ksef_nr_wiersza_fa': line_number,
+			})
+
+			orig_line.write({
+				'ksef_line_correction_type': 'before',
+				'ksef_is_before_correction': True,
+			})
+
+			if not orig_line.ksef_nr_wiersza_fa:
+				orig_line.ksef_nr_wiersza_fa = line_number
+
+	###	3. Strategia (najważniejsze)
+	def _apply_ksef_correction_strategy(self, correction):
+		self.ensure_one()
+
+		if self.ksef_rodzaj_faktury == 'ZAL':
+			self._apply_kor_zal_logic(correction)
+
+		elif self.ksef_rodzaj_faktury == 'ROZ':
+			self._apply_kor_roz_logic(correction)
+
+	### 4. KOR_ZAL (minimalny działający wariant)
+	def _apply_kor_zal_logic(self, correction):
+		"""
+		Minimalna wersja produkcyjna:
+		- zachowuje powiązania z zamówieniem
+		- przygotowuje dane pod XML
+		"""
+		if self.order_id:
+			correction.order_id = self.order_id.id
+
+		# opcjonalnie: kopiuj sale lines
+		if hasattr(self, 'sale_order_line_ids'):
+			correction.sale_order_line_ids = [(6, 0, self.sale_order_line_ids.ids)]
+
+		# miejsce na przyszłe pola:
+		# correction.ksef_order_value = ...
+		# correction.ksef_p15zk = ...
+
+	### 5. KOR_ROZ
+	def _apply_kor_roz_logic(self, correction):
+		"""
+		ROZ = rozliczenie zaliczek
+		"""
+		if self.order_id:
+			correction.order_id = self.order_id.id
+
+		# zachowaj powiązania z ZAL
+		if hasattr(self, 'sale_order_line_ids'):
+			correction.sale_order_line_ids = [(6, 0, self.sale_order_line_ids.ids)]
 
 
 #################################################################################

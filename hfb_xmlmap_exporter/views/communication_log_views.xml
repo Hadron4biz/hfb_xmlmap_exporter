@@ -122,13 +122,22 @@
 							</group>
 						</page>
 						
-						<page string="Pliki">
-							<group>
-								<field name="file_name"/>
-								<field name="file_size"/>
-								<field name="file_data" filename="file_name" widget="binary"/>
-							</group>
-						</page>
+                        <page string="Pliki">
+                            <group>
+                                <field name="file_name"/>
+                                <field name="file_size"/>
+                                <field name="file_data"
+                                       filename="file_name"
+                                       widget="binary"
+                                       nolabel="0"/>
+
+                                <button name="restore_xml_ksef_invoice"
+                                        type="object"
+                                        string="⚠️ Odtwórz Fakturę z pliku XML"
+                                        class="btn-info text-nowrap"
+                                        invisible="not file_data or document_id"/>
+                            </group>
+                        </page>
 						
 						<!-- Zakładka Payload tylko dla KSeF -->
 						<page string="Payload" invisible="provider_type != 'ksef'">
