@@ -25,7 +25,7 @@
 						<group string="Środowisko i autoryzacja">
 							<field name="base_url" />
 							<field name="qr_code_url" />
-							<field name="environment" invisible="1"/>
+							<field name="environment" widget="radio"/>
 							<field name="api_backend"/>
 							<field name="auth_type"/>
 							<field name="jar_directory" />
