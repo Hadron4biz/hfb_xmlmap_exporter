@@ -218,10 +218,27 @@ class CommunicationLog(models.Model):
 		store=True,
 	)
 
+	"""
 	@api.depends("file_data")
 	def _compute_file_size(self):
 		for rec in self:
 			rec.file_size = len(base64.b64decode(rec.file_data)) if rec.file_data else 0
+	"""
+
+	@api.depends("file_data")
+	def _compute_file_size(self):
+		for rec in self:
+			if not rec.file_data:
+				continue
+			try:
+				if rec.file_data:
+					_logger.info(f"\n👉 rec.file_size = {rec.file_size}")
+					rec.file_size = len(base64.b64decode(rec.file_data, validate=True))
+					_logger.info(f"\n👉👉 rec.file_size = {rec.file_size}")
+			except Exception:
+				rfsize = len(rec.file_data)
+
+			_logger.info(f"\n🔥 rec.file_size = {rec.file_size}")
 
 	# Walidacja XSD
 	validated = fields.Boolean(string="Zwalidowany")
