@@ -165,6 +165,9 @@ Szczegółowa dokumentacja techniczna (PL) zostanie udostępniona w nowej strukt
 - tworzenie własnych providerów,
 - integrację z KSeF.
 
+
+![AI Ready](static/description/AI-Ready-optimized.png)
+
 ---
 
 ## 📄 Licencja
