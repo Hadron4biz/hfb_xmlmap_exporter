@@ -189,65 +189,104 @@ class AccountMove(models.Model):
 		return amount_brutto
 
 	########################################################################################################
-	# pomocnicze
+	# Pomocnicze : komunikaty błędów
+	#
 	def _parse_xsd_errors_with_schema(self, raw_errors, schema_doc, xml_doc):
 		"""
-		Parsuje błędy XSD korzystając z informacji zawartych w samej schemie.
-		
-		Args:
-			raw_errors (list): Lista surowych komunikatów błędów
-			schema_doc (etree._Element): Drzewo schemy XSD
-			xml_doc (etree._Element): Drzewo XML dokumentu
-		
-		Returns:
-			list: Lista słowników z czytelnymi komunikatami błędów
+		Parsuje błędy XSD i zwraca czytelne komunikaty z mapowaniem na pola Odoo.
 		"""
 		error_details = []
 		namespace_map = {
 			'xs': 'http://www.w3.org/2001/XMLSchema',
 			'xsd': 'http://www.w3.org/2001/XMLSchema'
 		}
-		
-		# 🔹 Zbuduj mapę elementów i ich opisów z schemy
+
+		# Pobierz template i jego node'y
+		template = self.xml_export_template_id
+		nodes = template.node_ids if template else self.env['xml.export.node']
+
+		# Zbuduj mapę elementów i ich opisów z schemy XSD (fallback)
 		element_docs = {}
 		for elem in schema_doc.xpath('//xs:element', namespaces=namespace_map):
 			elem_name = elem.get('name')
 			if elem_name:
-				# Szukaj dokumentacji w annotation/documentation
 				doc = elem.xpath('xs:annotation/xs:documentation', namespaces=namespace_map)
 				if doc and doc[0].text:
 					element_docs[elem_name] = doc[0].text.strip()
-		
+
+		# Stwórz mapę nazwa elementu -> pierwszy node (dla prostoty)
+		node_by_name = {}
+		for node in nodes:
+			if node.name not in node_by_name:
+				node_by_name[node.name] = node
+
 		for error in raw_errors:
 			error_detail = {
 				'raw_error': error,
 				'element': 'Nieznany element',
-				'user_message': self._create_user_friendly_error(error, element_docs),
-				'field_name': None,
+				'user_message': '',
+				'odoo_field': None,
+				'odoo_label': None,
 			}
-			
+
 			try:
-				# 🔹 Wyodrębnij nazwę elementu
 				import re
 				elem_match = re.search(r"Element '([^']+)':", error)
-				if elem_match:
-					full_elem_name = elem_match.group(1)
-					# Usuń namespace dla czytelności
-					elem_name = full_elem_name.split('}')[-1] if '}' in full_elem_name else full_elem_name
-					error_detail['element'] = elem_name
+				if not elem_match:
+					continue
+
+				full_elem_name = elem_match.group(1)
+				elem_name = full_elem_name.split('}')[-1] if '}' in full_elem_name else full_elem_name
+				error_detail['element'] = elem_name
+
+				# Spróbuj znaleźć node po nazwie
+				node = node_by_name.get(elem_name)
+				
+				if node and node.src_rel_path:
+					error_detail['odoo_field'] = node.src_rel_path
 					
-					# 🔹 Pobierz opis pola z schemy jeśli istnieje
-					if elem_name in element_docs:
-						error_detail['field_description'] = element_docs[elem_name]
-						error_detail['field_name'] = f"{elem_name} ({element_docs[elem_name]})"
+					# Uproszczone pobieranie etykiety – tylko ostatni człon
+					field_name = node.src_rel_path.split('.')[-1]
+					if hasattr(self, '_fields') and field_name in self._fields:
+						error_detail['odoo_label'] = self._fields[field_name].string
 					else:
-						error_detail['field_name'] = elem_name
+						error_detail['odoo_label'] = field_name.replace('_', ' ').title()
 					
+					# Określ typ błędu
+					is_empty = "'' is not a valid" in error
+					
+					if is_empty:
+						error_detail['user_message'] = _(
+							"🚩 Pole '%s' (%s) w Odoo jest puste.\n"
+							"👉 To pole odpowiada za element '%s' w strukturze KSeF."
+						) % (error_detail['odoo_label'], error_detail['odoo_field'], elem_name)
+					else:
+						error_detail['user_message'] = _(
+							"🚩 Pole '%s' (%s) w Odoo zawiera nieprawidłową wartość.\n"
+							"👉 Błąd dotyczy elementu '%s' w strukturze KSeF."
+						) % (error_detail['odoo_label'], error_detail['odoo_field'], elem_name)
+					
+					# Dodaj opis z XSD jeśli dostępny
+					if elem_name in element_docs:
+						error_detail['user_message'] += _("\n💡 Opis KSeF: %s\n") % element_docs[elem_name]
+						
+				else:
+					# Fallback – nie znaleziono node'a
+					if elem_name in element_docs:
+						error_detail['user_message'] = _(
+							"❌ Element '%s' (%s) jest nieprawidłowy."
+						) % (elem_name, element_docs[elem_name])
+					else:
+						error_detail['user_message'] = _(
+							"❌ Element '%s' w strukturze KSeF jest nieprawidłowy."
+						) % elem_name
+
 			except Exception as e:
-				_logger.warning(f"Błąd podczas parsowania błędu XSD: {e}")
-			
+				_logger.warning(f"🚨 Błąd podczas parsowania błędu XSD: {e}")
+				error_detail['user_message'] = str(error)
+
 			error_details.append(error_detail)
-		
+
 		return error_details
 
 	def _create_user_friendly_error(self, error_msg, element_docs):
@@ -419,26 +458,6 @@ class AccountMove(models.Model):
 			"res_id": self.id,
 			"view_mode": "form",
 			"target": "current",
-			"tag": "display_notification",
-			"params": {
-				"title": _("Weryfikacja XSD"),
-				"message": msg,
-				"type": color,
-				"sticky": True,
-				"exec_reload": True,
-			},
-		}
-
-		return {
-			"type": "ir.actions.act_window",
-			"res_model": "account.move",
-			"res_id": self.id,
-			"view_mode": "form",
-			"target": "current",
-		}
-
-		return {
-			"type": "ir.actions.client",
 			"tag": "display_notification",
 			"params": {
 				"title": _("Weryfikacja XSD"),

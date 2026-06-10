@@ -1086,6 +1086,7 @@ class XmlExportTemplate(models.Model):
 		# 5. Renderowanie - przekazujemy root_node, który obsłuży swoje dzieci
 		try:
 			self._render_node(root_node, record, root_elem)
+
 		except Exception as e:
 			_logger.error(f"Error during XML rendering: {e}")
 			# Dump struktury dla debugowania
@@ -1391,39 +1392,6 @@ class XmlExportTemplate(models.Model):
 			
 			return parent_elem
 
-		"""# 3. PĘTLA (loop_mode) - TYMCZASOWE WYŁĄCZENIE!
-		if node.loop_mode != "none":
-			_logger.info(f"LOOP: node={node.name}, mode={node.loop_mode}")
-			
-			# UŻYJ NOWEJ METODY do rozwiązania kolekcji
-			collection = self._resolve_loop_collection(node, record)
-			_logger.info(f"LOOP: collection={collection}, count={len(collection) if collection else 0}")
-			
-			if collection:
-				for item in collection:
-					# Tworzymy element dla każdego item w kolekcji
-					elem = etree.SubElement(parent_elem, self._qualify_tag(node))
-
-					# 🔥 NAJPIERW WARTOŚĆ WĘZŁA (jeśli ma)
-					value = self._get_node_value(node, item)
-					if value not in (None, False, "", [], {}):
-						_logger.info(f"\n🔥 NAJPIERW WARTOŚĆ WĘZŁA value = {value}")
-						elem.text = str(value)
-					
-					# Renderujemy dzieci dla KONKRETNEGO ITEM, nie głównego rekordu!
-					children = self.node_ids.filtered(
-						lambda c: c.parent_id and c.parent_id.id == node.id
-					)
-					children = children.sorted(key=lambda c: (c.sequence or 0, c.id))
-					
-					for child in children:
-						# KLUCZOWA ZMIANA: przekazujemy 'item' zamiast 'record'
-						self._render_node(child, item, elem, visited.copy(), skip_xpath_prefixes)
-			else:
-				_logger.warning(f"LOOP: Empty collection for {node.name}")
-			
-			return parent_elem
-		"""
 		# 4. ELEMENT NORMALNY (bez pętli)
 		elem = etree.SubElement(parent_elem, self._qualify_tag(node))
 
