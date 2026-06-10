@@ -92,6 +92,37 @@
 							class="oe_highlight"
 							invisible="node_count == 0"/>
 
+                    <!-- SEQUENCE -->
+                    <button name="auto_sequence_nodes" 
+                            string="Auto-układ sekwencji" 
+                            type="object" 
+                            class="btn-warning"
+                            confirm="To nadpisze wszystkie sekwencje i uporządkuje je automatycznie. Kontynuować?"
+                            invisible="node_count == 0"/>
+
+                    <button name="action_snapshot_sequence"
+                            type="object"
+                            string="Snapshot sequence"
+                            class="btn-info"
+                            icon="fa-camera"
+                            invisible="node_count == 0"/>
+
+                    <button name="action_increment_sequence"
+                            type="object"
+                            string="Sequence +10"
+                            class="btn-outline-secondary"
+                            icon="fa-arrow-up"
+                            confirm="Zwiększyć sekwencję wszystkich węzłów o 10?"
+                            invisible="node_count == 0"/>
+
+                    <button name="action_restore_selected"
+                            type="object"
+                            icon="fa-undo"
+                            title="Restore sequence"
+                            class="btn-outline-secondary"
+                            confirm="Przywrócić sekwencję dla wybranych węzłów?"
+                            invisible="node_count == 0"/>
+
 					<button name="auto_sequence_nodes" 
 							string="Auto-układ sekwencji" 
 							type="object" 
