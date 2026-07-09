@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 softtabstop=0 shiftwidth=4 smarttab expandtab fileformat=unix
 #################################################################################
 #
 # Odoo, Open ERP Source Management Solution
-# Copyright (C) 2017-2026 Hadron for Business sp. z o.o. (http://hadronforbusiness.com)
+# Copyright (C) 17-25 Hadron for business sp. z o.o. (http://www.hadron.eu.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,21 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################################
-# UWAGA / NOTICE:
-# "XET" oraz nazwa "Hadron for Business" są zastrzeżonymi znakami towarowymi
-# "XET" and "Hadron for Business" are trademarks of Hadron for Business sp. z o.o.
-#
-# Sam kod jest objęty licencją AGPLv3, ale koncepcje, pomysły i rozwiązania
-# biznesowe w nim zawarte nie są objęte tą licencją i pozostają własnością
-# autora.
-# The code is licensed under AGPLv3, but the concepts, ideas and business
-# solutions contained herein are not covered by this license and remain the
-# property of the author.
-#################################################################################
-"""@version 17.1.7
-   @owner  Hadron for Business Sp. z o.o.
-   @author Andrzej Wiśniewski (warp3r)
-   @date   2026-03-07
+""" @version 15.1.3
+	@owner  Hadron for Business
+	@author andrzej wiśniewski warp3r
+	@date   2025.10.15
 """
 #################################################################################
 #   Rozszerzenie CommunicationLog dla importu faktur KSeF z XML do Odoo 18
@@ -58,7 +46,7 @@ import time
 import signal
 from markupsafe import Markup, escape
 _logger = logging.getLogger(__name__)
-
+from decimal import Decimal, ROUND_HALF_UP
 
 class CommunicationLog(models.Model):
 	_inherit = "communication.log"
@@ -128,24 +116,19 @@ class CommunicationLog(models.Model):
 		
 		return values
 		
-	def _process_kor_zal_correction_lines(self, xml_root, ns=None):
+	def _process_kor_zal_correction_lines(self, xml_root, ns):
 		"""
 		Przetwarza wiersze korekty faktury zaliczkowej (KOR_ZAL)
 		ze strukturą ZamowienieWiersz
-		
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			list: [(0, 0, line_vals), ...] dla invoice_line_ids
 		"""
 		lines_values = []
+		ns_uri = ns.get('ns') if ns else None
 		
-		# Znajdź WSZYSTKIE ZamowienieWiersz - bez namespace, tylko local-name
-		try:
-			zam_wiersze = xml_root.xpath("//*[local-name()='ZamowienieWiersz']")
-		except Exception as e:
-			_logger.error("Error finding ZamowienieWiersz for KOR_ZAL: %s", e)
-			zam_wiersze = []
+		# Znajdź WSZYSTKIE ZamowienieWiersz
+		if ns_uri:
+			zam_wiersze = xml_root.findall(f'.//{{{ns_uri}}}ZamowienieWiersz')
+		else:
+			zam_wiersze = xml_root.findall('.//ZamowienieWiersz')
 		
 		if not zam_wiersze:
 			_logger.warning("⚠️ KOR_ZAL: No ZamowienieWiersz found!")
@@ -164,7 +147,7 @@ class CommunicationLog(models.Model):
 				'element': zam_wiersz,
 				'stan_przed_z': stan_przed_z,
 				'is_before': stan_przed_z == '1',
-				'is_after': stan_przed_z != '1'
+				'is_after': stan_przed_z != '1'  # Brak lub inna wartość = stan po
 			})
 		
 		# Przetwarzaj każdą grupę
@@ -218,8 +201,7 @@ class CommunicationLog(models.Model):
 		lines_values.sort(key=lambda x: x[2].get('sequence', 0))
 		
 		_logger.info("✅ KOR_ZAL: Created %d total lines", len(lines_values))
-		return lines_values
-
+		return lines_values	
 		
 	def _create_kor_zal_line_from_element(self, element, ns, nr_wiersza, is_before=False):
 		"""
@@ -304,46 +286,46 @@ class CommunicationLog(models.Model):
 		
 		return line_vals	
 		
-	def _get_xml_value(self, container, field_name, ns=None):
+	def _get_xml_value(self, container, field_name, ns):
 		"""
-		Pobiera wartość tekstową z elementu XML.
-		Nie korzysta z namespace - używa local-name().
-		Obsługuje suffixy Z dla faktur zaliczkowych.
-		
-		Args:
-			container: element XML (lxml object)
-			field_name: nazwa pola do znalezienia (np. 'P_7', 'P_7Z')
-			ns: ignorowany (pozostawiony dla kompatybilności)
-		
-		Returns:
-			string or None
+		Pobiera wartość tekstową z elementu XML - POPRAWIONA dla suffixów
 		"""
-		# Lista wariantów do wypróbowania (dla suffixów Z)
+		ns_uri = ns.get('ns') if ns else None
+		
+		# Dla KOR_ZAL: pola mają suffix Z (P_7Z, P_8AZ, etc.)
+		# Ale mogą też być bez suffixu w innych fakturach
+		# Spróbuj kolejno: z suffixem, bez suffixu
+		
+		# Lista wersji do wypróbowania
 		versions_to_try = [field_name]
 		
 		# Jeśli pole kończy się na Z, spróbuj też bez Z
 		if field_name.endswith('Z'):
 			versions_to_try.append(field_name[:-1])
 		
-		# Jeśli pole nie kończy się na Z i zaczyna się od P_, spróbuj też z Z
+		# Jeśli pole nie kończy się na Z, spróbuj też z Z
 		elif not field_name.endswith('Z') and field_name.startswith('P_'):
 			versions_to_try.append(f"{field_name}Z")
 		
-		# Próba dla każdego wariantu
 		for version in versions_to_try:
 			try:
-				# Użyj local-name() - działa niezależnie od namespace
-				elements = container.xpath(f".//*[local-name()='{version}']")
+				if ns_uri:
+					element = container.find(f'{{{ns_uri}}}{version}')
+					if element is None:
+						element = container.find(f'.//{{{ns_uri}}}{version}')
+				else:
+					element = container.find(version)
+					if element is None:
+						element = container.find(f'.//{version}')
 				
-				if elements and elements[0] is not None and elements[0].text:
-					return elements[0].text.strip()
+				if element is not None and element.text:
+					return element.text.strip()
 					
 			except Exception as e:
-				_logger.debug("Error getting XML value for %s (tried %s): %s", 
+				_logger.debug("Error getting XML value %s (tried as %s): %s", 
 							 field_name, version, e)
-				continue
 		
-		return None
+		return None	
 
 	# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	def _create_correction_line_from_element(self, element, ns, nr_wiersza, is_before=False):
@@ -483,7 +465,7 @@ class CommunicationLog(models.Model):
 			# Szukaj faktury do skorygowania
 			corrected_invoice = self.env['account.move'].search([
 				('ksef_number', '=', corrected_ksef_number),
-				('company_id', '=', self.company_id.id),
+				('company_id', '=', self.env.company.id),
 			], limit=1)
 			
 			if corrected_invoice:
@@ -535,7 +517,7 @@ class CommunicationLog(models.Model):
 		if 'journal_id' not in values:
 			journal = self.env['account.journal'].search([
 				('type', '=', 'purchase'),
-				('company_id', '=', self.company_id.id),
+				('company_id', '=', self.env.company.id),
 			], limit=1)
 			if journal:
 				values['journal_id'] = journal.id
@@ -552,26 +534,21 @@ class CommunicationLog(models.Model):
 
 		return values
 
-	def _process_correction_lines_with_notes(self, xml_root, ns=None):
+	def _process_correction_lines_with_notes(self, xml_root, ns):
 		"""
 		Przetwarza wiersze korekty zgodnie z wymaganiami:
 		1. NrWierszaFa zachowujemy (nie zwiększamy)
 		2. Dla StanPrzed=1: ilość ujemna
 		3. Dodajemy wiersze-note "stan przed" i "stan po"
-		
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			list: [(0, 0, line_vals), ...] dla invoice_line_ids
 		"""
 		lines_values = []
+		ns_uri = ns.get('ns') if ns else None
 		
-		# Znajdź wszystkie FaWiersz - bez namespace, tylko local-name
-		try:
-			fa_wiersze = xml_root.xpath("//*[local-name()='FaWiersz']")
-		except Exception as e:
-			_logger.error("Error finding FaWiersz for correction: %s", e)
-			fa_wiersze = []
+		# Znajdź wszystkie wiersze
+		if ns_uri:
+			fa_wiersze = xml_root.findall(f'.//{{{ns_uri}}}FaWiersz')
+		else:
+			fa_wiersze = xml_root.findall('.//FaWiersz')
 		
 		_logger.info("📄 Found %d FaWiersz elements for correction processing", len(fa_wiersze))
 		
@@ -586,7 +563,7 @@ class CommunicationLog(models.Model):
 				'element': fa_wiersz,
 				'stan_przed': stan_przed,
 				'is_before': stan_przed == '1',
-				'is_after': stan_przed != '1'
+				'is_after': stan_przed != '1'  # Brak lub 0 = stan po
 			})
 		
 		# Przetwarzaj każdą grupę wierszy
@@ -599,182 +576,80 @@ class CommunicationLog(models.Model):
 			
 			base_sequence = int(nr_wiersza) * 10
 			
-			# 1. Dodaj wiersz-note "stan przed"
+			# 1. Dodaj wiersz-note "stan przed" (SEKWENCJA: base - 5)
 			lines_values.append((0, 0, {
 				'name': f"### STAN PRZED korektą (pozycja {nr_wiersza}) ###",
 				'quantity': 0,
 				'price_unit': 0,
 				'display_type': 'line_note',
-				'sequence': base_sequence - 5,
+				'sequence': base_sequence - 5,  # Przed właściwym wierszem
 			}))
 			
-			# 2. Przetwórz wiersze STAN PRZED
+			# 2. Przetwórz wiersze STAN PRZED (SEKWENCJA: base)
 			for wiersz_data in [w for w in wiersze_list if w['is_before']]:
 				line_vals = self._create_correction_line_from_element(
 					wiersz_data['element'], ns, nr_wiersza, is_before=True
 				)
 				if line_vals:
-					line_vals['sequence'] = base_sequence
+					line_vals['sequence'] = base_sequence  # Zachowaj oryginalną sekwencję
 					lines_values.append((0, 0, line_vals))
 			
-			# 3. Dodaj wiersz-note "stan po"
+			# 3. Dodaj wiersz-note "stan po" (SEKWENCJA: base + 95)
 			lines_values.append((0, 0, {
 				'name': f"### STAN PO korekcie (pozycja {nr_wiersza}) ###",
 				'quantity': 0,
 				'price_unit': 0,
 				'display_type': 'line_note',
-				'sequence': base_sequence + 95,
+				'sequence': base_sequence + 95,  # PO właściwym wierszu (duża liczba żeby było na końcu)
 			}))
 			
-			# 4. Przetwórz wiersze STAN PO
+			# 4. Przetwórz wiersze STAN PO (SEKWENCJA: base + 100)
 			for wiersz_data in [w for w in wiersze_list if w['is_after']]:
 				line_vals = self._create_correction_line_from_element(
 					wiersz_data['element'], ns, nr_wiersza, is_before=False
 				)
 				if line_vals:
-					line_vals['sequence'] = base_sequence + 100
+					line_vals['sequence'] = base_sequence + 100  # Po notatce
 					lines_values.append((0, 0, line_vals))
 		
 		# Sortuj według sequence
 		lines_values.sort(key=lambda x: x[2].get('sequence', 0))
 		
-		_logger.info("✅ Correction lines with notes: created %d total lines", len(lines_values))
 		return lines_values
 
+
 	def _extract_direct_value(self, xml_root, xpath):
-		"""
-		Wyciąga wartość bezpośrednio z XML (niezależnie od template).
-		Nie korzysta z namespace - używa local-name().
-		
-		Args:
-			xml_root: root element XML
-			xpath: ścieżka w formacie .//NazwaElementu lub //NazwaElementu
-		
-		Returns:
-			string or None
-		"""
+		"""Wyciąga wartość bezpośrednio z XML (niezależnie od template) - POPRAWIONA"""
 		try:
-			# Wyciągnij nazwę elementu z xpath
-			# Obsługa formatów: .//Element, //Element, Element
-			if xpath.startswith('.//'):
-				element_name = xpath[3:]
-			elif xpath.startswith('//'):
-				element_name = xpath[2:]
-			else:
-				element_name = xpath
+			# Spróbuj bez namespace
+			elem = xml_root.find(xpath)
 			
-			# Użyj local-name() - działa niezależnie od namespace
-			elements = xml_root.xpath(f"//*[local-name()='{element_name}']")
+			if elem is None:
+				# Dodaj namespace jeśli jest w root
+				ns_uri = xml_root.nsmap.get(None)
+				if ns_uri:
+					# Konwertuj prosty xpath na xpath z namespace
+					# Zamienia './/RodzajFaktury' na './/{namespace}RodzajFaktury'
+					import re
+					if xpath.startswith('.//'):
+						element_name = xpath[3:]  # Usuń './/'
+						ns_xpath = f'.//{{{ns_uri}}}{element_name}'
+						elem = xml_root.find(ns_xpath)
+					elif xpath.startswith('//'):
+						element_name = xpath[2:]  # Usuń '//'
+						ns_xpath = f'//{{{ns_uri}}}{element_name}'
+						elem = xml_root.find(ns_xpath)
 			
-			if elements and elements[0] is not None and elements[0].text:
-				return elements[0].text.strip()
-				
+			if elem is not None and elem.text:
+				return elem.text.strip()
 		except Exception as e:
 			_logger.debug("Direct extraction error for %s: %s", xpath, e)
 		
 		return None
 
 	# =========================================================================
-	# GŁÓWNA METODA IMPORTU ZAL
+	# GŁÓWNA METODA IMPORTU :: usunięta _process_invoice_lines_zal
 	# =========================================================================
-	def _process_invoice_lines_zal(self, xml_root, line_nodes, ns=None):
-		"""
-		Przetwarza wiersze dla faktur zaliczkowych (ZamowienieWiersz).
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			list: [(0, 0, line_vals), ...] dla invoice_line_ids
-		"""
-		lines_values = []
-		
-		# Znajdź WSZYSTKIE ZamowienieWiersz - bez namespace, tylko local-name
-		try:
-			line_containers = xml_root.xpath("//*[local-name()='ZamowienieWiersz']")
-		except Exception as e:
-			_logger.error("Error finding ZamowienieWiersz: %s", e)
-			line_containers = []
-		
-		_logger.info("📄 Found %d ZAL invoice lines (ZamowienieWiersz)", len(line_containers))
-		
-		for line_index, line_container in enumerate(line_containers):
-			line_vals = {'sequence': (line_index + 1) * 10}
-			
-			# Pobierz wartości (z suffix Z!) - używając _get_xml_value
-			p7z = self._get_xml_value(line_container, 'P_7Z', ns)		   # Nazwa
-			p8az = self._get_xml_value(line_container, 'P_8AZ', ns)		 # Jednostka
-			p8bz = self._get_xml_value(line_container, 'P_8BZ', ns)		 # Ilość
-			p9az = self._get_xml_value(line_container, 'P_9AZ', ns)		 # Cena jednostkowa
-			p11nettoz = self._get_xml_value(line_container, 'P_11NettoZ', ns)  # Netto
-			p11vatz = self._get_xml_value(line_container, 'P_11VatZ', ns)   # VAT
-			p12z = self._get_xml_value(line_container, 'P_12Z', ns)		 # Stawka VAT
-			
-			# Nazwa
-			if p7z:
-				line_vals['name'] = p7z
-			else:
-				line_vals['name'] = f"Zaliczka {line_index + 1}"
-			
-			# Ilość
-			if p8bz:
-				try:
-					line_vals['quantity'] = float(p8bz.replace(',', '.'))
-				except:
-					line_vals['quantity'] = 1.0
-			else:
-				line_vals['quantity'] = 1.0
-			
-			# CENA JEDNOSTKOWA - preferuj P_9AZ, potem oblicz z netto
-			price_unit_set = False
-			if p9az:
-				try:
-					line_vals['price_unit'] = float(p9az.replace(',', '.'))
-					price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set and p11nettoz and p8bz:
-				try:
-					netto = float(p11nettoz.replace(',', '.'))
-					ilosc = float(p8bz.replace(',', '.'))
-					if ilosc != 0:
-						line_vals['price_unit'] = netto / ilosc
-						price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set:
-				line_vals['price_unit'] = 0.0
-			
-			# Podatek (P_12Z)
-			if p12z:
-				tax_ids = self._find_tax_ids_by_name(p12z)
-				if tax_ids:
-					line_vals['tax_ids'] = [(6, 0, tax_ids)]
-			
-			# Jednostka (P_8AZ)
-			if p8az:
-				uom = self._find_uom_by_name(p8az)
-				if uom:
-					line_vals['product_uom_id'] = uom.id
-			
-			# Numer wiersza
-			nr_wiersza = self._get_xml_value(line_container, 'NrWierszaZam', ns)
-			if nr_wiersza:
-				try:
-					line_vals['sequence'] = int(nr_wiersza) * 10
-				except:
-					pass
-			
-			lines_values.append((0, 0, line_vals))
-				
-			_logger.debug("✅ ZAL Line %d: %s, qty: %s, price: %s", 
-						 line_index + 1, 
-						 line_vals.get('name', 'No name')[:30],
-						 line_vals.get('quantity'),
-						 line_vals.get('price_unit'))
-		
-		return lines_values
-
 
 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	# metoda pomocnicza dla głwnej metody odtwarzania faktury przychodzącej
@@ -783,113 +658,90 @@ class CommunicationLog(models.Model):
 		"""
 		Znajduje lub tworzy partnera na podstawie danych z XML.
 		Jeśli partner istnieje - zwraca go.
-		Jeśli nie istnieje - tworzy z danymi z XML.
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			res.partner or None
+		Jeśli nie istnieje - tworzy z pełnymi danymi z XML.
 		"""
 		try:
-			# Helper do znajdowania wartości
-			def find_value(element_name, parent=None):
-				target = parent if parent is not None else xml_root
-				try:
-					elements = target.xpath(f".//*[local-name()='{element_name}']")
-					if elements and elements[0].text:
-						return elements[0].text.strip()
-				except Exception:
-					pass
+			ns_uri = xml_root.nsmap.get(None)
+			ns_prefix = f"{{{ns_uri}}}" if ns_uri else ""
+			
+			# 1. Pobierz NIP (wymagany) - POPRAWIONE testowanie
+			nip_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}NIP')
+			
+			# Jawne testowanie zamiast "if not nip_elem"
+			if nip_elem is None:
+				_logger.warning("⚠️ Brak elementu NIP w XML dla %s", party_type)
 				return None
 			
-			# Helper do znajdowania elementu
-			def find_element(element_name, parent=None):
-				target = parent if parent is not None else xml_root
-				try:
-					elements = target.xpath(f".//*[local-name()='{element_name}']")
-					if elements:
-						return elements[0]
-				except Exception:
-					pass
+			if nip_elem.text is None or not nip_elem.text.strip():
+				_logger.warning("⚠️ Element NIP istnieje ale jest pusty dla %s", party_type)
 				return None
 			
-			# 1. Znajdź kontener party_type (Podmiot1 lub Podmiot2)
-			party_container = find_element(party_type)
-			if not party_container:
-				_logger.warning("⚠️ Brak elementu %s w XML", party_type)
-				return None
+			nip = nip_elem.text.strip()
 			
-			# 2. Pobierz NIP (wymagany)
-			nip = find_value('NIP', party_container)
-			if not nip:
-				_logger.warning("⚠️ Brak NIP w %s", party_type)
-				return None
-			
-			# 3. Najpierw spróbuj znaleźć istniejącego partnera (po czystym NIP)
+			# 2. Najpierw spróbuj znaleźć istniejącego partnera
 			existing_partner = self._find_partner_by_nip(nip)
 			if existing_partner:
 				_logger.info("✅ Found existing partner: %s (NIP: %s)", 
 							existing_partner.name, nip)
 				return existing_partner
 			
-			# 4. Jeśli nie ma partnera, utwórz go z danymi z XML
+			# 3. Jeśli nie ma partnera, utwórz go z pełnymi danami z XML
 			_logger.info("🆕 Creating new partner from XML data (NIP: %s)", nip)
 			
-			# Pobierz nazwę
-			nazwa = find_value('Nazwa', party_container)
-			if not nazwa:
-				nazwa = f"Partner {nip}"
+			# Pobierz nazwę - POPRAWIONE testowanie
+			nazwa = f"Partner {nip}"  # Domyślna
+			nazwa_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}Nazwa')
+			if nazwa_elem is not None and nazwa_elem.text and nazwa_elem.text.strip():
+				nazwa = nazwa_elem.text.strip()
 			
 			# Przygotuj wartości dla partnera
 			partner_vals = {
 				'name': nazwa,
-				'vat': nip,  # BEZ PL - czysty NIP
+				'vat': f"PL{nip}" if not nip.startswith('PL') else nip,
 				'company_type': 'company',
 				'is_company': True,
 			}
+
+			ksef_info = []
+			ksef_info.append(f"Importowany z KSeF: {self.ksef_invoice_number}")
+			ksef_info.append(f"Data importu: {fields.Date.today()}")		
+			if 'comment' in partner_vals:
+				partner_vals['comment'] = " | ".join(ksef_info) + "\n\n" + partner_vals['comment']
+			else:
+				partner_vals['comment'] = " | ".join(ksef_info)
+	
+			# 4. REGON (jeśli istnieje) - POPRAWIONE testowanie
+			regon_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}REGON')
+			if regon_elem is not None and regon_elem.text and regon_elem.text.strip():
+				partner_vals['company_registry'] = regon_elem.text.strip()
 			
-			# 5. REGON (jeśli istnieje)
-			regon = find_value('REGON', party_container)
-			if regon:
-				partner_vals['company_registry'] = regon
-			
-			# 6. Adres
-			adres_container = find_element('Adres', party_container)
-			if adres_container is not None:
-				# Zbierz wszystkie linie adresu
+			# 5. Adres (zgodnie ze schemą XSD) - POPRAWIONE testowanie
+			adres_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}Adres')
+			if adres_elem is not None:
+				# AdresL1 - AdresL4
 				street_parts = []
 				for i in range(1, 5):
-					adresl = find_value(f'AdresL{i}', adres_container)
-					if adresl:
-						street_parts.append(adresl)
+					adresl_elem = adres_elem.find(f'{ns_prefix}AdresL{i}')
+					if adresl_elem is not None and adresl_elem.text and adresl_elem.text.strip():
+						street_parts.append(adresl_elem.text.strip())
 				
 				if street_parts:
-					# Wszystkie linie łączymy w jedno pole street
-					# Użytkownik sam poprawi adres ręcznie
 					partner_vals['street'] = ', '.join(street_parts)
 				
-				# KodKraju -> mapowanie na country_id
-				kod_kraju = find_value('KodKraju', adres_container)
-				if kod_kraju:
-					country = self.env['res.country'].search([
-						('code', '=', kod_kraju)
-					], limit=1)
-					if country:
-						partner_vals['country_id'] = country.id
-						_logger.info("🌍 Mapped country code %s to %s", kod_kraju, country.name)
-					else:
-						_logger.warning("⚠️ Country not found for code: %s", kod_kraju)
-						# Zapisz kod kraju w komentarzu do ręcznej korekty
-						partner_vals.setdefault('comment', '')
-						partner_vals['comment'] += f"\nKod kraju z KSeF: {kod_kraju}"
+				# KodKraju
+				kraj_elem = adres_elem.find(f'{ns_prefix}KodKraju')
+				if kraj_elem is not None and kraj_elem.text and kraj_elem.text.strip():
+					partner_vals['country_code'] = kraj_elem.text.strip()
 			
-			# 7. Adres korespondencyjny (AdresKoresp) - tylko do komentarza
-			adres_koresp = find_element('AdresKoresp', party_container)
-			if adres_koresp is not None:
+			# 6. Adres korespondencyjny (opcjonalny) - POPRAWIONE testowanie
+			adres_koresp_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}AdresKoresp')
+			if adres_koresp_elem is not None:
 				comment_parts = ["Adres korespondencyjny:"]
+				
 				for i in range(1, 5):
-					adresl = find_value(f'AdresL{i}', adres_koresp)
-					if adresl:
-						comment_parts.append(adresl)
+					adresl_elem = adres_koresp_elem.find(f'{ns_prefix}AdresL{i}')
+					if adresl_elem is not None and adresl_elem.text and adresl_elem.text.strip():
+						comment_parts.append(adresl_elem.text.strip())
 				
 				if len(comment_parts) > 1:
 					existing_comment = partner_vals.get('comment', '')
@@ -898,61 +750,65 @@ class CommunicationLog(models.Model):
 					else:
 						partner_vals['comment'] = ' '.join(comment_parts)
 			
-			# 8. Dane kontaktowe (Email, Telefon)
-			dane_kontaktowe = find_element('DaneKontaktowe', party_container)
+			# 7. Dane kontaktowe (opcjonalne, max 3) - POPRAWIONE testowanie
+			dane_kontaktowe = xml_root.findall(f'.//{ns_prefix}{party_type}//{ns_prefix}DaneKontaktowe')
 			if dane_kontaktowe:
-				email = find_value('Email', dane_kontaktowe)
-				if email:
-					partner_vals['email'] = email
+				emails = []
+				phones = []
 				
-				telefon = find_value('Telefon', dane_kontaktowe)
-				if telefon:
-					partner_vals['phone'] = telefon
+				for kontakt in dane_kontaktowe:
+					email_elem = kontakt.find(f'{ns_prefix}Email')
+					if email_elem is not None and email_elem.text and email_elem.text.strip():
+						emails.append(email_elem.text.strip())
+					
+					telefon_elem = kontakt.find(f'{ns_prefix}Telefon')
+					if telefon_elem is not None and telefon_elem.text and telefon_elem.text.strip():
+						phones.append(telefon_elem.text.strip())
+				
+				# Pierwszy email jako główny
+				if emails:
+					partner_vals['email'] = emails[0]
+					if len(emails) > 1:
+						comment = partner_vals.get('comment', '')
+						partner_vals['comment'] = f"{comment}\nInne emaile: {', '.join(emails[1:])}" if comment else f"Inne emaile: {', '.join(emails[1:])}"
+				
+				# Pierwszy telefon jako główny
+				if phones:
+					partner_vals['phone'] = phones[0]
+					if len(phones) > 1:
+						comment = partner_vals.get('comment', '')
+						partner_vals['comment'] = f"{comment}\nInne telefony: {', '.join(phones[1:])}" if comment else f"Inne telefony: {', '.join(phones[1:])}"
 			
-			# 9. NrEORI
-			nreori = find_value('NrEORI', party_container)
-			if nreori:
-				partner_vals['ksef_nreori'] = nreori
+			# 8. NrEORI (opcjonalny) - POPRAWIONE testowanie
+			nreori_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}NrEORI')
+			if nreori_elem is not None and nreori_elem.text and nreori_elem.text.strip():
+				partner_vals['ksef_nreori'] = nreori_elem.text.strip()
 			
-			# 10. PrefiksPodatnika
-			prefiks = find_value('PrefiksPodatnika', party_container)
-			if prefiks:
-				partner_vals['ksef_prefiks'] = prefiks
+			# 9. PrefiksPodatnika - POPRAWIONE testowanie
+			prefiks_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}PrefiksPodatnika')
+			if prefiks_elem is not None and prefiks_elem.text and prefiks_elem.text.strip():
+				partner_vals['ksef_prefiks'] = prefiks_elem.text.strip()
 			
-			# 11. Dodaj informację o imporcie z KSeF (w tym surowy NIP)
-			ksef_info = []
-			ksef_info.append(f"Importowany z KSeF: {self.ksef_invoice_number}")
-			ksef_info.append(f"Data importu: {fields.Date.today()}")
-			ksef_info.append(f"NIP oryginalny: {nip} (bez PL)")
-			ksef_info.append("⚠️ UWAGA: Prosimy zweryfikować i uzupełnić dane adresowe!")
+			# 10. StatusInfoPodatnika (opcjonalny)
+			status_elem = xml_root.find(f'.//{ns_prefix}{party_type}//{ns_prefix}StatusInfoPodatnika')
+			if status_elem is not None:
+				# Możesz dodać przetwarzanie statusu jeśli potrzebne
+				pass
 			
-			existing_comment = partner_vals.get('comment', '')
-			if existing_comment:
-				partner_vals['comment'] = f"{existing_comment}\n\n{' | '.join(ksef_info)}"
-			else:
-				partner_vals['comment'] = ' | '.join(ksef_info)
-			
-			# 12. Utwórz partnera
+			# 11. Utwórz partnera
 			try:
-				partner = self.env['res.partner'].with_company(self.company_id).create(partner_vals)
+				partner = self.env['res.partner'].create(partner_vals)
 				
-				# Dodaj dodatkową informację o źródle
+				# Dodaj informację o źródle w komentarzu
 				source_info = f"\n\n--- Import z KSeF ---\nFaktura: {self.ksef_invoice_number}\nData: {fields.Datetime.now()}"
-				partner.write({'comment': partner_vals.get('comment', '') + source_info})
+				
+				if 'comment' in partner_vals:
+					partner.write({'comment': partner_vals['comment'] + source_info})
+				else:
+					partner.write({'comment': source_info})
 				
 				_logger.info("✅ Created new partner: %s (NIP: %s, ID: %d)", 
 							partner.name, nip, partner.id)
-				
-				# Jeśli brak kraju, dodaj notatkę w chatter faktury
-				if not partner.country_id and hasattr(self, 'id') and self.id:
-					self.message_post(
-						body=Markup(f"""
-						<b>⚠️ Uwaga dotycząca partnera {partner.name}</b><br/>
-						Brak przypisanego kraju. Kod kraju z KSeF: {kod_kraju if 'kod_kraju' in dir() else 'nieznany'}<br/>
-						Prosimy ręcznie uzupełnić dane adresowe i kraj w karcie partnera.
-						"""),
-						message_type='notification'
-					)
 				
 				return partner
 				
@@ -960,18 +816,17 @@ class CommunicationLog(models.Model):
 				_logger.error("❌ Error creating partner: %s", create_error, exc_info=True)
 				# Fallback: utwórz partnera z minimalnymi danymi
 				try:
-					minimal_partner = self.env['res.partner'].with_company(self.company_id).create({
+					minimal_partner = self.env['res.partner'].create({
 						'name': nazwa,
-						'vat': nip,  # BEZ PL
+						'vat': f"PL{nip}",
 						'company_type': 'company',
-						'comment': f"Utworzony automatycznie z KSeF. Oryginalny NIP: {nip}. Prosimy uzupełnić dane."
 					})
 					_logger.warning("⚠️ Created minimal partner due to error: %s", minimal_partner.name)
 					return minimal_partner
 				except Exception as fallback_error:
 					_logger.error("❌ Even fallback failed: %s", fallback_error)
 					return None
-						
+					
 		except Exception as e:
 			_logger.error("❌ Error in _create_or_get_partner_from_xml: %s", e, exc_info=True)
 			return None
@@ -1102,7 +957,7 @@ class CommunicationLog(models.Model):
 			if 'journal_id' not in invoice_values:
 				journal = self.env['account.journal'].search([
 					('type', '=', 'purchase'),
-					('company_id', '=', log.company_id.id),
+					('company_id', '=', self.env.company.id),
 				], limit=1)
 				if journal:
 					invoice_values['journal_id'] = journal.id
@@ -1121,7 +976,7 @@ class CommunicationLog(models.Model):
 
 				if kod_waluty:
 					currency = self.env['res.currency'].search([
-						('name', 'in', kod_waluty),
+						('name', 'in', kod_waluty)
 					], limit=1)
 
 				if not currency:
@@ -1186,8 +1041,7 @@ class CommunicationLog(models.Model):
 					log._auto_match_refund_lines(invoice, invoice.reversed_entry_id)
 				
 				#_logger.info(f"#👉 ZAPISZ XML JAKO ZAŁĄCZNIK KSeF_{log.ksef_invoice_number}.xml log.ksef_status = {log.ksef_status}")
-				attachment = self.env['ir.attachment'].with_company( invoice.company_id).create({
-					'company_id': invoice.company_id.id,
+				attachment = self.env['ir.attachment'].create({
 					'name': f"KSeF_{log.ksef_invoice_number}.xml",
 					'res_model': 'account.move',
 					'res_id': invoice.id,
@@ -1221,19 +1075,16 @@ class CommunicationLog(models.Model):
 	# =========================================================================
 	# PRZETWARZANIE XML ZGODNIE Z SZABLONEM
 	# =========================================================================
+
 	def _process_import_template(self, xml_root, template):
 		"""
 		Przetwarza XML faktury KSeF według szablonu importu.
-		Nie korzysta z namespace - używa local-name() we wszystkich zależnych metodach.
-		
-		Returns:
-			dict: wartości do utworzenia faktury
 		"""
 		_logger.info("📥 Start processing XML with template ID: %s", template.id)
 		
 		values = {}
 		
-		# 1. ROZPOZNAJ TYP FAKTURY (używa local-name wewnętrznie)
+		# 1. ROZPOZNAJ TYP FAKTURY (nowa metoda!)
 		rodzaj = self._extract_invoice_type_from_xml(xml_root)
 		type_info = self.map_invoice_type(rodzaj, xml_root)
 		
@@ -1245,18 +1096,37 @@ class CommunicationLog(models.Model):
 			if value:
 				values[key] = value
 		
-		# 3. NUMER KSeF (zawsze)
+		# 3. DLA KOREKT - SPRAWDŹ reversed_entry_id
+		if (type_info['special_fields'].get('requires_reversed_entry') and 
+			'reversed_entry_id' not in values):
+			_logger.warning("⚠️ Korekta bez reversed_entry_id - wymaga ręcznego powiązania")
+			values['state'] = 'draft'
+		
+		# 4. NUMER KSeF (zawsze)
 		if self.ksef_invoice_number:
 			values['ksef_number'] = self.ksef_invoice_number
 		
-		# 4. P_2 - numer faktury (użyj _extract_value_by_path z local-name)
-		p2_value = self._extract_value_by_path(xml_root, './/P_2')
-		if p2_value:
+		# 5. DLA FAKTUR UPROSZCZONYCH (UPR) - stan = draft
+		if rodzaj == 'UPR':
+			values['state'] = 'draft'
+		
+		# 6. PRZETWÓRZ POZOSTAŁE POLA Z SZABLONU
+		p2_value = None
+		ns_uri = xml_root.nsmap.get(None)
+		ns = {'ns': ns_uri} if ns_uri else {}
+		if ns_uri:
+			p2_elem = xml_root.find(f'.//{{{ns_uri}}}P_2')
+		else:
+			p2_elem = xml_root.find('.//P_2')
+		
+		if p2_elem is not None and p2_elem.text:
+			p2_value = p2_elem.text.strip()
 			values['ref'] = p2_value
 			values['invoice_origin'] = p2_value
-			_logger.info("✅ Extracted ref: %s", p2_value)
+			_logger.info("✅ Direct ref extraction: %s", p2_value)
+
 		
-		# 5. Podział node'ów na nagłówek i wiersze
+		# Podział node'ów na nagłówek i wiersze
 		header_nodes = []
 		line_field_nodes = []
 		
@@ -1269,12 +1139,12 @@ class CommunicationLog(models.Model):
 		# Pola już przetworzone (pomijamy)
 		skip_fields = {'move_type', 'ksef_number', 'state', 'ref'}
 		
-		# 6. Przetwarzanie nagłówka (używa _extract_value_from_xml_node które działa z local-name)
+		# Przetwarzanie nagłówka
 		for node in header_nodes:
 			if not node.src_rel_path or node.src_rel_path in skip_fields:
 				continue
 
-			value = self._extract_value_from_xml_node(xml_root, node, {})  # puste ns
+			value = self._extract_value_from_xml_node(xml_root, node, ns)
 			if value is not None:
 				# Specjalna obsługa dla partner_id
 				if node.src_rel_path == 'partner_id':
@@ -1292,20 +1162,34 @@ class CommunicationLog(models.Model):
 				else:
 					values[node.src_rel_path] = value
 		
-		# 7. PRZETWÓRZ WIERSZE FAKTURY
+		# 7. PRZETWÓRZ WIERSZE FAKTURY (nowa metoda dla FaWiersz!)
 		lines_values = []
-		
-		if rodzaj in ['ZAL', 'KOR_ZAL']:
-			# Faktury zaliczkowe - ZamowienieWiersz
-			lines_values = self._process_invoice_lines_zal(xml_root, line_field_nodes, ns=None)
+		if rodzaj == 'ZAL':
+			lines_values = self._process_zal_accounting_lines(
+				xml_root,
+				ns,
+			)
+		elif rodzaj == 'ROZ':
+			lines_values = self._process_roz_accounting_lines(
+				xml_root,
+				line_field_nodes,
+				ns,
+			)
 		else:
-			# Pozostałe typy - FaWiersz
-			lines_values = self._process_invoice_lines_fawiersz(xml_root, line_field_nodes, ns=None)
+			lines_values = self._process_invoice_lines_fawiersz(
+				xml_root,
+				line_field_nodes,
+				ns,
+			)
 
 		if lines_values:
 			values['invoice_line_ids'] = lines_values
-			_logger.info("✅ Added %d invoice lines", len(lines_values))
-		
+			_logger.info(
+				"Added %d invoice lines for %s",
+				len(lines_values),
+				rodzaj,
+			)
+
 		# 8. DODAJ POLA SPECJALNE Z FAKTURY
 		self._add_invoice_specific_fields(values, xml_root, rodzaj)
 		values['ksef_rodzaj_faktury'] = rodzaj
@@ -1325,11 +1209,469 @@ class CommunicationLog(models.Model):
 						_logger.warning("⚠️ Data korekty wcześniejsza niż data faktury korygowanej")
 		
 		_logger.info("✅ Processed invoice %s: move_type=%s, %d fields, %d lines", 
-					 rodzaj, values.get('move_type'), len(values), 
-					 len(lines_values) if 'invoice_line_ids' in values else 0)
+					 rodzaj, values.get('move_type'), len(values), len(lines_values) if 'invoice_line_ids' in values else 0)
 		
 		return values
 
+	# -------------------------------------------------------------------------
+	# Helper'y na potrzeby ZAL, 
+	# gdy w przysłanym XML nie ma wierszy a jest np. kwota
+	# -------------------------------------------------------------------------
+	def _format_ksef_vat_rate_label(self, rate):
+		if rate in (None, ''):
+			return ''
+
+		raw = str(rate).strip()
+
+		special_labels = {
+			'zw': 'zw',
+			'np': 'np',
+			'oo': 'oo',
+			'0': '0%',
+			'0 WDT': '0% WDT',
+			'0 EX': '0% EX',
+		}
+
+		if raw in special_labels:
+			return special_labels[raw]
+
+		try:
+			value = float(raw.replace(',', '.'))
+
+			if value.is_integer():
+				return f"{int(value)}%"
+
+			return f"{value:g}%"
+
+		except ValueError:
+			return raw
+
+	###
+	def _process_roz_accounting_lines(
+		self,
+		xml_root,
+		line_nodes,
+		ns,
+	):
+		"""
+		Tworzy księgowe wiersze faktury rozliczeniowej ROZ.
+		Logika:
+		1. FaWiersz tworzą pełne pozycje sprzedaży.
+		2. Pełne wartości FaWiersz są grupowane według stawki VAT.
+		3. P_13_* określają wartości netto pozostałe
+		   po rozliczeniu zaliczek.
+		4. Różnica:
+			   pełne netto FaWiersz - P_13_*
+		   tworzy ujemne techniczne linie rozliczenia zaliczek.
+		5. P_15 służy do kontroli końcowej wartości dokumentu.
+		FakturaZaliczkowa służy do identyfikacji i powiązania
+		wcześniejszych dokumentów ZAL, ale nie jest źródłem
+		kwot technicznych linii rozliczenia.
+		"""
+
+		def _to_decimal(value):
+			if value in (None, ''):
+				return Decimal('0.00')
+			try:
+				return Decimal(
+					str(value).replace(',', '.').strip()
+				)
+			except Exception:
+				return Decimal('0.00')
+
+		def _money(value):
+			return value.quantize(
+				Decimal('0.01'),
+				rounding=ROUND_HALF_UP,
+			)
+
+		def _normalize_rate(rate):
+			if rate in (None, ''):
+				return ''
+
+			raw = str(rate).strip()
+			lower = raw.lower()
+
+			aliases = {
+				'0%': '0',
+				'0 wdt': '0 WDT',
+				'0% wdt': '0 WDT',
+				'0 ex': '0 EX',
+				'0% ex': '0 EX',
+				'zw': 'zw',
+				'np': 'np',
+				'oo': 'oo',
+			}
+
+			return aliases.get(lower, raw)
+
+		# ------------------------------------------------------------
+		# 1. Pełne pozycje sprzedaży z FaWiersz
+		# ------------------------------------------------------------
+		lines_values = self._process_invoice_lines_fawiersz(
+			xml_root,
+			line_nodes,
+			ns,
+		)
+
+		ns_uri = ns.get('ns') if ns else None
+		if ns_uri:
+			fa_lines = xml_root.findall(
+				f'.//{{{ns_uri}}}FaWiersz'
+			)
+		else:
+			fa_lines = xml_root.findall(
+				'.//FaWiersz'
+			)
+
+		# ------------------------------------------------------------
+		# 2. Pełne wartości netto FaWiersz według stawki VAT
+		# ------------------------------------------------------------
+		full_net_by_rate = {}
+		for node in fa_lines:
+			rate = _normalize_rate(
+				self._get_xml_value(
+					node,
+					'P_12',
+					ns,
+				)
+			)
+
+			net = _money(
+				_to_decimal(
+					self._get_xml_value(
+						node,
+						'P_11',
+						ns,
+					)
+				)
+			)
+
+			if not rate:
+				_logger.warning(
+					"ROZ: FaWiersz bez P_12; "
+					"nie można przypisać pozycji do stawki VAT"
+				)
+				continue
+
+			full_net_by_rate.setdefault(
+				rate,
+				Decimal('0.00'),
+			)
+
+			full_net_by_rate[rate] += net
+
+
+		# ------------------------------------------------------------
+		# 3. Wartości ROZ po rozliczeniu zaliczek
+		# ------------------------------------------------------------
+		summary_fields = [
+			('P_13_1', 'P_14_1', '23'),
+			('P_13_2', 'P_14_2', '8'),
+			('P_13_3', 'P_14_3', '5'),
+
+			('P_13_6_1', None, '0'),
+			('P_13_6_2', None, '0 WDT'),
+			('P_13_6_3', None, '0 EX'),
+
+			('P_13_7', None, 'zw'),
+			('P_13_8', None, 'np'),
+			('P_13_10', None, 'oo'),
+		]
+
+		target_net_by_rate = {}
+		target_vat_by_rate = {}
+
+		for net_field, vat_field, vat_rate in summary_fields:
+			net_raw = self._extract_direct_value(
+				xml_root,
+				f'.//{net_field}',
+			)
+
+			if net_raw in (None, ''):
+				continue
+
+			rate = _normalize_rate(vat_rate)
+			target_net_by_rate[rate] = _money(
+				_to_decimal(net_raw)
+			)
+
+			vat_raw = None
+
+			if vat_field:
+				vat_raw = self._extract_direct_value(
+					xml_root,
+					f'.//{vat_field}',
+				)
+
+			target_vat_by_rate[rate] = _money(
+				_to_decimal(vat_raw)
+			)
+
+		# ------------------------------------------------------------
+		# 4. Techniczne linie rozliczenia zaliczek
+		# ------------------------------------------------------------
+		max_sequence = max(
+			[
+				command[2].get('sequence', 0)
+				for command in lines_values
+				if (
+					isinstance(command, tuple)
+					and len(command) >= 3
+					and isinstance(command[2], dict)
+				)
+			]
+			or [0]
+		)
+
+		sequence = max_sequence + 10
+		all_rates = (
+			set(full_net_by_rate)
+			| set(target_net_by_rate)
+		)
+
+		def _rate_sort_key(rate):
+			try:
+				return (
+					0,
+					Decimal(
+						str(rate).replace(',', '.')
+					),
+				)
+			except Exception:
+				return (
+					1,
+					str(rate),
+				)
+
+		for vat_rate in sorted(
+			all_rates,
+			key=_rate_sort_key,
+		):
+
+			full_net = _money(
+				full_net_by_rate.get(
+					vat_rate,
+					Decimal('0.00'),
+				)
+			)
+
+			target_net = _money(
+				target_net_by_rate.get(
+					vat_rate,
+					Decimal('0.00'),
+				)
+			)
+
+			settled_net = _money(
+				full_net - target_net
+			)
+
+			if settled_net == Decimal('0.00'):
+				continue
+
+			line_amount = -settled_net
+			if settled_net < Decimal('0.00'):
+				_logger.warning(
+					"ROZ: dla stawki %s wartość P_13 jest większa "
+					"od pełnej wartości FaWiersz: full=%s target=%s",
+					vat_rate,
+					full_net,
+					target_net,
+				)
+
+			rate_label = self._format_ksef_vat_rate_label(
+				vat_rate
+			)
+
+			line_vals = {
+				'name': (
+					f'Rozliczenie zaliczek KSeF – '
+					f'stawka {rate_label}'
+				),
+				'quantity': 1.0,
+				'price_unit': float(line_amount),
+				'sequence': sequence,
+			}
+
+			tax_ids = self._find_tax_ids_by_name(
+				vat_rate
+			)
+
+			if tax_ids:
+				line_vals['tax_ids'] = [
+					(6, 0, tax_ids)
+				]
+
+			else:
+				_logger.warning(
+					"ROZ: tax not found for rate %s",
+					vat_rate,
+				)
+
+			lines_values.append(
+				(0, 0, line_vals)
+			)
+
+			_logger.info(
+				"ROZ settlement line: "
+				"rate=%s full_net=%s target_net=%s "
+				"settled_net=%s line_amount=%s",
+				vat_rate,
+				full_net,
+				target_net,
+				settled_net,
+				line_amount,
+			)
+
+			sequence += 10
+
+		# ------------------------------------------------------------
+		# 5. Kontrola P_13 + P_14 == P_15
+		# ------------------------------------------------------------
+		target_net_total = _money(
+			sum(
+				target_net_by_rate.values(),
+				Decimal('0.00'),
+			)
+		)
+
+		target_vat_total = _money(
+			sum(
+				target_vat_by_rate.values(),
+				Decimal('0.00'),
+			)
+		)
+
+		target_gross_total = _money(
+			target_net_total
+			+ target_vat_total
+		)
+
+		p15_raw = self._extract_direct_value(
+			xml_root,
+			'.//P_15',
+		)
+
+		p15 = _money(
+			_to_decimal(p15_raw)
+		)
+
+		difference = _money(
+			target_gross_total - p15
+		)
+
+		if abs(difference) > Decimal('0.01'):
+			_logger.warning(
+				"ROZ totals mismatch: "
+				"P_13/P_14 gross=%s, "
+				"P_15=%s, "
+				"difference=%s",
+				target_gross_total,
+				p15,
+				difference,
+			)
+		else:
+			_logger.info(
+				"ROZ totals OK: "
+				"net=%s vat=%s gross=%s P_15=%s",
+				target_net_total,
+				target_vat_total,
+				target_gross_total,
+				p15,
+			)
+
+		_logger.info(
+			"ROZ: created %d accounting lines",
+			len(lines_values),
+		)
+
+		return lines_values
+
+	###
+	def _process_zal_accounting_lines(self, xml_root, ns):
+		"""
+		Tworzy księgowe wiersze faktury zaliczkowej ZAL
+		na podstawie pól podsumowania P_13_*.
+
+		Każda występująca podstawa opodatkowania tworzy
+		osobny wiersz account.move.line dla odpowiedniej
+		stawki VAT.
+
+		ZamowienieWiersz nie jest źródłem invoice_line_ids.
+		"""
+		lines_values = []
+
+		summary_fields = [
+			('P_13_1', 'P_14_1', '23'),
+			('P_13_2', 'P_14_2', '8'),
+			('P_13_3', 'P_14_3', '5'),
+			('P_13_6_1', None, '0'),
+			('P_13_6_2', None, '0 WDT'),
+			('P_13_6_3', None, '0 EX'),
+			('P_13_7', None, 'zw'),
+			('P_13_8', None, 'np'),
+			('P_13_10', None, 'oo'),
+		]
+
+		sequence = 10
+
+		for net_field, vat_field, vat_rate in summary_fields:
+			net_raw = self._extract_direct_value(
+				xml_root,
+				f'.//{net_field}'
+			)
+
+			if not net_raw:
+				continue
+
+			try:
+				net_amount = float(
+					net_raw.replace(',', '.')
+				)
+			except (ValueError, TypeError):
+				continue
+
+			# Tylko do czytelnej nazwy wiersza.
+			rate_label = self._format_ksef_vat_rate_label(
+				vat_rate
+			)
+
+			line_vals = {
+				'name': f'Zaliczka KSeF – stawka {rate_label}',
+				'quantity': 1.0,
+				'price_unit': net_amount,
+				'sequence': sequence,
+			}
+
+			# Do wyszukania podatku przekazujemy wartość surową,
+			# np. "23", "8", "zw", "np".
+			tax_ids = self._find_tax_ids_by_name(
+				vat_rate
+			)
+
+			if tax_ids:
+				line_vals['tax_ids'] = [
+					(6, 0, tax_ids)
+				]
+			else:
+				_logger.warning(
+					"ZAL fallback: tax not found for rate %s",
+					vat_rate,
+				)
+
+			lines_values.append(
+				(0, 0, line_vals)
+			)
+
+			sequence += 10
+
+		_logger.info(
+			"ZAL: created %d accounting lines from VAT summary",
+			len(lines_values),
+		)
+
+		return lines_values
 
 	# =========================================================================
 	# NOWE METODY DLA STRUKTURY FAWIERSZ
@@ -1388,11 +1730,10 @@ class CommunicationLog(models.Model):
 		return 'VAT'
 
 	# XXX
-	def _process_invoice_lines_fawiersz(self, xml_root, line_nodes, ns=None):
+	def _process_invoice_lines_fawiersz(self, xml_root, line_nodes, ns):
 		"""
 		Przetwarza wiersze faktury z FaWiersz (KSeF FA(3)).
-		Nie korzysta z namespace - używa local-name().
-		
+
 		Returns:
 			list: [(0, 0, line_vals), ...] dla invoice_line_ids
 		"""
@@ -1405,206 +1746,132 @@ class CommunicationLog(models.Model):
 				return None
 
 		lines_values = []
-		
-		# Znajdź wszystkie FaWiersz - bez namespace, tylko local-name
-		try:
-			line_containers = xml_root.xpath("//*[local-name()='FaWiersz']")
-			
-			# Fallback: stara struktura Pozycje/P_2A
-			if not line_containers:
-				line_containers = xml_root.xpath("//*[local-name()='Pozycje']//*[local-name()='P_2A']")
-		except Exception as e:
-			_logger.error("Error finding FaWiersz: %s", e)
-			line_containers = []
-		
+		ns_uri = ns.get('ns') if ns else None
+
+		# 1. Znajdź WSZYSTKIE FaWiersz
+		if ns_uri:
+			line_containers = xml_root.findall(f'.//{{{ns_uri}}}FaWiersz')
+		else:
+			line_containers = xml_root.findall('.//FaWiersz')
+
+		# 2. Fallback: stara struktura Pozycje/P_2A
+		if not line_containers:
+			if ns_uri:
+				line_containers = xml_root.findall(
+					f'.//{{{ns_uri}}}Pozycje/{{{ns_uri}}}P_2A'
+				)
+			else:
+				line_containers = xml_root.findall('.//Pozycje/P_2A')
+
 		_logger.info("📄 Found %d invoice lines (FaWiersz)", len(line_containers))
-		
-		# Przetwarzanie wierszy
+
+		# 3. Przetwarzanie wierszy
 		for line_index, line_container in enumerate(line_containers):
 			line_vals = {
 				'sequence': (line_index + 1) * 10,
-				'discount': 0.0,
+				'discount': 0.0,  # ZAWSZE 0 – FA(3) nie mapuje discount%
 			}
-			
-			# Pobierz wartości - używając _get_xml_value (która już używa local-name)
-			p7 = self._get_xml_value(line_container, 'P_7', ns)
-			p8a = self._get_xml_value(line_container, 'P_8A', ns)
-			p8b = self._get_xml_value(line_container, 'P_8B', ns)
-			p9a = self._get_xml_value(line_container, 'P_9A', ns)
-			p11 = self._get_xml_value(line_container, 'P_11', ns)
-			p12 = self._get_xml_value(line_container, 'P_12', ns)
-			
-			# Konwersje
-			qty = _to_float(p8b)
+
+			# --- pobranie wartości XML ---
+			p7 = self._get_xml_value( line_container, 'P_7', ns)	 # opis
+			p8a = self._get_xml_value( line_container, 'P_8A', ns)   # jednostka miary
+			p8b = self._get_xml_value( line_container, 'P_8B', ns)   # poprawka dla qty
+			p9a = self._get_xml_value( line_container, 'P_9A', ns)   # cena jedn. netto
+			p10 = self._get_xml_value( line_container, 'P_10', ns)   # ilość
+			p11 = self._get_xml_value( line_container, 'P_11', ns)   # wartość netto
+			p12 = self._get_xml_value( line_container, 'P_12', ns)   # stawka VAT
+
+			# --- konwersje ---
+			qty = _to_float(p8b)	# poprawka z p10
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
-			
-			# Nazwa pozycji
+
+			# --- nazwa pozycji ---
 			line_vals['name'] = p7 or f"Pozycja {line_index + 1}"
-			
-			# Jednostka miary (do określenia typu)
+
+			# --- klasyfikacja jednostki ---
 			uom_type = self.UN_CEFACT_UOM.get(p8a, "quantity")
-			
-			# Reguły semantyczne FA(3)
+
+			# ==========================================================
+			# JEDYNA REGUŁA SEMANTYCZNA FA(3)
+			# ==========================================================
+
+			# 1) Rabat / korekta kwotowa
 			if net_value is not None and net_value < 0:
-				# Rabat / korekta kwotowa
 				line_vals['quantity'] = 1.0
 				line_vals['price_unit'] = net_value
+
+			# 2) Jednostka procentowa (P1) – NIE discount, tylko linia kwotowa
 			elif uom_type == "percent":
-				# Jednostka procentowa - linia kwotowa
 				line_vals['quantity'] = 1.0
 				line_vals['price_unit'] = net_value or 0.0
+
+			# 3) Standardowa pozycja
 			else:
-				# Standardowa pozycja
 				line_vals['quantity'] = qty if qty not in (None, 0) else 1.0
 				line_vals['price_unit'] = unit_price or 0.0
-			
-			# Podatek
+
+			# --- PODATEK ---
 			if p12:
 				tax_ids = self._find_tax_ids_by_name(p12)
 				if tax_ids:
 					line_vals['tax_ids'] = [(6, 0, tax_ids)]
 				else:
 					_logger.warning("⚠️ Tax not found for value: %s", p12)
-			
-			# Jednostka miary (jeśli istnieje w Odoo)
+
+			# --- Jednostka miary (jeśli istnieje w Odoo) ---
 			if p8a:
 				uom = self._find_uom_by_name(p8a)
 				if uom:
 					line_vals['product_uom_id'] = uom.id
-			
-			# Numer wiersza (jeśli obecny w XML)
+
+			# --- Numer wiersza (jeśli obecny w XML) ---
 			nr_wiersza = self._get_xml_value(line_container, 'NrWierszaFa', ns)
 			if nr_wiersza:
 				try:
 					line_vals['sequence'] = int(nr_wiersza) * 10
 				except Exception:
 					pass
-			
+
 			lines_values.append((0, 0, line_vals))
-			
-			_logger.debug("✅ Line %d: %s | qty=%s | price=%s",
-						  line_index + 1,
-						  line_vals['name'][:40],
-						  line_vals['quantity'],
-						  line_vals['price_unit'])
-		
+
+			_logger.debug(
+				"✅ Line %d: %s | qty=%s | price=%s",
+				line_index + 1,
+				line_vals['name'][:40],
+				line_vals['quantity'],
+				line_vals['price_unit'],
+			)
+
 		return lines_values
 
-	def XXX_process_invoice_lines_fawiersz(self, xml_root, line_nodes, ns):
+	# END _process_invoice_lines_fawiersz
+
+	def _get_xml_value(self, container, field_name, ns):
 		"""
-		Przetwarza wiersze faktury z FaWiersz (nowa struktura KSeF).
-		
-		Returns:
-			list: [(0, 0, line_vals), ...] dla invoice_line_ids
+		Pomocnicza: pobiera wartość tekstową z elementu XML.
 		"""
-		lines_values = []
 		ns_uri = ns.get('ns') if ns else None
 		
-		# 1. Znajdź WSZYSTKIE FaWiersz
-		if ns_uri:
-			line_containers = xml_root.findall(f'.//{{{ns_uri}}}FaWiersz')
-		else:
-			line_containers = xml_root.findall('.//FaWiersz')
-		
-		# 2. Fallback: stara struktura Pozycje/P_2A
-		if not line_containers:
+		try:
 			if ns_uri:
-				line_containers = xml_root.findall(f'.//{{{ns_uri}}}Pozycje/{{{ns_uri}}}P_2A')
+				# Najpierw bezpośrednie dziecko
+				element = container.find(f'{{{ns_uri}}}{field_name}')
+				if element is None:
+					# Potem w poddrzewie
+					element = container.find(f'.//{{{ns_uri}}}{field_name}')
 			else:
-				line_containers = xml_root.findall('.//Pozycje/P_2A')
+				element = container.find(field_name)
+				if element is None:
+					element = container.find(f'.//{field_name}')
+			
+			if element is not None and element.text:
+				return element.text.strip()
+				
+		except Exception as e:
+			_logger.debug("Error getting XML value %s: %s", field_name, e)
 		
-		_logger.info("📄 Found %d invoice lines (FaWiersz)", len(line_containers))
-		
-		# 3. Przetwórz każdy wiersz
-		for line_index, line_container in enumerate(line_containers):
-			line_vals = {'sequence': (line_index + 1) * 10}
-			
-			# Pobierz kluczowe wartości bezpośrednio (szybsze i pewniejsze)
-			p7 = self._get_xml_value(line_container, 'P_7', ns)	 # Nazwa
-			p8a = self._get_xml_value(line_container, 'P_8A', ns)   # Jednostka
-			p8b = self._get_xml_value(line_container, 'P_8B', ns)   # Ilość
-			p9a = self._get_xml_value(line_container, 'P_9A', ns)   # Cena jednostkowa
-			p10 = self._get_xml_value(line_container, 'P_10', ns)   # Rabat
-			p11 = self._get_xml_value(line_container, 'P_11', ns)   # Wartość netto
-			p12 = self._get_xml_value(line_container, 'P_12', ns)   # Podatek
-			
-			# 4. Nazwa (wymagane)
-			if p7:
-				line_vals['name'] = p7
-			else:
-				line_vals['name'] = f"Pozycja {line_index + 1}"
-			
-			# 5. Ilość (wymagane)
-			if p8b:
-				try:
-					line_vals['quantity'] = float(p8b.replace(',', '.'))
-				except:
-					line_vals['quantity'] = 1.0
-			else:
-				line_vals['quantity'] = 1.0
-			
-			# 6. CENA JEDNOSTKOWA (KLUCZOWE!) - preferuj P_9A, jeśli nie ma, oblicz z P_11
-			price_unit_set = False
-			if p9a:
-				try:
-					line_vals['price_unit'] = float(p9a.replace(',', '.'))
-					price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set and p11 and p8b:
-				try:
-					netto = float(p11.replace(',', '.'))
-					ilosc = float(p8b.replace(',', '.'))
-					if ilosc != 0:
-						line_vals['price_unit'] = netto / ilosc
-						price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set:
-				line_vals['price_unit'] = 0.0
-			
-			# 7. Rabat
-			if p10:
-				try:
-					line_vals['discount'] = float(p10.replace(',', '.'))
-				except:
-					pass
-			
-			# 8. PODATEK (NAJWAŻNIEJSZE!)
-			if p12:
-				tax_ids = self._find_tax_ids_by_name(p12)
-				if tax_ids:
-					line_vals['tax_ids'] = [(6, 0, tax_ids)]
-				else:
-					_logger.warning("⚠️ Tax not found for value: %s", p12)
-			
-			# 9. Jednostka miary
-			if p8a:
-				uom = self._find_uom_by_name(p8a)
-				if uom:
-					line_vals['product_uom_id'] = uom.id
-			
-			# 10. Numer wiersza (jeśli jest w XML)
-			nr_wiersza = self._get_xml_value(line_container, 'NrWierszaFa', ns)
-			if nr_wiersza:
-				try:
-					line_vals['sequence'] = int(nr_wiersza) * 10
-				except:
-					pass
-			
-			# 11. Dodaj wiersz (zawsze, nawet jeśli puste wartości)
-			lines_values.append((0, 0, line_vals))
-			
-			_logger.debug("✅ Line %d: %s, qty: %s, price: %s", 
-						 line_index + 1, 
-						 line_vals.get('name', 'No name')[:30],
-						 line_vals.get('quantity'),
-						 line_vals.get('price_unit'))
-		
-		return lines_values
+		return None
 
 	def _find_uom_by_name(self, uom_name):
 		"""
@@ -1777,6 +2044,7 @@ class CommunicationLog(models.Model):
 					('ref', '=', corrected_number),
 					('ksef_number', '=', corrected_number),
 					('move_type', '=', 'in_invoice'),
+					('company_id', '=', self.env.company.id),
 				], limit=1)
 				
 				if corrected_invoice:
@@ -1838,47 +2106,19 @@ class CommunicationLog(models.Model):
 	def _extract_value_by_path(self, xml_root, xpath):
 		"""
 		Pobiera wartość tekstową po XPath.
-		Nie korzysta z namespace - używa local-name().
-		
-		Args:
-			xml_root: root element XML
-			xpath: ścieżka w formacie .//Element1//Element2
-		
-		Returns:
-			string or None
 		"""
 		try:
-			# Jeśli xpath zawiera //, rozbijamy na segmenty
-			if '//' in xpath:
-				# Przykład: ".//Podmiot1//NIP" -> ["Podmiot1", "NIP"]
-				segments = [s for s in xpath.replace('.//', '').split('//') if s]
-				
-				current_elements = [xml_root]
-				
-				for segment in segments:
-					next_elements = []
-					for elem in current_elements:
-						# Znajdź wszystkie elementy o danej nazwie (local-name)
-						found = elem.xpath(f".//*[local-name()='{segment}']")
-						next_elements.extend(found)
-					current_elements = next_elements
-					if not current_elements:
-						break
-				
-				# Zwróć tekst z pierwszego znalezionego elementu
-				if current_elements and current_elements[0].text:
-					return current_elements[0].text.strip()
+			elem = xml_root.find(xpath)
+			if elem is None:
+				# Spróbuj z namespace
+				ns_uri = xml_root.nsmap.get(None)
+				if ns_uri:
+					elem = xml_root.find(f'.//{{{ns_uri}}}{xpath.split("//")[-1]}')
 			
-			else:
-				# Prosty xpath - tylko nazwa elementu
-				element_name = xpath.replace('.//', '').replace('//', '')
-				elements = xml_root.xpath(f"//*[local-name()='{element_name}']")
-				if elements and elements[0].text:
-					return elements[0].text.strip()
-					
-		except Exception as e:
-			_logger.debug("Error extracting value by path %s: %s", xpath, e)
-		
+			if elem is not None and elem.text:
+				return elem.text.strip()
+		except:
+			pass
 		return None
 
 	def _parse_date(self, date_str):
@@ -1943,90 +2183,75 @@ class CommunicationLog(models.Model):
 	def _extract_advance_references(self, xml_root):
 		"""
 		Wyciąga numery faktur zaliczkowych dla faktur rozliczeniowych.
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			list: list of strings with advance invoice references
 		"""
 		refs = []
 		
 		try:
-			# Znajdź element P_6A niezależnie od namespace
-			elements = xml_root.xpath("//*[local-name()='P_6A']")
-			
-			if elements and elements[0] is not None and elements[0].text:
-				text = elements[0].text.strip()
-				
-				# Podziel na osobne referencje (separatory: przecinek, średnik, pipe, slash)
+			advances_elem = xml_root.find('.//P_6A')
+			if advances_elem is not None and advances_elem.text:
+				text = advances_elem.text.strip()
 				for separator in [',', ';', '|', '/']:
 					if separator in text:
 						refs.extend([ref.strip() for ref in text.split(separator) if ref.strip()])
 						break
 				else:
-					# Brak separatora - cały tekst to jedna referencja
-					if text:
-						refs.append(text)
-						
-		except Exception as e:
-			_logger.debug("Error extracting advance references: %s", e)
+					refs.append(text)
+		except:
+			pass
 		
 		return refs
-
 
 	def _check_additional_flags(self, xml_root):
 		"""
 		Sprawdza dodatkowe flagi z XML.
-		Nie korzysta z namespace - używa local-name().
-		
-		Returns:
-			dict: flagi z wartościami
 		"""
 		flags = {}
 		
-		# Helper do znajdowania wartości
+		# Helper do znajdowania
 		def find_flag(flag_name):
-			try:
-				elements = xml_root.xpath(f"//*[local-name()='{flag_name}']")
-				if elements and elements[0].text:
-					return elements[0].text.strip()
-			except Exception as e:
-				_logger.debug("Error finding flag %s: %s", flag_name, e)
-			return None
+			elem = xml_root.find(f'.//{flag_name}')
+			if elem is None:
+				ns_uri = xml_root.nsmap.get(None)
+				if ns_uri:
+					elem = xml_root.find(f'.//{{{ns_uri}}}{flag_name}')
+			return elem
 		
 		# P_16: Czy faktura zaliczkowa?
 		p16 = find_flag('P_16')
-		if p16:
-			flags['ksef_p16'] = p16
-			if p16 == '1':
+		if p16 is not None and p16.text:
+			flags['ksef_p16'] = p16.text.strip()
+			if p16.text.strip() == '1':
 				flags['ksef_is_advance'] = True
 		
 		# P_17: Czy faktura korygująca?
 		p17 = find_flag('P_17')
-		if p17:
-			flags['ksef_p17'] = p17
+		if p17 is not None and p17.text:
+			flags['ksef_p17'] = p17.text.strip()
 		
 		# P_18A: Czy faktura rozliczeniowa?
 		p18a = find_flag('P_18A')
-		if p18a:
-			flags['ksef_p18a'] = p18a
-			if p18a == '1':
+		if p18a is not None and p18a.text:
+			flags['ksef_p18a'] = p18a.text.strip()
+			if p18a.text.strip() == '1':
 				flags['ksef_is_settlement'] = True
 		
 		# P_19N: Czy podatek nie podlega odliczeniu?
 		p19n = find_flag('P_19N')
-		if p19n:
-			flags['ksef_p19n'] = p19n
+		if p19n is not None and p19n.text:
+			#p19n = '2' if p19n == '2' else '1'
+			flags['ksef_p19n'] = p19n.text.strip() 
 		
 		# P_22N: Czy nie podlega opodatkowaniu?
 		p22n = find_flag('P_22N')
-		if p22n:
-			flags['ksef_p22n'] = p22n
+		if p22n is not None and p22n.text:
+			#p22n = '2' if p22n == '2' else '1'
+			flags['ksef_p22n'] = p22n.text.strip()
 		
 		# P_23: Czy marża?
 		p23 = find_flag('P_23')
-		if p23:
-			flags['ksef_p23'] = p23
-			if p23 == '1':
+		if p23 is not None and p23.text:
+			flags['ksef_p23'] = p23.text.strip()
+			if p23.text.strip() == '1':
 				flags['ksef_pmarzyn'] = True
 		
 		return flags
@@ -2049,7 +2274,7 @@ class CommunicationLog(models.Model):
 			tax = self.env['account.tax'].search([
 				('amount', '=', tax_rate),
 				('type_tax_use', 'in', ['purchase', 'all']),
-				('company_id', '=', self.company_id.id),
+				('company_id', '=', self.env.company.id),
 				('active', '=', True),
 			], limit=1)
 			
@@ -2070,7 +2295,7 @@ class CommunicationLog(models.Model):
 			tax = self.env['account.tax'].search([
 				('name', 'ilike', term),
 				('type_tax_use', 'in', ['purchase', 'all']),
-				('company_id', '=', self.company_id.id),
+				('company_id', '=', self.env.company.id),
 				('active', '=', True),
 			], limit=1)
 			
@@ -2094,7 +2319,7 @@ class CommunicationLog(models.Model):
 					tax = self.env['account.tax'].search([
 						('name', 'ilike', odoo_name),
 						('type_tax_use', 'in', ['purchase', 'all']),
-						('company_id', '=', self.company_id.id),
+						('company_id', '=', self.env.company.id),
 						('active', '=', True),
 					], limit=1)
 					
@@ -2117,7 +2342,6 @@ class CommunicationLog(models.Model):
 			'|',
 			('vat', 'ilike', f'%{clean_nip}%'),
 			('vat', 'ilike', f'%PL{clean_nip}%'),
-			('company_id', '=', self.company_id.id)
 		], limit=1)
 		
 		return partner
@@ -2169,12 +2393,12 @@ class CommunicationLog(models.Model):
 				return False
 
 			_logger.info( f"\n✅ ADDON restore_xml_ksef_invoice w/provider {provider} ")
-	
+
 			# 3. Call appropriate implementation
 			if self._should_use_python(provider):
 				result = self._execute_ksef_python_operation(provider)  # Python
 			else:
-				result = self._execute_ksef_operation(provider)		 # Java
+				result = self._execute_ksef_operation(provider)	  # Java
 
 			# 4. Obsłuż wynik
 			if result.get('success'):
@@ -2202,7 +2426,4 @@ class CommunicationLog(models.Model):
 
 
 #################################################################################
-
-
-
 #EoF
