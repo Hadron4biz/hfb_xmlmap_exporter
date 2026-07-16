@@ -1,0 +1,164 @@
+/* ==========================================================
+   KSeF Timeline
+   ========================================================== */
+
+/* Right column container */
+.o_ksef_right {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: flex-start !important;
+    flex: 0 0 auto !important;
+}
+
+/* ==========================================================
+   Main panel
+   ========================================================== */
+
+.o_ksef_prototype {
+    width: 250px;
+    background: #fafafa;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+}
+
+/* ==========================================================
+   Header
+   ========================================================== */
+
+.o_ksef_prototype-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+/* ==========================================================
+   Timeline list
+   ========================================================== */
+
+.o_ksef_prototype-list {
+    position: relative;
+}
+
+.o_ksef_prototype-list::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: #4eb85a;
+}
+
+/* ==========================================================
+   Single stage
+   ========================================================== */
+
+.o_ksef_prototype-step {
+    position: relative;
+    padding-left: 28px;
+    padding-bottom: 12px;
+    min-height: 28px;
+}
+
+.o_ksef_prototype-step:last-child {
+    padding-bottom: 0;
+}
+
+/* ==========================================================
+   State marker
+   ========================================================== */
+
+.o_ksef_prototype-marker {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    z-index: 1;
+}
+
+/* not confirmed */
+.o_ksef-prototype-marker-none {
+    background: #c9c9c9;
+    color: #888;
+}
+
+.o_ksef-prototype-marker-none::before {
+    content: "○";
+}
+
+/* success */
+.o_ksef-prototype-marker-success {
+    background: #2db84d;
+}
+
+.o_ksef-prototype-marker-success::before {
+    content: "✓";
+}
+
+/* error */
+.o_ksef-prototype-marker-error {
+    background: #dc3545;
+}
+
+.o_ksef-prototype-marker-error::before {
+    content: "✗";
+}
+
+/* ==========================================================
+   Stage content
+   ========================================================== */
+
+.o_ksef_prototype-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #2f3b4d;
+}
+
+.o_ksef_prototype-step-date {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #666;
+}
+
+.o_ksef_prototype-step-status {
+    margin-top: 1px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.o_ksef-prototype-status-success {
+    color: #2a9a3c;
+}
+
+.o_ksef-prototype-status-error {
+    color: #dc3545;
+}
+
+/* ==========================================================
+   Kolory tytułów etapów
+   ========================================================== */
+
+.o_ksef-prototype-title-none {
+    color: #6c757d;
+}
+
+.o_ksef-prototype-title-success {
+    color: #2db84d;
+}
+
+.o_ksef-prototype-title-error {
+    color: #dc3545;
+}

@@ -1433,15 +1433,17 @@ class CommunicationLog(models.Model):
 		if not move:
 			return
 
-		self.env["ir.attachment"].create({
+		attachment = self.env["ir.attachment"].create({
 			'company_id': move.company_id.id,
-			"name": "UPO.xml",
+			"name": f"UPO_{move.ksef_number}.xml",
 			"type": "binary",
 			"datas": base64.b64encode(upo_binary),
 			"res_model": "account.move",
 			"res_id": move.id,
 			
 		})
+
+		return attachment
 
 	# =============================================================================
 

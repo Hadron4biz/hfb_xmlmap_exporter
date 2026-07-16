@@ -364,6 +364,11 @@ class AccountMove(models.Model):
 		return "Wystąpił błąd walidacji danych."
 
 	# ########################################################################
+	xsd_validation_date = fields.Datetime(
+		string='Weryfikowano dnia',
+		help="Data i czas ostatniej weryfikacji dokumentu"
+	)
+
 	def action_validate_template(self):
 		"""
 		Walidacja danych faktury względem szablonu XML.
@@ -440,11 +445,18 @@ class AccountMove(models.Model):
 
 		# Zapisz log walidacji
 		try:
+			validation_date = fields.Datetime.now()
+			self.sudo().write(
+				{	
+					'xsd_validation_date': validation_date,
+					'xsd_validation_state': state
+				}
+			)
 			self.env["xml.validation.log"].sudo().create({
 				"move_id": self.id,
 				"template_id": template.id,
 				"state": state,
-				"validation_date": fields.Datetime.now(),
+				"validation_date": validation_date,				
 				"user_id": self.env.user.id,
 				"error_log": "\n".join(user_messages[:50]) if user_messages else "",
 				"xml_snapshot": xml_bytes,

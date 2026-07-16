@@ -718,6 +718,10 @@ class ProviderKsefApiService:
 			}
 		
 		_logger.info(f"[KSeF][Python] Sending invoice using session from log {self.log.id}")
+
+		# na potrzeby timeline
+		log = self.log
+		move = log.env[log.document_model].browse(log.document_id).exists()
 		
 		try:
 			# 2. Pobierz klucze Z LOGU
@@ -774,7 +778,11 @@ class ProviderKsefApiService:
 
 			###_logger.info(f"[KSeF][Python] Finale: update_vals {update_vals}")
 			self.log.write(update_vals)
-			
+
+			# aktualizacja timeline
+			move.ksef_sent_state = "success"
+			move.ksef_sent_date = fields.Datetime.now()
+
 			return {
 				"success": True,
 				"data": data,
@@ -806,6 +814,9 @@ class ProviderKsefApiService:
 			
 		except Exception as e:
 			_logger.error(f"[KSeF][Python] Send invoice failed: {e}", exc_info=True)
+			# aktualizacja timeline
+			move.ksef_sent_state = "error"
+			move.ksef_sent_date = fields.Datetime.now()
 			return {
 				"success": False,
 				"error": str(e)
@@ -830,6 +841,10 @@ class ProviderKsefApiService:
 			}
 		
 		try:
+			# na potrzeby timeline
+			log = self.log
+			move = log.env[log.document_model].browse(log.document_id).exists()
+
 			endpoint = f"{self.api_url}/sessions/{self.log.ksef_session_token}/invoices/{self.log.ksef_reference_number}"
 			response = self._make_request('GET', endpoint)
 			data = response.json()
@@ -841,6 +856,10 @@ class ProviderKsefApiService:
 				'ksef_processing_code': data.get('processingCode'),
 				'payload_response': json.dumps(data, ensure_ascii=False)
 			})
+
+			# timeline
+			move.ksef_accepted_state = "success"
+			move.ksef_accepted_date = fields.Datetime.now()
 			
 			return {
 				"success": True,
@@ -848,6 +867,10 @@ class ProviderKsefApiService:
 			}
 			
 		except Exception as e:
+			# timeline
+			move.ksef_accepted_state = "error"
+			move.ksef_accepted_date = fields.Datetime.now()
+
 			return {
 				"success": False,
 				"error": str(e)
@@ -1299,7 +1322,7 @@ class ProviderKsefApiService:
 		Zapisuje UPO jako załącznik do communication.log.
 		"""
 
-		filename = f"ksef-upo-{self.log.ksef_reference_number}.xml"
+		filename = f"UPO_{self.log.ksef_invoice_number}.xml"
 
 		model = self.log.document_model
 		rekord = self.log.document_id

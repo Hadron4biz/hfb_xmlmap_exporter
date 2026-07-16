@@ -33,7 +33,7 @@
 {
     "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 18",
     "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-    "version": "18.0.1.9",
+    "version": "18.0.1.11",
     "license": "AGPL-3",
     "author": "Hadron for Business, Andrzej Wiśniewski",
     'category': 'Accounting/Invoicing',
@@ -54,10 +54,15 @@
 		"views/xml_template_views.xml",
 		"views/actions.xml",
 
+		# --- modyfikacja formularza faktury
+		"views/account_move_view.xml",
+
+        # --- Timeline na fakturze
+        "views/ksef_timeline.xml",
+
 		# --- Wizard's ---
 		"wizard/template_name_wizard_views.xml",
 		"wizard/wizard_xsd_upload_views.xml",
-		"views/account_move_view.xml",
 		"wizard/wizard_template_import_json.xml",
 
 		# --- dane, które odwołują się do modeli ---
@@ -90,6 +95,9 @@
 
 	],
 	'assets': {
+        'web.assets_backend': [
+            'hfb_xmlmap_exporter/static/src/css/ksef_timeline.css',
+        ],
 	},
 	'test': ['tests/test_basic.py'],
 	'images': [

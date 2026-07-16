@@ -65,5 +65,5 @@ from . import communication_provider_ksef_mfcert    # Dodatek do pobierania kluc
 from . import invoice								# Używa providerów do wysyłki faktur
 from . import account_move_ksef_qr					# Rozszezenia obsługi QR Type I
 from . import upo_pdf								# Wizualizacja UPO
-
+from . import ksef_timeline_helpers					# Wizualizacja Timeline
 #EoF
