@@ -823,13 +823,6 @@ class ProviderKsefApiService:
 			}
 	# --------------------- CHECK STATUS ---------------------
 
-	def check_status(self):
-		reference = self.log.ksef_reference_number
-
-		response = self._call_status_api(reference)
-
-		return {"success": True, "data": response}
-
 	def check_invoice_status(self):
 		"""
 		Sprawdza status faktury używając reference number Z LOGU.

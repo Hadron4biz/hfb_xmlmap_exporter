@@ -272,6 +272,7 @@ class XmlExportTemplate(models.Model):
 	def auto_sequence_nodes(self):
 		pass
 
+
 	# ============================================================
 	# 💡 Mapowanie XSD na NODE
 	# ============================================================
@@ -290,6 +291,7 @@ class XmlExportTemplate(models.Model):
 			raise UserError(f"Błąd parsowania XSD: {e}")
 
 		ns = {"xsd": "http://www.w3.org/2001/XMLSchema"}
+		Type = self.env["xml.xsd.type"]
 
 		# ------------------------------------------------------------
 		# Clear existing nodes
@@ -350,11 +352,122 @@ class XmlExportTemplate(models.Model):
 		# ------------------------------------------------------------
 		# Helpers
 		# ------------------------------------------------------------
+		def schema_target_namespace(xml_node):
+			return (
+				xml_node.getroottree().getroot().get("targetNamespace")
+				or ""
+			)
+
+		def resolve_qname(value, context_node):
+			"""Rozwiązuje QName do pary (namespace_uri, nazwa lokalna)."""
+			if not value:
+				return "", None
+
+			if ":" in value:
+				prefix, local_type_name = value.split(":", 1)
+				return (
+					context_node.nsmap.get(prefix) or "",
+					local_type_name,
+				)
+
+			return (
+				context_node.nsmap.get(None)
+				or schema_target_namespace(context_node),
+				value,
+			)
+
+		def find_xsd_type(type_name, context_node):
+			"""
+			Wyszukuje typ XSD dla bieżącego szablonu.
+
+			Kolejność:
+			1. Dokładna zgodność namespace_uri + name.
+			2. Jeśli brak dokładnego wyniku, dopuszcza typ po samej nazwie,
+			   ale wyłącznie wtedy, gdy istnieje dokładnie jeden kandydat.
+			3. Nie tworzy relacji dla wbudowanych typów XML Schema.
+			"""
+			namespace_uri, local_type_name = resolve_qname(
+				type_name,
+				context_node,
+			)
+
+			if not local_type_name or namespace_uri == ns["xsd"]:
+				return Type.browse()
+
+			base_domain = [
+				("template_id", "=", self.id),
+				("company_id", "=", self.company_id.id),
+				("name", "=", local_type_name),
+			]
+
+			# Najpierw dokładne dopasowanie QName.
+			if "namespace_uri" in Type._fields and namespace_uri:
+				exact_type = Type.search(
+					base_domain + [
+						("namespace_uri", "=", namespace_uri),
+					],
+					limit=1,
+				)
+				if exact_type:
+					return exact_type
+
+			# Katalog utworzony przez aktualny importer ma namespace_uri=NULL.
+			# Fallback jest bezpieczny tylko przy dokładnie jednym kandydacie.
+			candidates = Type.search(base_domain, limit=2)
+
+			if len(candidates) == 1:
+				return candidates
+
+			return Type.browse()
+
+		def effective_type_name(declaration):
+			"""
+			Zwraca nazwany typ elementu albo nazwaną bazę jego lokalnej
+			definicji. Nie tworzy nazw dla typów anonimowych.
+			"""
+			type_name = declaration.get("type")
+			if type_name:
+				return type_name
+
+			paths = (
+				"xsd:simpleType/xsd:restriction",
+				"xsd:simpleType/xsd:list",
+				"xsd:complexType/xsd:simpleContent/xsd:extension",
+				"xsd:complexType/xsd:simpleContent/xsd:restriction",
+				"xsd:complexType/xsd:complexContent/xsd:extension",
+				"xsd:complexType/xsd:complexContent/xsd:restriction",
+			)
+			for path in paths:
+				derivation = declaration.find(path, ns)
+				if derivation is None:
+					continue
+				base = (
+					derivation.get("base")
+					or derivation.get("itemType")
+				)
+				if base:
+					return base
+
+			return None
+
+		def fallback_type_kind(type_name, default="complex"):
+			"""Rozpoznaje typy wbudowane xs:/xsd:, gdy brak type_id."""
+			if (
+				type_name
+				and ":" in type_name
+				and type_name.split(":", 1)[0] in ("xs", "xsd")
+			):
+				return "builtin"
+			return default
+
 		def walk_attributes(container, parent_id):
 			for attr in container.findall("xsd:attribute", ns):
 				name = attr.get("name")
 				if not name:
 					continue
+
+				type_name = effective_type_name(attr)
+				xsd_type_rec = find_xsd_type(type_name, attr)
 
 				self.env["xml.export.node"].create({
 					"template_id": self.id,
@@ -362,8 +475,12 @@ class XmlExportTemplate(models.Model):
 					"sequence": next_seq(),
 					"name": name,
 					"node_kind": "attribute",
-					"xsd_type_name": attr.get("type"),
-					"xsd_type_kind": "simple",
+					"type_id": xsd_type_rec.id or False,
+					"xsd_type_kind": (
+						xsd_type_rec.category
+						if xsd_type_rec
+						else fallback_type_kind(type_name, default="simple")
+					),
 					"xsd_min_occurs": 0 if attr.get("use") != "required" else 1,
 					"xsd_max_occurs": 1,
 					'company_id': self.company_id.id,
@@ -476,6 +593,8 @@ class XmlExportTemplate(models.Model):
 			if not name:
 				return
 
+			declared_type_name = el.get("type")
+			effective_type = effective_type_name(el)
 			node_vals = {
 				"template_id": self.id,
 				"parent_id": parent_id,
@@ -494,24 +613,17 @@ class XmlExportTemplate(models.Model):
 			# -----------------------------
 			# TYPE resolution (xml.xsd.type first)
 			# -----------------------------
-			type_name = el.get("type")
-			xsd_type_rec = None
-
-			if type_name:
-				clean = type_name.split(":")[-1]
-				xsd_type_rec = self.env["xml.xsd.type"].search(
-					[
-						("name", "=", clean),
-						('company_id', '=', self.company_id.id),
-					], limit=1
-				)
+			xsd_type_rec = find_xsd_type(effective_type, el)
 
 			if xsd_type_rec:
-				node_vals["xsd_type_name"] = xsd_type_rec.name
+				node_vals["type_id"] = xsd_type_rec.id
 				node_vals["xsd_type_kind"] = xsd_type_rec.category
 			else:
-				node_vals["xsd_type_name"] = clean if type_name else None
-				node_vals["xsd_type_kind"] = "complex"
+				node_vals["type_id"] = False
+				node_vals["xsd_type_kind"] = fallback_type_kind(
+					effective_type,
+					default="complex",
+				)
 
 			node = self.env["xml.export.node"].create(node_vals)
 
@@ -536,8 +648,8 @@ class XmlExportTemplate(models.Model):
 			# -----------------------------
 			type_def = None
 
-			if type_name:
-				clean = type_name.split(":")[-1]
+			if declared_type_name:
+				clean = declared_type_name.split(":")[-1]
 				type_def = complex_types.get(clean)
 				if type_def is None:
 					type_def = simple_types.get(clean)
@@ -609,385 +721,92 @@ class XmlExportTemplate(models.Model):
 		walk_element(root_el)
 
 		return True
-
-
-	### Po testach nowej metody nie zapomnij: usunąć
-	def v1_action_import_from_schema(self):
-		"""Analizuje plik XSD i rozkłada go na węzły xml.export.node."""
-		self.ensure_one()
-		
-		_logger.info("🚩# 1️⃣ PRE-CHECK")
-		if not self.xsd_attachment_id:
-			self.state = "error"
-			self.message_post(body=_("Brak pliku XSD."))
-			return False
-
-		_logger.info("🚩# 2️⃣ WCZYTANIE PLIKU XSD")
-		try:
-			xml_data = self.xsd_attachment_id.raw
-			schema_root = etree.fromstring(xml_data)
-		except Exception as e:
-			self.state = "error"
-			self.message_post(body=_("Nie udało się sparsować pliku XSD: %s") % str(e))
-			return False
-
-		# POPRAWKA: Użyj słownika namespace
-		ns = {"xsd": "http://www.w3.org/2001/XMLSchema"}
-
-		# --- detekcja root elementów ---
-		_logger.info("🚩# 3️⃣ DETEKCJA ELEMENTÓW GŁÓWNYCH (root)")
-		roots = schema_root.findall("xsd:element", ns)
-		roots = [el for el in roots if el.get("name")]
-		
-		if not roots:
-			self.state = "error"
-			self.message_post(body=_("Nie znaleziono żadnego elementu głównego (root) w pliku XSD."))
-			return False
-
-		if not self.root_tag:
-			if len(roots) == 1:
-				self.root_tag = roots[0].get("name")
-				_logger.info("✅ Automatycznie wykryto root_tag: <%s>", self.root_tag)
-				self.message_post(body=_("Automatycznie wykryto element główny: <b>%s</b>.") % self.root_tag)
-			else:
-				root_names = [r.get("name") for r in roots]
-				chosen = root_names[0]
-				self.root_tag = chosen
-				_logger.warning("⚠️ Wykryto wiele elementów głównych: %s (wybrano: %s)", root_names, chosen)
-				self.message_post(body=_(
-					"Wykryto wiele elementów głównych w schemie XSD: %s.<br/>"
-					"Automatycznie wybrano pierwszy: <b>%s</b>."
-				) % (", ".join(root_names), chosen))
-
-		_logger.info("🚩# 4️⃣ CZYSZCZENIE POPRZEDNICH WĘZŁÓW")
-		self._clear_existing_nodes()
-
-		# --- pomocnicze mapy typów ---
-		elements_by_name = {el.get("name"): el for el in schema_root.findall(".//xsd:element", ns)}
-		types_by_name = {t.get("name"): t for t in schema_root.findall(".//xsd:complexType", ns)}
-		simple_types = {t.get("name"): t for t in schema_root.findall(".//xsd:simpleType", ns)}
-		
-		# Dodaj mapowanie dla elementów przez ref
-		ref_elements = {}
-		for el in schema_root.findall(".//xsd:element[@ref]", ns):
-			ref_name = el.get("ref").split(":")[-1] if ":" in el.get("ref") else el.get("ref")
-			if ref_name in elements_by_name:
-				ref_elements[ref_name] = elements_by_name[ref_name]
-
-		def get_type_element(type_name):
-			"""Zwraca definicję typu po nazwie."""
-			if not type_name:
-				return None
-			name = type_name.split(":")[-1] if ":" in type_name else type_name
-			return types_by_name.get(name) or simple_types.get(name)
-
-		# --- właściwa rekurencja ---
-		seq = 0
-		created = []
-		visited_elements = set()  # Zapobieganie cyklom
-
-		def walk_element(el, parent_id=None, depth=0, element_name=None):
-			"""Rekurencyjnie rozwija element XSD do struktury xml.export.node."""
-			nonlocal seq
-			
-			if depth > 20:  # Zabezpieczenie przed głęboką rekursją
-				_logger.warning("⚠️ Osiągnięto maksymalną głębokość rekursji: %s", depth)
-				return
-				
-			# Obsługa elementów przez ref
-			if el.get("ref"):
-				ref_name = el.get("ref").split(":")[-1] if ":" in el.get("ref") else el.get("ref")
-				if ref_name in ref_elements:
-					el = ref_elements[ref_name]
-				else:
-					_logger.warning("⚠️ Nie znaleziono elementu ref: %s", el.get("ref"))
-					return
-			
-			name = el.get("name") or element_name
-			if not name:
-				return
-				
-			# Sprawdź czy element nie był już odwiedzony (zapobieganie cyklom)
-			element_key = f"{name}_{parent_id}"
-			if element_key in visited_elements:
-				_logger.warning("⚠️ Cykl wykryty dla elementu: %s (parent: %s)", name, parent_id)
-				return
-			visited_elements.add(element_key)
-			
-			seq += 10
-			
-			# Określ loop_mode na podstawie maxOccurs
-			max_occurs = el.get("maxOccurs", "1")
-			loop_mode = "none"
-			
-			node_vals = {
-				"template_id": self.id,
-				"parent_id": parent_id,
-				"sequence": seq,
-				"name": name,
-				"node_kind": "element",
-				"xsd_type_name": el.get("type"),
-				"xsd_min_occurs": safe_int(el.get("minOccurs", "1")),
-				"xsd_max_occurs": 0 if max_occurs == "unbounded" else safe_int(max_occurs),
-				"xsd_nillable": el.get("nillable") == "true",
-				"loop_mode": loop_mode,
-				"emit_empty": "if-required",
-				'company_id': self.company_id.id,
-			}
-			
-			# Określ rodzaj typu
-			tname = el.get("type")
-			if tname:
-				tdef = get_type_element(tname)
-				if tdef:
-					if tdef.tag.endswith("}complexType"):
-						node_vals["xsd_type_kind"] = "complex"
-					else:
-						node_vals["xsd_type_kind"] = "simple"
-				else:
-					# Heurystyka po nazwie typu
-					if tname and ("TAdres" in tname or "TPodmiot" in tname or "TFaktura" in tname):
-						node_vals["xsd_type_kind"] = "complex"
-					else:
-						node_vals["xsd_type_kind"] = "simple"
-			
-			node = self.env["xml.export.node"].create(node_vals)
-			# -----------------------------
-			# xsd:choice metadata (structural, not business)
-			# -----------------------------
-			if choice_meta:
-				meta = (
-					f"choice={choice_meta['choice']};"
-					f"variant={choice_meta['variant']};"
-					f"role={choice_meta['role']}"
-				)
-				node.write({"description": meta})
-
-			created.append(node)
-
-			# --- Szukamy definicji typu elementu ---
-			tname = el.get("type")
-			tdef = get_type_element(tname)
-
-			# --- Główny typ zdefiniowany w schema ---
-			if tdef is not None:
-				# Znajdź sequence/choice/all w complexType
-				if tdef.tag.endswith("}complexType"):
-					seq_child = None
-					for tag in ("sequence", "choice", "all"):
-						found = tdef.find(f"xsd:{tag}", ns)
-						if found is not None:
-							seq_child = found
-							break
-
-					if seq_child is not None:
-						for child in seq_child.findall("xsd:element", ns):
-							walk_element(child, parent_id=node.id, depth=depth + 1)
-
-					# Atrybuty complexType
-					for attr in tdef.findall("xsd:attribute", ns):
-						seq += 10
-						self.env["xml.export.node"].create({
-							"template_id": self.id,
-							"parent_id": node.id,
-							"sequence": seq,
-							"name": attr.get("name"),
-							"node_kind": "attribute",
-							"xsd_type_name": attr.get("type"),
-							"xsd_type_kind": "simple",
-							"emit_empty": "if-required",
-							"loop_mode": "none",
-							'company_id': self.company_id.id,
-						})
-
-			# --- Typ inline (complexType wewnątrz elementu) ---
-			else:
-				inline_ct = el.find("xsd:complexType", ns)
-				if inline_ct is not None:
-					seq_child = None
-					for tag in ("sequence", "choice", "all"):
-						found = inline_ct.find(f"xsd:{tag}", ns)
-						if found is not None:
-							seq_child = found
-							break
-
-					if seq_child is not None:
-						for child in seq_child.findall("xsd:element", ns):
-							walk_element(child, parent_id=node.id, depth=depth + 1)
-
-					for attr in inline_ct.findall("xsd:attribute", ns):
-						seq += 10
-						self.env["xml.export.node"].create({
-							"template_id": self.id,
-							"parent_id": node.id,
-							"sequence": seq,
-							"name": attr.get("name"),
-							"node_kind": "attribute",
-							"xsd_type_name": attr.get("type"),
-							"xsd_type_kind": "simple",
-							"emit_empty": "if-required",
-							"loop_mode": "none",
-							'company_id': self.company_id.id,
-						})
-
-				# --- SimpleType inline (enum, restriction) ---
-				else:
-					st = el.find("xsd:simpleType", ns)
-					if st is not None:
-						restr = st.find("xsd:restriction", ns)
-						if restr is not None:
-							enums = [e.get("value") for e in restr.findall("xsd:enumeration", ns)]
-							if enums:
-								node.write({"xsd_enumeration": ", ".join(enums)})
-
-		# --- znajdź root ---
-		_logger.info("🚩# 5️⃣ SZUKANIE ROOTA <%s>", self.root_tag)
-		root = elements_by_name.get(self.root_tag)
-		if root is None:
-			# Sprawdź czy root jest zdefiniowany przez ref
-			if self.root_tag in ref_elements:
-				root = ref_elements[self.root_tag]
-		
-		if root is None:
-			self.state = "error"
-			self.message_post(body=_("Nie znaleziono elementu '%s' w pliku XSD.") % self.root_tag)
-			return False
-
-		_logger.info("🚩# 6️⃣ IMPORT STRUKTURY DLA ROOTA <%s>", self.root_tag)
-		try:
-			walk_element(root, element_name=self.root_tag)
-		except Exception as e:
-			self.state = "error"
-			self.message_post(body=_("Błąd podczas rozwijania XSD: %s") % str(e))
-			_logger.exception("Błąd podczas importu XSD")
-			return False
-
-		count = len(created)
-		self.state = "imported"
-		msg = _("Zaimportowano %s węzłów XML dla root <%s>.") % (count, self.root_tag)
-		self.message_post(body=msg)
-		_logger.info("✅ %s", msg)
-		
-		# Automatycznie ustaw sekwencje
-		try:
-			self.auto_sequence_nodes()
-		except:
-			pass  # Jeśli metoda nie istnieje, ignoruj
-		
-		return True
-
+	# ============================================================
 
 	# ============================================================
-	# Pomocnicze
+	# Pomocnicze - walidacja - formatowanie
 	# ============================================================
-	def _get_xsd_element_order(self):
-		"""
-		Zwraca reguły kolejności elementów.
-		Dla FA(3) - specjalne reguły, dla innych - generyczny parser.
-		"""
-		self.ensure_one()
-		
-		# Sprawdź czy to FA(3) po namespace
-		is_fa3 = self.namespace and 'crd.gov.pl/wzor/2025/06/25/13775/' in self.namespace
-		
-		if is_fa3:
-			_logger.info(f"🔍 Rozpoznano FA(3), używam specjalnych reguł")
-			return self._get_fa3_specific_rules()
-		else:
-			_logger.info(f"🔍 To nie FA(3), próbuję parsować XSD")
-			return self._parse_xsd_generic()
-
-	def _generic_xsd_parse(self):
-		"""Generyczny parser XSD dla innych schematów."""
-		# Tu wklej stary kod parsera
-		# ...
-		return {}
-
-	def _format_numeric_by_xsd_type(self, node, value):
-		"""
-		Formatuje wartość liczbową zgodnie z typem XSD.
-		Zwraca string gotowy do zapisania w XML.
-		"""
-
-		if value is None:
-			return value
-
-		if not node.type_id:
-			return value
-
-		xsd_type = node.type_id.name
-
-		try:
-			dec_value = Decimal(str(value))
-		except Exception:
-			return value
-
-		# --- TKwota → dokładnie 2 miejsca ---
-		if xsd_type in ('TKwota', 'TKwotowy', 'TKwotowy2'):
-			return str(dec_value.quantize(
-				Decimal("0.01"),
-				rounding=ROUND_HALF_UP
-			))
-
-		# --- TProcent → maks 2 miejsca, bez zbędnych zer ---
-		if xsd_type == 'TProcent':
-			quantized = dec_value.quantize(
-				Decimal("0.01"),
-				rounding=ROUND_HALF_UP
-			)
-			return format(quantized.normalize(), "f")
-
-		# --- TIlosc → maks 4 miejsca ---
-		if xsd_type == 'TIlosc':
-			return str(dec_value.quantize(
-				Decimal("0.0001"),
-				rounding=ROUND_HALF_UP
-			).normalize())
-
-		# --- Domyślne zachowanie ---
-		if dec_value == dec_value.to_integral():
-			return str(dec_value.to_integral())
-		return str(dec_value)
 
 	def _format_xsd_value(self, node, value, record=None):
-		"""Formatuje wartość zgodnie z wymaganiami typu danych w XSD."""
-		_logger.info(f"🔧 FORMAT_XSD: node={node.name}, value='{value}', type={type(value)}")
-		
-		if value is None or value is False:
-			return None
-			
-		# Konwertuj na string
-		if not isinstance(value, str):
-			value = str(value)
+		"""
+		Steruje formatowaniem wartości node'a.
 
-		# TYMCZASOWO: dla NrKSeFFaKorygowanej pokaż pattern z XSD
-		if node.name == 'NrKSeFFaKorygowanej':
-			if node.type_id:
-				_logger.info(f"🔍 XSD PATTERN for {node.name}: {node.type_id.pattern}")
-				_logger.info(f"🔍 XSD BASE TYPE: {node.type_id.base_type}")
-				if node.type_id.enumeration:
-					_logger.info(f"🔍 XSD ENUM: {node.type_id.enumeration}")
-		
-		# Dla dat - formatuj zgodnie z XSD
-		if node.name in ['DataWytworzeniaFa']:
-			# Spróbuj sparsować datę jeśli to string
-			if isinstance(value, str) and len(value) == 10 and value.count('-') == 2:
-				# To jest data w formacie YYYY-MM-DD, dodaj czas
-				value = value + 'T00:00:00'
-				_logger.info(f"🔧 FORMAT_XSD: formatted date '{value}'")
-		
-		# Dla wartości liczbowych - usuń niepotrzebne zera
-		value = self._format_numeric_by_xsd_type(node, value)
-		#try:
-		#	float_val = float(value)
-		#	if float_val == int(float_val):
-		#		value = str(int(float_val))
-		#		_logger.info(f"🔧 FORMAT_XSD: formatted number '{value}'")
-		#except (ValueError, TypeError):
-		#	pass
-				
-		_logger.info(f"🔧 FORMAT_XSD: final value '{value}'")
-		return value
+		Zasady:
+		1. Wartość wejściowa jest jednocześnie wartością domyślną wyniku.
+		2. Jeżeli node posiada typ XSD:
+		   a) pierwszeństwo ma pattern typu,
+		   b) przy braku pattern stosowane jest formatowanie według typu.
+		3. Jeżeli node nie posiada typu XSD, sprawdzane są ustawienia
+		   formatowania zapisane bezpośrednio na node.
+		4. Jeżeli żadna reguła nie zostanie dopasowana, zwracana jest
+		   wartość wejściowa bez zmian.
+		"""
+
+		result = value
+
+		if result is None:
+			return result
+
+		_logger.info(
+			"🔧 FORMAT_XSD: node=%s, value=%r, type=%s",
+			node.name,
+			result,
+			type(result),
+		)
+
+		xsd_type = node.type_id
+
+		# ============================================================
+		# 1. FORMATOWANIE NA PODSTAWIE TYPU XSD
+		# ============================================================
+		if xsd_type:
+
+			# Pattern ma pierwszeństwo przed pozostałymi informacjami typu.
+			if xsd_type.pattern:
+				result = self._format_value_by_xsd_pattern(
+					node=node,
+					xsd_type=xsd_type,
+					result=result,
+					record=record,
+				)
+
+				_logger.info(
+					"🔧 FORMAT_XSD: result after pattern processing: %r",
+					result,
+				)
+				return result
+
+			# Brak pattern — próba formatowania według typu lub base_type.
+			result = self._format_value_by_xsd_type(
+				node=node,
+				xsd_type=xsd_type,
+				result=result,
+				record=record,
+			)
+
+			_logger.info(
+				"🔧 FORMAT_XSD: result after type processing: %r",
+				result,
+			)
+			return result
+
+		# ============================================================
+		# 2. FORMATOWANIE NA PODSTAWIE USTAWIEŃ NODE
+		# ============================================================
+		result = self._format_value_by_node_options(
+			node=node,
+			result=result,
+			record=record,
+		)
+
+		_logger.info(
+			"🔧 FORMAT_XSD: result after node options processing: %r",
+			result,
+		)
+
+		return result
+
+
 
 	# ============================================================
 	# PUBLIC API – główny punkt wejścia
@@ -1039,8 +858,8 @@ class XmlExportTemplate(models.Model):
 
 		_logger.info(
 			f"\n👉 Generuje finalny XML dla rekordu {record}."
-			f"\n👉 XMLGEN: Template={self.name}, root_tag={self.root_tag}"
-			f"\n👉 XMLGEN: Node count={len(self.node_ids)}")
+			f"\n👉 XMLGEN: Szablon={self.name}, root_tag={self.root_tag}"
+			f"\n👉 XMLGEN: Węzły razem={len(self.node_ids)}")
 		
 		# DEBUG: Pokaż strukturę drzewa
 		_logger.info("=== DEBUG NODE STRUCTURE ===")
@@ -1440,7 +1259,7 @@ class XmlExportTemplate(models.Model):
 		)
 		children = children.sorted(key=lambda c: (c.sequence or 0, c.id))
 		
-		_logger.info(f"Node {node.tag} has {len(children)} children")
+		_logger.info(f"Węzeł {node.tag} posiada {len(children)} potomnych")
 		
 		for child in children:
 			self._render_node(child, record, elem, visited.copy(), skip_xpath_prefixes)
@@ -1662,58 +1481,6 @@ class XmlExportTemplate(models.Model):
 		help="Załączniki zawierające definicje typów (np. schema.xsd, StrukturyDanych_v10-0E.xsd, dodatkowe include/import)."
 	)
 
-
-	def auto_repair_nodes_from_xsd(self):
-		Type = self.env["xml.xsd.type"]
-		Element = self.env["xml.xsd.element"]
-
-		for node in self.node_ids:
-			clean = node.name.split(":")[-1]
-
-			# 1. Spróbuj dopasować element globalny
-			el = Element.search([
-				("type_id.template_id", "=", self.id),
-				("name", "=", clean)
-			], limit=1)
-
-			if el and el.type_id:
-				node.type_id = el.type_id.id
-				node.xsd_type_name = el.type_id.name
-				node.xsd_type_kind = el.type_id.category
-
-				# repair min/maxOccurs if missing
-				if not node.xsd_min_occurs:
-					node.xsd_min_occurs = el.min_occurs
-				if not node.xsd_max_occurs:
-					node.xsd_max_occurs = el.max_occurs
-
-				continue
-
-			# 2. Synthetic fallback
-			synthetic = f"{clean}Type"
-			t = Type.search([
-				("template_id", "=", self.id),
-				("name", "=", synthetic)
-			], limit=1)
-
-			if t:
-				node.type_id = t.id
-				node.xsd_type_name = t.name
-				node.xsd_type_kind = t.category
-				continue
-
-			# 3. Fallback simple
-			if not node.child_ids:
-				t = Type.search([
-					("template_id", "=", self.id),
-					("category", "=", "simple")
-				], limit=1)
-				if t:
-					node.type_id = t.id
-					node.xsd_type_name = t.name
-					node.xsd_type_kind = "simple"
-
-
 	def action_import_xsd_types(self):
 		self.ensure_one()
 		from lxml import etree
@@ -1737,260 +1504,758 @@ class XmlExportTemplate(models.Model):
 		# jeśli nie ma importów → normalny import lokalny
 		return self._import_xsd_types_from_attachments()
 
+	################################################################################################################ NEW Inline
 	def _import_xsd_types_from_attachments(self):
 		"""
-		Kompletny importer XSD zgodny z FA(3):
-		- Czyta globalne elementy -> ich nazwy + typy
-		- Czyta wszystkie complexType
-		- Łączy elementy z typami
-		- Obsługuje simpleType (globalne + inline)
-		- Obsługuje ref=""
-		- Buduje poprawną strukturę xml_xsd_type + xml_xsd_element
+		Importuje katalog nazwanych typów XSD i ich elementów.
+
+		Zasady:
+		- xml.xsd.type powstaje wyłącznie dla globalnego, nazwanego
+		  xs:simpleType albo xs:complexType;
+		- anonimowe typy inline nie otrzymują sztucznych nazw i nie tworzą
+		  rekordów xml.xsd.type;
+		- dla anonimowego xs:simpleType element przechowuje rzeczywisty typ
+		  bazowy restriction/list/union, jeżeli został podany;
+		- brak definicji zależnej nie blokuje importu dostępnych typów;
+		  nierozwiązane odwołanie zachowuje oryginalny QName i trafia
+		  do raportu;
+		- metoda nie tworzy, nie usuwa i nie modyfikuje xml.export.node;
+		- ponowny import aktualizuje typy i odbudowuje ich element_ids.
+
+		Model xml.xsd.type identyfikuje obecnie rekord nazwą lokalną.
+		Jeżeli ta sama nazwa występuje w kilku namespace, pierwszeństwo ma
+		definicja z głównego XSD, a pozostałe wystąpienia są raportowane.
 		"""
 		self.ensure_one()
-		from lxml import etree
-		import json
-		from markupsafe import Markup
+
+		if not self.xsd_attachment_id:
+			raise UserError(_("Brak głównego pliku XSD."))
 
 		Type = self.env["xml.xsd.type"]
 		Element = self.env["xml.xsd.element"]
-		ns = {"xsd": "http://www.w3.org/2001/XMLSchema"}
+		xsd_ns = "http://www.w3.org/2001/XMLSchema"
+		xsd_tag = f"{{{xsd_ns}}}"
 
-		created_types = 0
-		created_elements = 0
-		processed_files = set()
+		parser = etree.XMLParser(
+			resolve_entities=False,
+			no_network=True,
+			recover=False,
+		)
 
-		# KROK 1 — Pobieramy wszystkie załączniki
-		attachments = []
-		if self.xsd_attachment_id:
-			attachments.append(self.xsd_attachment_id)
-		attachments += self.xsd_type_attachment_ids
-
-		# Mapy pomocnicze
-		global_elements = {}	 # name → type_name
-		complex_types = {}	   # type_name → complexType XML node
-		simple_types = {}		# type_name → dict(pattern, enum, base)
-		inline_simple_counter = 0
-
-		# --------------------------------------------------------------
-		# KROK 2 — Parsujemy wszystkie pliki XSD
-		# --------------------------------------------------------------
-		for att in attachments:
-			if att.id in processed_files:
+		# Główny XSD zawsze jest pierwszy. Kolejność dodatkowych załączników
+		# pozostaje stabilna według ID.
+		attachments = [self.xsd_attachment_id]
+		seen_attachment_ids = {self.xsd_attachment_id.id}
+		for attachment in self.xsd_type_attachment_ids.sorted("id"):
+			if attachment.id in seen_attachment_ids:
 				continue
-			processed_files.add(att.id)
+			seen_attachment_ids.add(attachment.id)
+			attachments.append(attachment)
+
+		schemas = []
+		import_warnings = []
+		for attachment in attachments:
+			xml_data = attachment.raw
+			if not xml_data and attachment.datas:
+				xml_data = base64.b64decode(attachment.datas)
+			if not xml_data:
+				message = _(
+					"Załącznik XSD „%s” nie zawiera danych.",
+					attachment.name,
+				)
+				if attachment == self.xsd_attachment_id:
+					raise UserError(message)
+				import_warnings.append(message)
+				continue
 
 			try:
-				root = etree.fromstring(att.raw)
+				root = etree.fromstring(xml_data, parser=parser)
+			except Exception as error:
+				message = _(
+					"Nie można sparsować XSD „%(name)s”: %(error)s",
+					name=attachment.name,
+					error=error,
+				)
+				if attachment == self.xsd_attachment_id:
+					raise UserError(message) from error
+				import_warnings.append(message)
+				continue
 
-				# 2A — globalne elementy
-				for el in root.findall("xsd:element", ns):
-					name = el.attrib.get("name")
-					ref = el.attrib.get("ref")
-					type_name = el.attrib.get("type")
+			if etree.QName(root).namespace != xsd_ns:
+				message = _(
+					"Załącznik „%s” nie jest schematem XSD.",
+					attachment.name,
+				)
+				if attachment == self.xsd_attachment_id:
+					raise UserError(message)
+				import_warnings.append(message)
+				continue
 
-					if not name and ref:
-						name = ref
+			schemas.append({
+				"attachment": attachment,
+				"root": root,
+				"namespace": root.get("targetNamespace") or "",
+			})
 
-					if not name:
-						continue
+		main_namespace = schemas[0]["namespace"]
 
-					global_elements[name] = type_name
+		def schema_namespace(xml_node):
+			return (
+				xml_node.getroottree().getroot().get("targetNamespace")
+				or ""
+			)
 
-				# 2B — simpleType
-				for st in root.findall(".//xsd:simpleType", ns):
-					name = st.attrib.get("name")
-					if not name:
-						continue
+		def local_name(value):
+			if not value or not isinstance(value, str):
+				return None
+			if value.startswith("{"):
+				return value.rsplit("}", 1)[-1]
+			return value.split(":")[-1]
 
-					restriction = st.find("xsd:restriction", ns)
-					if restriction is None:
-						continue
+		def resolve_qname(value, context_node):
+			if not value:
+				return "", None
+			if ":" in value:
+				prefix, name = value.split(":", 1)
+				namespace = context_node.nsmap.get(prefix)
+				if namespace is None:
+					return None, name
+				return namespace or "", name
+			return (
+				context_node.nsmap.get(None)
+				or schema_namespace(context_node),
+				value,
+			)
 
-					base = restriction.attrib.get("base")
-					enums = [e.attrib["value"] for e in restriction.findall("xsd:enumeration", ns)]
-					pattern_el = restriction.find("xsd:pattern", ns)
-					pattern = pattern_el.attrib.get("value") if pattern_el is not None else None
+		# Rejestry przechowują wyłącznie komponenty globalne, czyli
+		# bezpośrednie dzieci xs:schema.
+		component_tags = {
+			"type": ("simpleType", "complexType"),
+			"simple_type": ("simpleType",),
+			"complex_type": ("complexType",),
+			"element": ("element",),
+			"attribute": ("attribute",),
+			"group": ("group",),
+			"attribute_group": ("attributeGroup",),
+		}
+		components = {
+			kind: {}
+			for kind in component_tags
+		}
 
-					simple_types[name] = {
-						"base": base,
-						"pattern": pattern,
-						"enum": enums
-					}
+		for schema in schemas:
+			root = schema["root"]
+			namespace = schema["namespace"]
+			for kind, tag_names in component_tags.items():
+				for tag_name in tag_names:
+					for definition in root.findall(f"{xsd_tag}{tag_name}"):
+						name = definition.get("name")
+						if not name:
+							continue
+						key = (namespace, name)
+						components[kind].setdefault(key, []).append({
+							"definition": definition,
+							"attachment": schema["attachment"],
+							"namespace": namespace,
+						})
 
-				# 2C — complexType
-				for ct in root.findall(".//xsd:complexType", ns):
-					name = ct.attrib.get("name")
-					if not name:
-						continue
-					complex_types[name] = ct
+		duplicate_component_errors = []
+		for kind in (
+			"simple_type",
+			"complex_type",
+			"element",
+			"attribute",
+			"group",
+			"attribute_group",
+		):
+			for (namespace, name), definitions in components[kind].items():
+				serialized = {
+					etree.tostring(item["definition"])
+					for item in definitions
+				}
+				if len(serialized) > 1:
+					duplicate_component_errors.append(
+						_(
+							"%(kind)s „%(name)s” ma kilka różnych definicji "
+							"w namespace „%(namespace)s”.",
+							kind=kind,
+							name=name,
+							namespace=namespace or "(brak)",
+						)
+					)
 
-				# ------------------------------------------------------------
-				# 2D — GLOBAL ELEMENTS (np. <xsd:element name="Faktura" type="tns:TFaktura">)
-				# ------------------------------------------------------------
-				for ge in root.findall(".//xsd:element[@name][@type]", ns):
-					ge_name = ge.attrib.get("name")
-					ge_type = ge.attrib.get("type")
+		import_warnings.extend(duplicate_component_errors)
 
-					if not ge_name or not ge_type:
-						continue
+		def get_component(kind, qname, context_node):
+			namespace, name = resolve_qname(qname, context_node)
+			if namespace is None:
+				return None, _(
+					"Nieznany prefiks w QName „%s”.", qname
+				)
+			definitions = components[kind].get((namespace, name), [])
+			if not definitions:
+				return None, _(
+					"Brak definicji %(kind)s „%(qname)s” "
+					"(namespace „%(namespace)s”).",
+					kind=kind,
+					qname=qname,
+					namespace=namespace or "(brak)",
+				)
+			return definitions[0]["definition"], None
 
-					# clean prefix: tns:TNaglowek → TNaglowek
-					clean_type = ge_type.split(":")[-1]
+		# ----------------------------------------------------------
+		# Inwentaryzacja brakujących odwołań. Nie blokuje importu.
+		# ----------------------------------------------------------
+		missing_definitions = set()
 
-					# znajdź typ XSD (jeśli istnieje)
-					type_rec = Type.search([
-						("template_id", "=", self.id),
-						("name", "=", clean_type)
-					], limit=1)
+		def check_reference(kind, value, context_node):
+			if not value:
+				return
+			namespace, name = resolve_qname(value, context_node)
+			if namespace is None:
+				missing_definitions.add(
+					_("Nieznany prefiks w QName „%s”.", value)
+				)
+				return
+			if kind == "type" and namespace == xsd_ns:
+				return
+			if (namespace, name) not in components[kind]:
+				missing_definitions.add(
+					_(
+						"Brak %(kind)s „%(value)s” "
+						"(namespace „%(namespace)s”).",
+						kind=kind,
+						value=value,
+						namespace=namespace or "(brak)",
+					)
+				)
 
-					Element.create({
-						"name": ge_name,
-						"type": clean_type,
-						"type_id": type_rec.id if type_rec else False,
-						"min_occurs": int(ge.attrib.get("minOccurs", 1)),
-						"max_occurs": ge.attrib.get("maxOccurs", "1"),
-						"is_attribute": False,
-					})
-
-				# Ustalenie root_tag (pierwszy global element)
-				if att.id == self.xsd_attachment_id.id:
-					first_el = root.find("xsd:element", ns)
-					if first_el is not None:
-						root_name = first_el.attrib.get("name") or first_el.attrib.get("ref")
-						if root_name:
-							self.root_tag = root_name
-
-			except Exception as e:
-				_logger.error("⚠ Błąd parsowania XSD %s: %s", att.name, e)
-
-		# --------------------------------------------------------------
-		# KROK 3 — Tworzymy simpleType (jako xml.xsd.type)
-		# --------------------------------------------------------------
-		for name, st in simple_types.items():
-			rec = Type.search([("name", "=", name), ("template_id", "=", self.id)], limit=1)
-			if not rec:
-				Type.create({
-					"name": name,
-					"category": "simple",
-					"template_id": self.id,
-					"base_type": st["base"],
-					"pattern": st["pattern"],
-					"enumeration": json.dumps(st["enum"]) if st["enum"] else None,
-				})
-				created_types += 1
-
-		# --------------------------------------------------------------
-		# KROK 4 — Tworzymy complexType + ich element children
-		# --------------------------------------------------------------
-		for type_name, ct_node in complex_types.items():
-			type_rec = Type.search([("name", "=", type_name),
-									("template_id", "=", self.id)],
-									limit=1)
-			if not type_rec:
-				type_rec = Type.create({
-					"name": type_name,
-					"category": "complex",
-					"template_id": self.id,
-				})
-				created_types += 1
-
-			# elementy wewnętrzne complexType
-			for el in ct_node.findall(".//xsd:element", ns):
-				el_name = el.attrib.get("name") or el.attrib.get("ref")
-				if not el_name:
+		for schema in schemas:
+			for xml_node in schema["root"].iter():
+				if not isinstance(xml_node.tag, str):
 					continue
 
-				el_type = el.attrib.get("type")
-				mino = int(el.attrib.get("minOccurs", "1"))
-				maxo = el.attrib.get("maxOccurs", "1")
+				tag = local_name(xml_node.tag)
 
-				# --- [NEW] Obsługa inline simpleType ---
-				inline_restr = el.find("xsd:simpleType/xsd:restriction", ns)
-				if inline_restr is not None:
-					enums = [
-						e.attrib.get("value")
-						for e in inline_restr.findall("xsd:enumeration", ns)
-						if e.attrib.get("value")
-					]
+				check_reference(
+					"type",
+					xml_node.get("type"),
+					xml_node,
+				)
+				check_reference(
+					"type",
+					xml_node.get("base"),
+					xml_node,
+				)
+				check_reference(
+					"type",
+					xml_node.get("itemType"),
+					xml_node,
+				)
+				for member_type in (
+					xml_node.get("memberTypes") or ""
+				).split():
+					check_reference("type", member_type, xml_node)
 
-					p = inline_restr.find("xsd:pattern", ns)
-					pattern = p.attrib.get("value") if p is not None else None
+				ref = xml_node.get("ref")
+				if not ref:
+					continue
+				if tag == "element":
+					check_reference("element", ref, xml_node)
+				elif tag == "attribute":
+					check_reference("attribute", ref, xml_node)
+				elif tag == "group":
+					check_reference("group", ref, xml_node)
+				elif tag == "attributeGroup":
+					check_reference("attribute_group", ref, xml_node)
 
-					inline_type_name = f"{type_name}_{el_name}_Inline"
+		import_warnings.extend(sorted(missing_definitions))
 
-					type_inline = Type.create({
-						"template_id": self.id,
-						"name": inline_type_name,
-						"category": "simple",
-						"base_type": inline_restr.attrib.get("base"),
-						"pattern": pattern,
-						"enumeration": json.dumps(enums) if enums else None,
-					})
+		# ----------------------------------------------------------
+		# Wybór nazwanych typów do obecnego modelu xml.xsd.type.
+		# Nazwa rekordu zawsze jest oryginalnym @name z XSD.
+		# ----------------------------------------------------------
+		type_candidates_by_name = {}
+		for component_kind, category in (
+			("simple_type", "simple"),
+			("complex_type", "complex"),
+		):
+			for (namespace, name), definitions in components[
+				component_kind
+			].items():
+				type_candidates_by_name.setdefault(name, []).append({
+					"name": name,
+					"namespace": namespace,
+					"category": category,
+					"definition": definitions[0]["definition"],
+					"attachment": definitions[0]["attachment"],
+				})
 
-					el_type = inline_type_name
-				# --- [END NEW] ---
+		selected_types = {}
+		for name, candidates in sorted(type_candidates_by_name.items()):
+			if len(candidates) == 1:
+				selected_types[name] = candidates[0]
+				continue
 
-				existing_el = Element.search([
-					("type_id", "=", type_rec.id),
-					("name", "=", el_name)
-				], limit=1)
-
-				vals = {
-					"name": el_name,
-					"type": el_type,
-					"min_occurs": mino,
-					"max_occurs": maxo,
+			main_candidates = [
+				candidate
+				for candidate in candidates
+				if candidate["namespace"] == main_namespace
+			]
+			if len(main_candidates) == 1:
+				selected = main_candidates[0]
+			else:
+				# Obecny model nie przechowuje namespace typu. Nie tworzymy
+				# sztucznych nazw; wybór jest stabilny według kolejności
+				# załączników, a konflikt zostaje jawnie zaraportowany.
+				attachment_positions = {
+					schema["attachment"].id: position
+					for position, schema in enumerate(schemas)
 				}
+				selected = sorted(
+					candidates,
+					key=lambda candidate: (
+						attachment_positions[candidate["attachment"].id],
+						candidate["namespace"],
+					),
+				)[0]
 
-				if existing_el:
-					existing_el.write(vals)
-				else:
-					Element.create(dict(vals, type_id=type_rec.id))
+			selected_types[name] = selected
+			import_warnings.append(
+				_(
+					"Typ „%(name)s” występuje w kilku namespace. "
+					"Użyto definicji z „%(selected)s”; pominięto: %(other)s.",
+					name=name,
+					selected=selected["namespace"] or "(brak)",
+					other=", ".join(
+						sorted({
+							candidate["namespace"] or "(brak)"
+							for candidate in candidates
+							if candidate is not selected
+						})
+					),
+				)
+			)
+
+		def documentation(definition):
+			doc = definition.find(
+				f"{xsd_tag}annotation/{xsd_tag}documentation"
+			)
+			if doc is None:
+				return False
+			return " ".join("".join(doc.itertext()).split()) or False
+
+		def integer_facet(restriction, tag_name, default=False):
+			facet = restriction.find(f"{xsd_tag}{tag_name}")
+			if facet is None:
+				return default
+			try:
+				return int(facet.get("value"))
+			except (TypeError, ValueError):
+				return default
+
+		def simple_type_values(definition):
+			values = {
+				"base_type": False,
+				"pattern": False,
+				"min_length": False,
+				"max_length": False,
+				"enumeration": False,
+				"documentation": documentation(definition),
+			}
+			restriction = definition.find(f"{xsd_tag}restriction")
+			if restriction is not None:
+				values["base_type"] = restriction.get("base") or False
+				patterns = [
+					item.get("value")
+					for item in restriction.findall(f"{xsd_tag}pattern")
+					if item.get("value") is not None
+				]
+				if len(patterns) == 1:
+					values["pattern"] = patterns[0]
+				elif len(patterns) > 1:
+					import_warnings.append(
+						_(
+							"Typ „%(name)s” zawiera %(count)s facety pattern. "
+							"Pole xml.xsd.type.pattern nie pozwala zapisać ich "
+							"bez utraty semantyki; pattern pozostawiono pusty.",
+							name=definition.get("name"),
+							count=len(patterns),
+						)
+					)
+
+				enumerations = [
+					item.get("value")
+					for item in restriction.findall(f"{xsd_tag}enumeration")
+					if item.get("value") is not None
+				]
+				if enumerations:
+					values["enumeration"] = json.dumps(
+						enumerations,
+						ensure_ascii=False,
+					)
+
+				values["min_length"] = integer_facet(
+					restriction,
+					"minLength",
+				)
+				values["max_length"] = integer_facet(
+					restriction,
+					"maxLength",
+				)
+
+				optional_facets = {
+					"length": ("length", -1),
+					"total_digits": ("totalDigits", -1),
+					"fraction_digits": ("fractionDigits", -1),
+					"min_inclusive": ("minInclusive", False),
+					"max_inclusive": ("maxInclusive", False),
+					"min_exclusive": ("minExclusive", False),
+					"max_exclusive": ("maxExclusive", False),
+					"white_space": ("whiteSpace", False),
+				}
+				for field_name, (tag_name, default) in optional_facets.items():
+					if field_name not in Type._fields:
+						continue
+					facet = restriction.find(f"{xsd_tag}{tag_name}")
+					value = facet.get("value") if facet is not None else default
+					if field_name in {
+						"length",
+						"total_digits",
+						"fraction_digits",
+					} and value not in (False, None):
+						try:
+							value = int(value)
+						except (TypeError, ValueError):
+							value = default
+					values[field_name] = value
+				return values
+
+			list_node = definition.find(f"{xsd_tag}list")
+			if list_node is not None:
+				values["base_type"] = list_node.get("itemType") or False
+				return values
+
+			union_node = definition.find(f"{xsd_tag}union")
+			if union_node is not None:
+				values["base_type"] = union_node.get("memberTypes") or False
+			return values
+
+		# Duplikaty istniejących rekordów dotyczące rzeczywistych nazw typów
+		# uniemożliwiają bezpieczną aktualizację.
+		existing_types = Type.search([
+			("template_id", "=", self.id),
+			("name", "in", list(selected_types)),
+		])
+		existing_by_name = {}
+		for xsd_type in existing_types:
+			existing_by_name.setdefault(xsd_type.name, Type.browse())
+			existing_by_name[xsd_type.name] |= xsd_type
+
+		duplicate_existing = {
+			name: records.ids
+			for name, records in existing_by_name.items()
+			if len(records) > 1
+		}
+		if duplicate_existing:
+			for name, record_ids in sorted(duplicate_existing.items()):
+				import_warnings.append(
+					_(
+						"Szablon zawiera kilka rekordów typu „%(name)s”: "
+						"%(ids)s. Zaktualizowano rekord o najniższym ID; "
+						"pozostałych nie zmieniono.",
+						name=name,
+						ids=record_ids,
+					)
+				)
+				existing_by_name[name] = existing_by_name[name].sorted("id")[:1]
+
+		created_types = 0
+		updated_types = 0
+		type_records = {}
+
+		for name, specification in selected_types.items():
+			values = {
+				"name": name,
+				"category": specification["category"],
+				"template_id": self.id,
+				"company_id": self.company_id.id,
+				"base_type": False,
+				"pattern": False,
+				"min_length": False,
+				"max_length": False,
+				"enumeration": False,
+				"documentation": documentation(
+					specification["definition"]
+				),
+			}
+			if specification["category"] == "simple":
+				values.update(
+					simple_type_values(specification["definition"])
+				)
+
+			xsd_type = existing_by_name.get(name)
+			if xsd_type:
+				xsd_type.write(values)
+				updated_types += 1
+			else:
+				xsd_type = Type.with_company(self.company_id).create(values)
+				created_types += 1
+			type_records[name] = xsd_type
+
+		# ----------------------------------------------------------
+		# Efektywne elementy i atrybuty typów złożonych.
+		# ----------------------------------------------------------
+		def resolve_declaration(declaration, kind):
+			ref = declaration.get("ref")
+			if not ref:
+				return declaration
+			component, error = get_component(kind, ref, declaration)
+			if error:
+				import_warnings.append(error)
+				return declaration
+			return component
+
+		def collect_particle(container, visited_groups=None):
+			visited_groups = set(visited_groups or ())
+			result = []
+			for child in container:
+				tag = local_name(child.tag)
+				if tag == "element":
+					result.append(child)
+				elif tag in ("sequence", "choice", "all"):
+					result.extend(
+						collect_particle(child, visited_groups)
+					)
+				elif tag == "group":
+					ref = child.get("ref")
+					if not ref:
+						result.extend(
+							collect_particle(child, visited_groups)
+						)
+						continue
+					namespace, name = resolve_qname(ref, child)
+					group_key = (namespace, name)
+					if group_key in visited_groups:
+						continue
+					group, error = get_component("group", ref, child)
+					if error:
+						import_warnings.append(error)
+						continue
+					result.extend(
+						collect_particle(
+							group,
+							visited_groups | {group_key},
+						)
+					)
+			return result
+
+		def collect_attributes(container, visited_groups=None):
+			visited_groups = set(visited_groups or ())
+			result = []
+			for child in container:
+				tag = local_name(child.tag)
+				if tag == "attribute":
+					result.append(child)
+				elif tag == "attributeGroup":
+					ref = child.get("ref")
+					if not ref:
+						result.extend(
+							collect_attributes(child, visited_groups)
+						)
+						continue
+					namespace, name = resolve_qname(ref, child)
+					group_key = (namespace, name)
+					if group_key in visited_groups:
+						continue
+					group, error = get_component(
+						"attribute_group",
+						ref,
+						child,
+					)
+					if error:
+						import_warnings.append(error)
+						continue
+					result.extend(
+						collect_attributes(
+							group,
+							visited_groups | {group_key},
+						)
+					)
+			return result
+
+		def complex_members(definition, visited_types=None):
+			visited_types = set(visited_types or ())
+			type_key = (
+				schema_namespace(definition),
+				definition.get("name"),
+			)
+			if type_key in visited_types:
+				return [], []
+			visited_types.add(type_key)
+
+			content = definition.find(f"{xsd_tag}complexContent")
+			if content is None:
+				content = definition.find(f"{xsd_tag}simpleContent")
+			if content is None:
+				return (
+					collect_particle(definition),
+					collect_attributes(definition),
+				)
+
+			extension = content.find(f"{xsd_tag}extension")
+			restriction = content.find(f"{xsd_tag}restriction")
+			derivation = extension if extension is not None else restriction
+			if derivation is None:
+				return [], []
+
+			base_elements = []
+			base_attributes = []
+			base = derivation.get("base")
+			if base:
+				namespace, base_name = resolve_qname(base, derivation)
+				if namespace != xsd_ns:
+					base_definition = components["complex_type"].get(
+						(namespace, base_name),
+						[],
+					)
+					if base_definition:
+						base_elements, base_attributes = complex_members(
+							base_definition[0]["definition"],
+							visited_types,
+						)
+
+			own_elements = collect_particle(derivation)
+			own_attributes = collect_attributes(derivation)
+			if extension is not None:
+				return (
+					base_elements + own_elements,
+					base_attributes + own_attributes,
+				)
+			return own_elements, own_attributes
+
+		def inline_base_type(declaration):
+			inline_simple = declaration.find(f"{xsd_tag}simpleType")
+			if inline_simple is not None:
+				restriction = inline_simple.find(f"{xsd_tag}restriction")
+				if restriction is not None:
+					return restriction.get("base") or False
+				list_node = inline_simple.find(f"{xsd_tag}list")
+				if list_node is not None:
+					return list_node.get("itemType") or False
+				union_node = inline_simple.find(f"{xsd_tag}union")
+				if union_node is not None:
+					return union_node.get("memberTypes") or False
+
+			inline_complex = declaration.find(f"{xsd_tag}complexType")
+			if inline_complex is not None:
+				content = inline_complex.find(f"{xsd_tag}simpleContent")
+				if content is not None:
+					derivation = content.find(f"{xsd_tag}extension")
+					if derivation is None:
+						derivation = content.find(f"{xsd_tag}restriction")
+					if derivation is not None:
+						return derivation.get("base") or False
+			return False
+
+		def declaration_values(declaration, kind):
+			resolved = resolve_declaration(declaration, kind)
+			name = resolved.get("name") or local_name(
+				declaration.get("ref")
+			)
+			declared_type = resolved.get("type")
+			if not declared_type:
+				declared_type = inline_base_type(resolved)
+
+			if kind == "attribute":
+				min_occurs = (
+					1
+					if declaration.get("use", resolved.get("use")) == "required"
+					else 0
+				)
+				max_occurs = "1"
+			else:
+				try:
+					min_occurs = int(declaration.get("minOccurs", "1"))
+				except (TypeError, ValueError):
+					min_occurs = 1
+				max_occurs = declaration.get("maxOccurs", "1")
+
+			return {
+				"name": name,
+				"type": declared_type or False,
+				"min_occurs": min_occurs,
+				"max_occurs": max_occurs,
+				"is_attribute": kind == "attribute",
+			}
+
+		# Rebuild wyłącznie elementów należących do typów synchronizowanych
+		# przez tę metodę. Rekordy typów zachowują swoje ID.
+		synchronized_type_ids = [
+			type_records[name].id
+			for name, specification in selected_types.items()
+			if specification["category"] == "complex"
+		]
+		if synchronized_type_ids:
+			Element.search([
+				("type_id", "in", synchronized_type_ids),
+			]).unlink()
+
+		created_elements = 0
+		for name, specification in selected_types.items():
+			if specification["category"] != "complex":
+				continue
+
+			owner_type = type_records[name]
+			element_declarations, attribute_declarations = complex_members(
+				specification["definition"]
+			)
+			seen_elements = set()
+
+			for kind, declarations in (
+				("element", element_declarations),
+				("attribute", attribute_declarations),
+			):
+				for declaration in declarations:
+					values = declaration_values(declaration, kind)
+					if not values["name"]:
+						continue
+					key = (
+						values["name"],
+						values["type"],
+						values["min_occurs"],
+						values["max_occurs"],
+						values["is_attribute"],
+					)
+					if key in seen_elements:
+						continue
+					seen_elements.add(key)
+
+					Element.with_company(self.company_id).create({
+						**values,
+						"type_id": owner_type.id,
+						"company_id": self.company_id.id,
+					})
 					created_elements += 1
 
-		# --------------------------------------------------------------
-		# KROK 5 — Łączymy globalne elementy → complexType
-		# --------------------------------------------------------------
-		for el_name, type_name in global_elements.items():
-			if not el_name or not type_name:
-				continue
+		html = (
+			"<b>Import typów XSD</b><br><br>"
+			f"• Przetworzone pliki: {len(schemas)}<br>"
+			f"• Typy utworzone: {created_types}<br>"
+			f"• Typy zaktualizowane: {updated_types}<br>"
+			f"• Elementy i atrybuty typów: {created_elements}<br>"
+			"• Sztuczne typy Inline: 0<br>"
+		)
+		if import_warnings:
+			html += "<br><b>Ostrzeżenia:</b><br>"
+			for warning in dict.fromkeys(import_warnings):
+				html += f"• {escape(warning)}<br>"
 
-			type_rec = Type.search([
-				("name", "=", type_name),
-				("template_id", "=", self.id)
-			], limit=1)
-
-			if not type_rec:
-				continue
-
-			# Dodajemy element globalny jako „dziecko” jego typu
-			exists = Element.search([
-				("type_id", "=", type_rec.id),
-				("name", "=", el_name)
-			], limit=1)
-
-			if not exists:
-				Element.create({
-					"name": el_name,
-					"type": type_name,
-					"min_occurs": 1,
-					"max_occurs": "1",
-					"type_id": type_rec.id
-				})
-				created_elements += 1
-
-		# --------------------------------------------------------------
-		# LOGI + powrót do widoku
-		# --------------------------------------------------------------
 		self.message_post(
-			body=Markup(
-				f"📘 Zaimportowano typów: <b>{created_types}</b><br/>"
-				f"📘 Zaimportowano elementów: <b>{created_elements}</b><br/>"
-				f"📘 Przetworzone pliki: <b>{len(processed_files)}</b>"
-			),
-			subject="Import typów XSD",
+			body=Markup(html),
+			subject=_("Import typów XSD"),
 			message_type="comment",
+			subtype_xmlid="mail.mt_note",
 		)
 
 		return {
@@ -1998,10 +2263,10 @@ class XmlExportTemplate(models.Model):
 			"res_model": "xml.xsd.type",
 			"view_mode": "list,form",
 			"domain": [("template_id", "=", self.id)],
-			"name": "Typy XSD",
+			"name": _("Typy XSD"),
 		}
 
-
+	################################################################################################################ END Inline
 	def action_open_xsd_upload_wizard(self):
 		"""Otwiera wizard do wgrania pliku XSD i podpięcia jako attachment.
 		Widoczny/wywoływany, gdy xsd_attachment_id jest puste."""
@@ -2201,7 +2466,6 @@ class XmlExportNode(models.Model):
 	], default="none", required=True, string="Źródło wartości")
 
 	value_fixed = fields.Char(string="Stała wartość")
-	value_expr = fields.Text(string="Wyrażenie (safe_eval)")
 	value_sequence_name = fields.Char(string="Sekwencja (nazwa w ir.sequence)")
 	value_attachment_field = fields.Char(string="Pole binarne (base64)")
 	value_literal = fields.Text(string="Literal XML (bez escape)")
@@ -2377,7 +2641,7 @@ class XmlExportNode(models.Model):
 class XmlXsdType(models.Model):
 	_name = "xml.xsd.type"
 	_description = "XSD Type Definition"
-	_order = "name"
+	_order = "name, namespace_uri, id"
 
 	company_id = fields.Many2one(
 		'res.company',
@@ -2400,6 +2664,12 @@ class XmlXsdType(models.Model):
 	documentation = fields.Text()
 	template_id = fields.Many2one('xml.export.template', ondelete='cascade')
 	element_ids = fields.One2many('xml.xsd.element', 'type_id', string="Child Elements")
+
+	namespace_uri = fields.Char(
+		string="Namespace URI",
+		index=True,
+		help="Przestrzeń nazw, w której zdefiniowano typ XSD.",
+	)
 
 class XmlXsdElement(models.Model):
 	_name = "xml.xsd.element"

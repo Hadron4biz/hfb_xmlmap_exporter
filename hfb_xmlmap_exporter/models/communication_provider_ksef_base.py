@@ -545,17 +545,34 @@ class AccountMoveKsef(models.Model):
 		return super().create(vals_list)
 
 	def write(self, values):
-		if values.get('origin'):
-			origin = values.get('origin')
-			order = self.env['sale.order'].search(
-				[
-					('name','=', origin),
-					('company_id', '=', self.company_id.id)
-				], limit=1)
-			if order:
-				values['order_id'] = order.id
-		return super().write(values)
+		values = dict(values)
 
+		if len(self) == 1 and self.move_type == "out_invoice":
+			is_upr = values.get("ksef_is_upr", self.ksef_is_upr)
+			rodzaj = values.get(
+				"ksef_rodzaj_faktury",
+				self.ksef_rodzaj_faktury,
+			)
+
+			if is_upr and rodzaj in (False, "VAT", "UPR"):
+				values["ksef_rodzaj_faktury"] = "UPR"
+
+			elif not is_upr and rodzaj == "UPR":
+				values["ksef_rodzaj_faktury"] = "VAT"
+
+		if values.get("origin"):
+			origin = values["origin"]
+			order = self.env["sale.order"].search(
+				[
+					("name", "=", origin),
+					("company_id", "=", self.company_id.id),
+				],
+				limit=1,
+			)
+			if order:
+				values["order_id"] = order.id
+
+		return super().write(values)
 
 	ksef_number = fields.Char('Nr KSeF', store=True, copy=False, tracking=True, )
 	ksef_sent_date = fields.Datetime('Data przesłania', store=True,  copy=False,)
@@ -854,6 +871,18 @@ class AccountMoveKsef(models.Model):
 		struktury XML faktury przekazywanej do KSeF.
 		"""
 	)
+
+	@api.onchange("ksef_is_upr")
+	def _onchange_ksef_is_upr(self):
+		for move in self:
+			if move.move_type != "out_invoice":
+				continue
+
+			if move.ksef_is_upr:
+				if move.ksef_rodzaj_faktury in (False, "VAT", "UPR"):
+					move.ksef_rodzaj_faktury = "UPR"
+			elif move.ksef_rodzaj_faktury == "UPR":
+				move.ksef_rodzaj_faktury = "VAT"
 
 	ksef_correction_type = fields.Selection([
 		('0', 'To nie jest korekta'),

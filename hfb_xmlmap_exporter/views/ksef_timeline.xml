@@ -50,6 +50,30 @@
 									readonly="1"
 									string="Rodzaj faktury KSeF" 
 									invisible="not ksef_number and not xml_export_template_id" />
+								<field name="ksef_is_upr"
+									string="Faktura uproszczona (UPR)"
+									invisible="
+										move_type not in ('out_invoice', 'in_invoice')
+										or (
+											move_type == 'in_invoice'
+											and not ksef_is_upr
+										)
+										or (
+											move_type == 'out_invoice'
+											and ksef_rodzaj_faktury not in (False, 'VAT', 'UPR')
+										)
+										or (
+											move_type == 'out_invoice'
+											and state != 'draft'
+											and not ksef_is_upr
+										)
+									"
+									readonly="
+										move_type != 'out_invoice'
+										or state != 'draft'
+										or ksef_number
+									"
+								/>
 								<field name="order_id" 
 									readonly="1" 
 									string="Dokument Zamówienia"

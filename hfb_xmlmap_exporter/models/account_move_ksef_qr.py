@@ -302,7 +302,6 @@ class AccountMove(models.Model):
 
 		log = self.env["communication.log"].search( domain, order="create_date desc", limit=1,)
 
-
 		seq = 1
 		if not log:
 			if self.log_ids:
@@ -311,11 +310,13 @@ class AccountMove(models.Model):
 				return None
 
 		if ksef_invoice_hash and log:
-			log.ksef_invoice_hash = ksef_invoice_hash
+			#log.ksef_invoice_hash = ksef_invoice_hash
+			log.sudo().write({ "ksef_invoice_hash": ksef_invoice_hash,})
 		elif log and log.file_data:
 			ksef_invoice_hash = self._compute_ksef_invoice_hash()
 			if ksef_invoice_hash:
-				log.ksef_invoice_hash = ksef_invoice_hash
+				#log.ksef_invoice_hash = ksef_invoice_hash
+				log.sudo().write({ "ksef_invoice_hash": ksef_invoice_hash,})
 			seq = 2
 		else:
 			seq = 9

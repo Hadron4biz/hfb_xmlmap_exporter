@@ -28,6 +28,21 @@
     </data>
 
     <data noupdate="1">
+        <!-- Cron do monitorowania i wznawiania faktur wystawionych w trybie OFFLINE KSeF -->
+        <record id="ir_cron_ksef_offline_monitor" model="ir.cron">
+            <field name="name">🔌 Provider KSeF – Offline Monitor (auto-wznowienie)</field>
+            <field name="active">False</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">15</field>
+            <field name="interval_type">minutes</field>  <!-- Częściej niż health-check: od tego zależy dosłanie faktury w ustawowym terminie -->
+            <field name="model_id" ref="model_communication_provider_ksef_offline"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_ksef_offline_monitor()</field>
+            <field name="priority">10</field>
+        </record>
+    </data>
+
+    <data noupdate="1">
         <!-- Cron do sprawdzania dostępności środowiska KSeF -->
         <record id="ir_cron_ksef_environment_check" model="ir.cron">
             <field name="name">⚠️  Provider KSeF – Environment Health Check</field>

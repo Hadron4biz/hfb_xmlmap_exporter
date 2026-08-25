@@ -33,6 +33,8 @@
 
 # 1. MODELE BAZOWE / ABSTRAKCYJNE (najpierw zależności)
 from . import xml_template
+from . import xml_xsd_node_type_repair
+from . import xml_xsd_value_formatter
 from . import xml_export_template
 from . import xml_import_template
 from . import xml_validation_log

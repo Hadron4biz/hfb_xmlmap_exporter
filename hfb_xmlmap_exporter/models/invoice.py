@@ -139,7 +139,7 @@ class AccountMove(models.Model):
 		# Price_subtotal w Odoo zawsze zawiera wartość netto (bez podatku),
 		# nawet jeśli podatek jest w cenie (tax_included).
 		relevant_lines = self.invoice_line_ids.filtered(
-			lambda l: any(ksef_tax_name in t.name for t in l.tax_ids)
+			lambda l: any(ksef_tax_name == t.name for t in l.tax_ids)
 		)
 		if not relevant_lines:
 			return None
@@ -149,7 +149,7 @@ class AccountMove(models.Model):
 		# 2. Pobierz kwotę podatku bezpośrednio z linii podatkowych (tax_line_ids)
 		# Szukamy linii, gdzie tax_line_id nie jest puste
 		tax_lines = self.line_ids.filtered(
-			lambda l: l.tax_line_id and ksef_tax_name in l.tax_line_id.name
+			lambda l: l.tax_line_id and ksef_tax_name == l.tax_line_id.name
 		)
 		
 		# 'balance' w Odoo dla kredytu (zobowiązanie) jest ujemne, 

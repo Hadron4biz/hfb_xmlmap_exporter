@@ -67,4 +67,46 @@ Zmiany przygotowują system do:
 - bezpiecznej obsługi równoległych sesji,
 - spójnego modelu retry i harmonogramowania.
 
+---
+
+## [18.0.1.12] — 2026-07-31 — Porządkowanie kodu
+
+### Removed
+
+- Usunięto 5 plików `views/*.xml`, których nie było w `__manifest__.py`
+  (nigdy się nie ładowały): `communication_provider_peppol_views.xml`,
+  `communication_provider_poweroffice_views.xml` (odwoływały się do
+  nieistniejących modeli), `ksef_connection_test_result_views.xml`
+  (nieistniejący model), `report_invoice.xml` (odwoływał się do
+  usuniętych pól QR, zastąpiony przez `report_invoice_ksef_qr.xml`),
+  `ksef_invoice_offline.xml` (nigdy niepodpięty do manifestu).
+- Usunięto zdublowane/martwe definicje metod i pól, które w Pythonie
+  były cicho nadpisywane przez późniejszą definicję w tej samej klasie
+  (m.in. `_get_next_operation`, dwie z trzech kopii `_handle_ksef_error`,
+  martwą wersję `_is_token_valid`, `_call_python_http` wraz z zależną od
+  niej `check_status`, `XXX_import_xsd_types_from_attachments`,
+  `XXX_process_invoice_lines_fawiersz`, `xxx_action_confirm`) —
+  w `communication_provider_ksef.py`, `communication_provider_ksef_apiservice.py`,
+  `xml_template.py`, `communication_provider_ksef_addons.py`,
+  `wizard/wizard_template_name.py`.
+
+### Fixed
+
+- Pole `ksef_session_token` miało dwie definicje w tej samej klasie —
+  późniejsza (bez `groups="base.group_system"`) cicho nadpisywała
+  wcześniejszą, przez co token sesji KSeF nie miał ograniczonego dostępu.
+  Przywrócono `groups="base.group_system"`.
+- Pole `executed_by` w `communication.log` analogicznie traciło
+  `tracking=True` — przywrócono, żeby zmiana wykonawcy operacji trafiała
+  do chattera.
+- `cron_ksef_offline_monitor` (auto-wznowienie faktur z trybu OFFLINE)
+  filtrował logi po `self.company_id`, mimo że jest wołany na
+  `AbstractModel` bez kontekstu firmy — cron nigdy nic by nie znalazł.
+  Naprawiono przekazywanie `company_id` z konkretnego logu.
+
+### Added
+
+- Dodano brakujący wpis `ir.cron` (`ir_cron_ksef_offline_monitor`,
+  `active=False`, co 15 minut) aktywujący `cron_ksef_offline_monitor`.
+
 

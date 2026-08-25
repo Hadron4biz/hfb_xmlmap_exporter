@@ -204,30 +204,4 @@ class XmlTemplateNameWizard(models.TransientModel):
 			"view_mode": "form",
 			"target": "current",
 		}
-
-
-	def xxx_action_confirm(self):
-		"""Zwróć gotową nazwę i ustaw XSD na szablonie – reszta logiki w modelu szablonu."""
-		self.ensure_one()
-		if not self.preview_name or not _NAME_REGEX.match(self.preview_name):
-			raise ValidationError(_("Nazwa jest niepoprawna — sprawdź pola wejściowe."))
-
-		# Minimalne utworzenie szablonu (tylko nazwa + XSD).
-		template_vals = {
-			"name": self.preview_name,
-			"xsd_attachment_id": self.xsd_attachment_id.id,
-			"active": True,
-			'company_id': self.company_id.id,
-		}
-		tmpl = self.env["xml.export.template"].create(template_vals)
-
-		# Otwórz świeżo utworzony szablon (widok form) – działa tak samo 14–19
-		return {
-			"type": "ir.actions.act_window",
-			"res_model": "xml.export.template",
-			"view_mode": "form",
-			"res_id": tmpl.id,
-			"target": "current",
-		}
-
 #EoF

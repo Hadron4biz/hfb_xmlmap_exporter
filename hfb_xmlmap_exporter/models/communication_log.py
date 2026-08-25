@@ -236,15 +236,8 @@ class CommunicationLog(models.Model):
 	provider_message = fields.Text(string="Komunikat providera")
 
 	# Obsługa czasu
-	duration_ms = fields.Integer(string="Czas wykonania [ms]")
 	send_date = fields.Datetime(string="Data wysłania")
 	receive_date = fields.Datetime(string="Data importu")
-
-	executed_by = fields.Many2one(
-		"res.users",
-		string="Wykonane przez",
-		default=lambda self: self.env.user,
-	)
 
 	context_json = fields.Json(string="Kontekst")
 
