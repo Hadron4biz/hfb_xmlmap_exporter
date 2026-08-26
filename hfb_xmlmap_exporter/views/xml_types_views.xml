@@ -24,6 +24,8 @@
             <field name="category"/>
             <field name="base_type"/>
             <field name="pattern"/>
+			<field name="min_length"/>
+			<field name="max_length"/>
             <field name="enumeration"/>
             <field name="documentation"/>
           </group>
@@ -33,8 +35,10 @@
                 <list editable="bottom">
                   <field name="name"/>
                   <field name="type"/>
+				  <field name="type_id"/>
                   <field name="min_occurs"/>
                   <field name="max_occurs"/>
+				  <field name="is_attribute" />
                 </list>
               </field>
             </page>

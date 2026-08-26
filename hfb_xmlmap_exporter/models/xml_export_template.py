@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.6
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -43,7 +43,7 @@ from datetime import datetime
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 import uuid
-from markupsafe import Markup
+from markupsafe import Markup, escape
 
 _logger = logging.getLogger(__name__)
 
@@ -370,6 +370,558 @@ class XmlExportTemplate(models.Model):
 			"target": "current",
 		}
 
+	def _validate_nodes_against_xsd(self):
+		"""
+		Porównuje typy przypisane do node'ów XET z deklaracjami w XSD.
+
+		Metoda jest wyłącznie informacyjna:
+		- nie zmienia node.type_id,
+		- nie zmienia state node'ów.
+
+		Źródłem prawdy jest rzeczywiste drzewo XSD rozwijane od globalnego
+		elementu wskazanego w root_tag. Wynik jest słownikiem używanym do
+		zbudowania osobnej sekcji raportu w chatterze.
+		"""
+		self.ensure_one()
+
+		result = {
+			"total": len(self.node_ids),
+			"located": 0,
+			"matching": 0,
+			"mismatches": [],
+			"not_found": [],
+			"unresolved": [],
+			"errors": [],
+		}
+
+		if not self.xsd_attachment_id:
+			result["errors"].append("Brak głównego pliku XSD.")
+			return result
+
+		try:
+			from lxml import etree
+		except ImportError:
+			result["errors"].append("Brak biblioteki lxml wymaganej do analizy XSD.")
+			return result
+
+		xsd_ns = "http://www.w3.org/2001/XMLSchema"
+		component_tags = {
+			"element": "element",
+			"attribute": "attribute",
+			"complex_type": "complexType",
+			"simple_type": "simpleType",
+			"group": "group",
+			"attribute_group": "attributeGroup",
+		}
+		components = {
+			key: {}
+			for key in component_tags
+		}
+		components_by_local_name = {
+			key: {}
+			for key in component_tags
+		}
+		parsed_roots = {}
+
+		def local_name(value):
+			if not value:
+				return None
+			if not isinstance(value, str):
+				return None
+			if value.startswith("{"):
+				return value.rsplit("}", 1)[-1]
+			return value.split(":")[-1]
+
+		def schema_root(xml_node):
+			return xml_node.getroottree().getroot()
+
+		def schema_target_namespace(xml_node):
+			return schema_root(xml_node).get("targetNamespace") or ""
+
+		def register_component(kind, namespace, name, xml_node):
+			if not name:
+				return
+
+			key = (namespace or "", name)
+			components[kind].setdefault(key, []).append(xml_node)
+			components_by_local_name[kind].setdefault(name, []).append(xml_node)
+
+		def resolve_qname(value, context_node):
+			if not value:
+				return "", None
+
+			if ":" in value:
+				prefix, name = value.split(":", 1)
+				namespace = context_node.nsmap.get(prefix, "")
+				return namespace or "", name
+
+			# W większości schem XSD komponenty lokalne są wskazywane przez
+			# tns:Name. Obsługujemy również zapis bez prefiksu.
+			namespace = (
+				context_node.nsmap.get(None)
+				or schema_target_namespace(context_node)
+				or ""
+			)
+			return namespace, value
+
+		def lookup_component(kind, value, context_node):
+			namespace, name = resolve_qname(value, context_node)
+			if not name:
+				return None, "Brak nazwy komponentu XSD."
+
+			exact = components[kind].get((namespace, name), [])
+			if len(exact) == 1:
+				return exact[0], None
+			if len(exact) > 1:
+				return None, (
+					f"Niejednoznaczna definicja XSD: {value} "
+					f"({len(exact)} wystąpienia)."
+				)
+
+			# Fallback po nazwie lokalnej jest potrzebny dla schem, które
+			# odwołują się do komponentów bez jawnego prefiksu namespace.
+			by_name = components_by_local_name[kind].get(name, [])
+			if len(by_name) == 1:
+				return by_name[0], None
+			if len(by_name) > 1:
+				return None, (
+					f"Niejednoznaczna nazwa lokalna XSD: {name} "
+					f"({len(by_name)} definicje)."
+				)
+
+			return None, f"Nie znaleziono komponentu XSD: {value}."
+
+		attachments = []
+		seen_attachment_ids = set()
+		for attachment in (
+			self.xsd_attachment_id | self.xsd_type_attachment_ids
+		):
+			if attachment.id in seen_attachment_ids:
+				continue
+			seen_attachment_ids.add(attachment.id)
+			attachments.append(attachment)
+
+		# Najpierw parsujemy wszystkie pliki, aby później móc rozwiązywać
+		# importy, include, ref, type, group i dziedziczenie typów.
+		for attachment in attachments:
+			try:
+				xml_data = attachment.raw
+				if not xml_data and attachment.datas:
+					xml_data = base64.b64decode(attachment.datas)
+				root = etree.fromstring(xml_data)
+			except Exception as exc:
+				result["errors"].append(
+					f"Nie można odczytać XSD „{attachment.name}”: {exc}"
+				)
+				continue
+
+			if etree.QName(root).namespace != xsd_ns:
+				result["errors"].append(
+					f"Załącznik „{attachment.name}” nie jest schematem XSD."
+				)
+				continue
+
+			parsed_roots[attachment.id] = root
+			target_namespace = root.get("targetNamespace") or ""
+
+			# Rejestrujemy wyłącznie komponenty globalne. Elementy lokalne
+			# będą odnajdywane przez przejście po rzeczywistym drzewie typów.
+			for kind, tag_name in component_tags.items():
+				for xml_node in root.findall(f"{{{xsd_ns}}}{tag_name}"):
+					register_component(
+						kind,
+						target_namespace,
+						xml_node.get("name"),
+						xml_node,
+					)
+
+		main_root = parsed_roots.get(self.xsd_attachment_id.id)
+		if main_root is None:
+			return result
+
+		def resolve_element_declaration(declaration):
+			ref = declaration.get("ref")
+			if not ref:
+				return declaration, None
+			return lookup_component("element", ref, declaration)
+
+		def resolve_attribute_declaration(declaration):
+			ref = declaration.get("ref")
+			if not ref:
+				return declaration, None
+			return lookup_component("attribute", ref, declaration)
+
+		def declared_type(declaration, node_kind="element"):
+			if node_kind == "attribute":
+				resolved, error = resolve_attribute_declaration(declaration)
+			else:
+				resolved, error = resolve_element_declaration(declaration)
+
+			if error:
+				return None, None, error
+
+			type_value = resolved.get("type")
+			if type_value:
+				namespace, name = resolve_qname(type_value, resolved)
+				if namespace == xsd_ns:
+					return f"xs:{name}", "builtin", None
+				return name, "named", None
+
+			inline_simple = resolved.find(f"{{{xsd_ns}}}simpleType")
+			if inline_simple is not None:
+				restriction = inline_simple.find(
+					f"{{{xsd_ns}}}restriction"
+				)
+				if restriction is not None and restriction.get("base"):
+					namespace, name = resolve_qname(
+						restriction.get("base"),
+						restriction,
+					)
+					if namespace == xsd_ns:
+						return f"xs:{name}", "builtin", None
+					return name, "named_base", None
+
+				list_node = inline_simple.find(f"{{{xsd_ns}}}list")
+				if list_node is not None and list_node.get("itemType"):
+					namespace, name = resolve_qname(
+						list_node.get("itemType"),
+						list_node,
+					)
+					if namespace == xsd_ns:
+						return f"xs:{name}", "builtin", None
+					return name, "named_base", None
+
+				return None, "anonymous_simple", None
+
+			inline_complex = resolved.find(f"{{{xsd_ns}}}complexType")
+			if inline_complex is not None:
+				for content_name in ("simpleContent", "complexContent"):
+					content = inline_complex.find(
+						f"{{{xsd_ns}}}{content_name}"
+					)
+					if content is None:
+						continue
+					derivation = content.find(f"{{{xsd_ns}}}extension")
+					if derivation is None:
+						derivation = content.find(
+							f"{{{xsd_ns}}}restriction"
+						)
+					if derivation is None or not derivation.get("base"):
+						continue
+
+					namespace, name = resolve_qname(
+						derivation.get("base"),
+						derivation,
+					)
+					if namespace == xsd_ns:
+						return f"xs:{name}", "builtin", None
+					return name, "named_base", None
+
+				return None, "anonymous_complex", None
+
+			return None, None, "Element XSD nie posiada deklaracji typu."
+
+		def resolve_complex_type(declaration):
+			resolved, error = resolve_element_declaration(declaration)
+			if error:
+				return None, error
+
+			inline_complex = resolved.find(f"{{{xsd_ns}}}complexType")
+			if inline_complex is not None:
+				return inline_complex, None
+
+			type_value = resolved.get("type")
+			if not type_value:
+				return None, None
+
+			namespace, name = resolve_qname(type_value, resolved)
+			if namespace == xsd_ns:
+				return None, None
+
+			return lookup_component("complex_type", type_value, resolved)
+
+		def particle_elements(container, visited_groups=None):
+			visited_groups = set(visited_groups or ())
+			found = []
+
+			for child in container:
+				tag = local_name(child.tag)
+
+				if tag == "element":
+					found.append(child)
+				elif tag in ("sequence", "all", "choice"):
+					found.extend(particle_elements(child, visited_groups))
+				elif tag == "group":
+					ref = child.get("ref")
+					if not ref:
+						found.extend(particle_elements(child, visited_groups))
+						continue
+
+					namespace, name = resolve_qname(ref, child)
+					group_key = (namespace, name)
+					if group_key in visited_groups:
+						continue
+
+					group, error = lookup_component("group", ref, child)
+					if group is not None and not error:
+						found.extend(
+							particle_elements(
+								group,
+								visited_groups | {group_key},
+							)
+						)
+
+			return found
+
+		def type_attributes(container, visited_groups=None):
+			visited_groups = set(visited_groups or ())
+			found = []
+
+			for child in container:
+				tag = local_name(child.tag)
+				if tag == "attribute":
+					found.append(child)
+				elif tag == "attributeGroup":
+					ref = child.get("ref")
+					if not ref:
+						found.extend(type_attributes(child, visited_groups))
+						continue
+
+					namespace, name = resolve_qname(ref, child)
+					group_key = (namespace, name)
+					if group_key in visited_groups:
+						continue
+
+					group, error = lookup_component(
+						"attribute_group",
+						ref,
+						child,
+					)
+					if group is not None and not error:
+						found.extend(
+							type_attributes(
+								group,
+								visited_groups | {group_key},
+							)
+						)
+
+			return found
+
+		def complex_type_members(complex_type, visited_types=None):
+			visited_types = set(visited_types or ())
+			elements = []
+			attributes = []
+
+			type_name = complex_type.get("name")
+			type_key = (
+				schema_target_namespace(complex_type),
+				type_name or f"anonymous:{id(complex_type)}",
+			)
+			if type_key in visited_types:
+				return elements, attributes
+			visited_types.add(type_key)
+
+			content = complex_type.find(f"{{{xsd_ns}}}complexContent")
+			if content is None:
+				content = complex_type.find(f"{{{xsd_ns}}}simpleContent")
+			if content is not None:
+				derivation = content.find(f"{{{xsd_ns}}}extension")
+				if derivation is None:
+					derivation = content.find(f"{{{xsd_ns}}}restriction")
+				if derivation is not None:
+					base = derivation.get("base")
+					if base:
+						base_type, error = lookup_component(
+							"complex_type",
+							base,
+							derivation,
+						)
+						if base_type is not None and not error:
+							base_elements, base_attributes = complex_type_members(
+								base_type,
+								visited_types,
+							)
+							elements.extend(base_elements)
+							attributes.extend(base_attributes)
+
+					elements.extend(particle_elements(derivation))
+					attributes.extend(type_attributes(derivation))
+					return elements, attributes
+
+			elements.extend(particle_elements(complex_type))
+			attributes.extend(type_attributes(complex_type))
+			return elements, attributes
+
+		def declaration_name(declaration, node_kind):
+			if node_kind == "attribute":
+				resolved, error = resolve_attribute_declaration(declaration)
+			else:
+				resolved, error = resolve_element_declaration(declaration)
+			if error or resolved is None:
+				return local_name(declaration.get("ref"))
+			return resolved.get("name")
+
+		def add_not_found(node, reason):
+			result["not_found"].append({
+				"path": node.xpath or node.name,
+				"reason": reason,
+			})
+			for child in node.child_ids.sorted(key=lambda rec: (rec.sequence, rec.id)):
+				add_not_found(
+					child,
+					"Nie można ustalić deklaracji, ponieważ nie odnaleziono rodzica.",
+				)
+
+		def validate_node(node, declaration, node_kind="element"):
+			result["located"] += 1
+
+			expected_type, type_kind, type_error = declared_type(
+				declaration,
+				node_kind=node_kind,
+			)
+			actual_type = node.type_id.name if node.type_id else None
+
+			if type_error:
+				result["unresolved"].append({
+					"path": node.xpath or node.name,
+					"reason": type_error,
+				})
+			elif type_kind in ("anonymous_simple", "anonymous_complex"):
+				result["unresolved"].append({
+					"path": node.xpath or node.name,
+					"reason": (
+						"Typ anonimowy zdefiniowany bezpośrednio przy elemencie "
+						"XSD — brak nazwy pozwalającej na porównanie type_id."
+					),
+				})
+			elif type_kind == "builtin":
+				if actual_type:
+					result["mismatches"].append({
+						"path": node.xpath or node.name,
+						"actual": actual_type,
+						"expected": expected_type,
+					})
+				else:
+					# Typy xs:* są częścią XML Schema i nie wymagają
+					# rekordu xml.xsd.type ani relacji type_id.
+					result["matching"] += 1
+			elif expected_type:
+				expected_comparable = expected_type.split(":")[-1]
+				if actual_type == expected_comparable:
+					result["matching"] += 1
+				else:
+					result["mismatches"].append({
+						"path": node.xpath or node.name,
+						"actual": actual_type or "brak",
+						"expected": expected_type,
+					})
+
+			if node_kind != "element":
+				return
+
+			complex_type, complex_error = resolve_complex_type(declaration)
+			children = node.child_ids.sorted(key=lambda rec: (rec.sequence, rec.id))
+
+			if complex_error:
+				for child in children:
+					add_not_found(child, complex_error)
+				return
+
+			if complex_type is None:
+				for child in children:
+					add_not_found(
+						child,
+						"Typ rodzica w XSD nie jest typem złożonym.",
+					)
+				return
+
+			element_declarations, attribute_declarations = complex_type_members(
+				complex_type
+			)
+			declarations_by_key = {}
+
+			for child_declaration in element_declarations:
+				name = declaration_name(child_declaration, "element")
+				if name:
+					declarations_by_key.setdefault(
+						("element", name),
+						[],
+					).append(child_declaration)
+
+			for child_declaration in attribute_declarations:
+				name = declaration_name(child_declaration, "attribute")
+				if name:
+					declarations_by_key.setdefault(
+						("attribute", name),
+						[],
+					).append(child_declaration)
+
+			for child in children:
+				child_kind = (
+					"attribute"
+					if child.node_kind == "attribute"
+					else "element"
+				)
+				candidates = declarations_by_key.get(
+					(child_kind, local_name(child.name)),
+					[],
+				)
+
+				if not candidates:
+					add_not_found(
+						child,
+						"Brak elementu pod wskazanym rodzicem w XSD.",
+					)
+					continue
+
+				if len(candidates) > 1:
+					candidate_types = {
+						declared_type(candidate, child_kind)[0]
+						for candidate in candidates
+					}
+					if len(candidate_types) > 1:
+						result["unresolved"].append({
+							"path": child.xpath or child.name,
+							"reason": (
+								"Niejednoznaczna deklaracja elementu w XSD; "
+								"pod tym samym rodzicem występuje kilka "
+								"deklaracji o różnych typach."
+							),
+						})
+						continue
+
+				validate_node(child, candidates[0], child_kind)
+
+		root_declarations = [
+			xml_node
+			for xml_node in main_root.findall(f"{{{xsd_ns}}}element")
+			if xml_node.get("name") == self.root_tag
+		]
+		if not root_declarations:
+			result["errors"].append(
+				f"Nie znaleziono globalnego elementu root_tag „{self.root_tag}” "
+				"w głównym XSD."
+			)
+			return result
+		if len(root_declarations) > 1:
+			result["errors"].append(
+				f"Globalny element root_tag „{self.root_tag}” "
+				"nie jest jednoznaczny."
+			)
+			return result
+
+		root_nodes = self.node_ids.filtered(lambda node: not node.parent_id)
+		for root_node in root_nodes.sorted(key=lambda rec: (rec.sequence, rec.id)):
+			if local_name(root_node.name) != self.root_tag:
+				add_not_found(
+					root_node,
+					f"Root node nie odpowiada root_tag „{self.root_tag}”.",
+				)
+				continue
+			validate_node(root_node, root_declarations[0])
+
+		return result
+
 
 	def action_validate_template_full(self):
 		"""
@@ -417,9 +969,6 @@ class XmlExportTemplate(models.Model):
 			node_errors = []
 			node_warnings = []
 
-			### XXX ToDo: weryfikacja występowania i zgodności w XSD
-
-			
 			# 1) Sprawdź źródło wartości
 			if node.value_source == "field":
 				if not node.src_rel_path:
@@ -469,6 +1018,11 @@ class XmlExportTemplate(models.Model):
 				warnings.extend([f"{node.name}: {w}" for w in node_warnings])
 			else:
 				node.state = "validated"
+
+		# ------------------------------------------------------------
+		# WALIDACJA INFORMACYJNA WZGLĘDEM RZECZYWISTEGO XSD
+		# ------------------------------------------------------------
+		xsd_report = self._validate_nodes_against_xsd()
 		
 		# ------------------------------------------------------------
 		# DODATKOWA WALIDACJA: Sprawdź czy można wygenerować XML
@@ -506,6 +1060,70 @@ class XmlExportTemplate(models.Model):
 		• Węzły z ostrzeżeniami: {warning_nodes}<br>
 		• Łącznie węzłów: {len(self.node_ids)}<br><br>
 		"""
+
+		xsd_issue_count = (
+			len(xsd_report["mismatches"])
+			+ len(xsd_report["not_found"])
+			+ len(xsd_report["unresolved"])
+			+ len(xsd_report["errors"])
+		)
+		html += """
+		<b>📐 Zgodność node'ów XET ze schematem XSD:</b><br>
+		"""
+		html += (
+			f"• Węzły w szablonie: {xsd_report['total']}<br>"
+			f"• Odnalezione w drzewie XSD: {xsd_report['located']}<br>"
+			f"• Typ zgodny z XSD: {xsd_report['matching']}<br>"
+			f"• Niezgodny lub nieprzypisany typ: "
+			f"{len(xsd_report['mismatches'])}<br>"
+			f"• Węzeł niewystępujący pod wskazanym rodzicem: "
+			f"{len(xsd_report['not_found'])}<br>"
+			f"• Niejednoznaczne lub niemożliwe do porównania: "
+			f"{len(xsd_report['unresolved'])}<br><br>"
+		)
+
+		if xsd_report["errors"]:
+			html += "<b style='color:red;'>Błędy odczytu schemy:</b><br>"
+			for issue in xsd_report["errors"]:
+				html += f"• {escape(issue)}<br>"
+			html += "<br>"
+
+		if xsd_report["mismatches"]:
+			html += "<b style='color:red;'>Niezgodności typów XET ↔ XSD:</b><br>"
+			for issue in xsd_report["mismatches"]:
+				html += (
+					f"• <b>{escape(issue['path'])}</b>: "
+					f"XET = <code>{escape(issue['actual'])}</code>, "
+					f"XSD = <code>{escape(issue['expected'])}</code><br>"
+				)
+			html += "<br>"
+
+		if xsd_report["not_found"]:
+			html += "<b style='color:orange;'>Węzły nieodnalezione w XSD:</b><br>"
+			for issue in xsd_report["not_found"]:
+				html += (
+					f"• <b>{escape(issue['path'])}</b>: "
+					f"{escape(issue['reason'])}<br>"
+				)
+			html += "<br>"
+
+		if xsd_report["unresolved"]:
+			html += (
+				"<b style='color:orange;'>Węzły z anonimowym typem XSD (informacyjnie):</b><br>"
+			)
+			for issue in xsd_report["unresolved"]:
+				html += (
+					f"• <b>{escape(issue['path'])}</b>: "
+					f"{escape(issue['reason'])}<br>"
+				)
+			html += "<br>"
+
+		if not xsd_issue_count:
+			html += (
+				"<span style='color:green;'>"
+				"✅ Wszystkie porównywalne węzły mają typ zgodny z XSD."
+				"</span><br><br>"
+			)
 		
 		if errors:
 			html += "<b style='color:red;'>❌ Błędy krytyczne:</b><br>"
@@ -551,8 +1169,16 @@ class XmlExportTemplate(models.Model):
 		)
 		
 		# Notyfikacja
-		notification_type = "success" if not errors else "danger"
-		notification_message = f"Znaleziono {len(errors)} błędów i {len(warnings)} ostrzeżeń."
+		if errors:
+			notification_type = "danger"
+		elif xsd_issue_count or warnings:
+			notification_type = "warning"
+		else:
+			notification_type = "success"
+		notification_message = (
+			f"Znaleziono {len(errors)} błędów, {len(warnings)} ostrzeżeń "
+			f"oraz {xsd_issue_count} uwag wynikających z porównania z XSD."
+		)
 		
 		return {
 			"type": "ir.actions.client",
@@ -564,6 +1190,7 @@ class XmlExportTemplate(models.Model):
 				"sticky": True,
 			},
 		}
+
 
 
 #EoF

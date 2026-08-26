@@ -1,19 +1,86 @@
 <odoo>
-	<record id="group_xml_export_admin" model="res.groups">
-		<field name="name">XML Export Administrator</field>
+	<!-- Sekcja w zakładce "Prawa dostępu" formularza użytkownika. -->
+	<record id="module_category_xet_ksef" model="ir.module.category">
+		<field name="name">XET / KSeF</field>
+		<field name="description">
+			Uprawnienia modułu integracji XET i komunikacji z KSeF.
+		</field>
+		<field name="sequence">25</field>
 	</record>
 
-	<!-- Reguła globalna: pozwól czytać provider wszystkim -->
-	<record id="rule_communication_provider_read" model="ir.rule">
-		<field name="name">communication.provider public read</field>
-		<field name="model_id" ref="model_communication_provider"/>
-		<field name="groups" eval="[(4, ref('base.group_user'))]"/>
-		<field name="domain_force">[(1, '=', 1)]</field>
+	<!-- Niezależne obszary uprawnień Odoo 19. -->
+	<record id="privilege_xet_templates" model="res.groups.privilege">
+		<field name="name">Szablony XET</field>
+		<field name="category_id" ref="module_category_xet_ksef"/>
+		<field name="sequence">10</field>
+	</record>
+
+	<record id="privilege_ksef_communication" model="res.groups.privilege">
+		<field name="name">Komunikacja KSeF</field>
+		<field name="category_id" ref="module_category_xet_ksef"/>
+		<field name="sequence">20</field>
+	</record>
+
+	<record id="group_xml_export_admin" model="res.groups">
+		<field name="name">Administrator szablonów XET</field>
+		<field name="comment">
+			Pełny dostęp do konfiguracji: szablony eksportu XML,
+			węzły mapowania, providerzy komunikacji
+			(KSeF, LocalDir i inne).
+		</field>
+		<field name="privilege_id" ref="privilege_xet_templates"/>
+	</record>
+
+	<record id="group_communication_log_reader" model="res.groups">
+		<field name="name">Wysyłka faktur do KSeF</field>
+		<field name="comment">
+			Umożliwia użytkownikowi weryfikację, wysyłkę
+			i śledzenie statusu faktur w KSeF (formularz faktury +
+			podstawowy podgląd logu komunikacji). Nie daje dostępu
+			do danych technicznych logu: tokenów sesji, surowych
+			payloadów API ani ustawień providera.
+		</field>
+		<field name="privilege_id" ref="privilege_ksef_communication"/>
+		<field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+	</record>
+
+	<!-- Użytkownik widzi tylko logi dotyczące faktur -->
+	<record id="rule_communication_log_account_move_read"
+			model="ir.rule">
+		<field name="name">Communication logs: account.move read</field>
+		<field name="model_id" ref="model_communication_log"/>
+		<field name="groups"
+			   eval="[(4, ref('hfb_xmlmap_exporter.group_communication_log_reader'))]"/>
+		<field name="domain_force">
+			[('document_model', '=', 'account.move'), ('company_id', 'in', company_ids)]
+		</field>
 		<field name="perm_read" eval="True"/>
 		<field name="perm_write" eval="False"/>
 		<field name="perm_create" eval="False"/>
 		<field name="perm_unlink" eval="False"/>
 	</record>
 
-</odoo>
+	<!-- Dotychczasowa reguła providerów -->
+	<record id="rule_communication_provider_read" model="ir.rule">
+		<field name="name">communication.provider public read</field>
+		<field name="model_id" ref="model_communication_provider"/>
+		<field name="groups" eval="[(4, ref('base.group_user'))]"/>
+		<field name="domain_force">[('company_id', 'in', company_ids)]</field>
+		<field name="perm_read" eval="True"/>
+		<field name="perm_write" eval="False"/>
+		<field name="perm_create" eval="False"/>
+		<field name="perm_unlink" eval="False"/>
+	</record>
 
+	<!-- ADMIN: pełny dostęp do communication.log dla group_system, niezależnie od reguły "reader" -->
+	<record id="rule_communication_log_system_full" model="ir.rule">
+		<field name="name">Communication logs: system full access</field>
+		<field name="model_id" ref="model_communication_log"/>
+		<field name="groups" eval="[(4, ref('base.group_system'))]"/>
+		<field name="domain_force">[(1, '=', 1)]</field>
+		<field name="perm_read" eval="True"/>
+		<field name="perm_write" eval="True"/>
+		<field name="perm_create" eval="True"/>
+		<field name="perm_unlink" eval="True"/>
+	</record>
+</odoo>

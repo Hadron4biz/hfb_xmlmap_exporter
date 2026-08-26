@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.6
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -302,7 +302,6 @@ class AccountMove(models.Model):
 
 		log = self.env["communication.log"].search( domain, order="create_date desc", limit=1,)
 
-
 		seq = 1
 		if not log:
 			if self.log_ids:
@@ -311,11 +310,13 @@ class AccountMove(models.Model):
 				return None
 
 		if ksef_invoice_hash and log:
-			log.ksef_invoice_hash = ksef_invoice_hash
+			#log.ksef_invoice_hash = ksef_invoice_hash
+			log.sudo().write({ "ksef_invoice_hash": ksef_invoice_hash,})
 		elif log and log.file_data:
 			ksef_invoice_hash = self._compute_ksef_invoice_hash()
 			if ksef_invoice_hash:
-				log.ksef_invoice_hash = ksef_invoice_hash
+				#log.ksef_invoice_hash = ksef_invoice_hash
+				log.sudo().write({ "ksef_invoice_hash": ksef_invoice_hash,})
 			seq = 2
 		else:
 			seq = 9
@@ -377,16 +378,11 @@ class AccountMove(models.Model):
 	# -------------------------------------------------------------------------
 
 	def _get_ksef_qr_base_url(self):
-		"""
-		Pobiera bazowy URL QR z konfiguracji providera KSeF.
-
-		communication.provider.ksef.qr_code_url
-		jest JEDYNYM źródłem prawdy.
-		"""
 		self.ensure_one()
 
 		provider = self.env["communication.provider.ksef"].search(
 			[("company_id", "=", self.company_id.id)],
+			order="id desc",   # 🔑 KLUCZOWA ZMIANA
 			limit=1,
 		)
 

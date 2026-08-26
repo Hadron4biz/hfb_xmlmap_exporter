@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        KSeF timeline for account.move.
+
+        Four fixed stages are rendered exactly once. The view consumes only
+        normalized timeline fields from models/ksef_timeline_helpers.py.
+
+        Supported presentation states:
+            none    - neutral / not confirmed
+            success - completed successfully
+            error   - confirmed failure
+    -->
+    <record id="view_move_form_ksef_timeline" model="ir.ui.view">
+        <field name="name">account.move.form.ksef.timeline</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="hfb_xmlmap_exporter.view_move_form_inherit_xsd_validate"/>
+        <field name="arch" type="xml">
+
+			<xpath expr="//div[hasclass('oe_title')]" position="replace">
+				<group>
+                    <group>
+						<!-- Orginalny oe_title -->
+                        <div class="oe_title">
+                            <span class="o_form_label">
+                                <field name="move_type" readonly="1" invisible="move_type == 'entry'" nolabel="1"/>
+                            </span>
+                            <div class="text-warning" invisible="not show_name_warning">The current highest number is
+                                <field class="oe_inline" name="highest_name"/>. You might want to put a higher number here.
+                            </div>
+                            <h1>
+                                <field name="name" 
+									invisible="not (name or name_placeholder or quick_edit_mode)" 
+									readonly="state != 'draft'" 
+									options="{'placeholder_field': 'name_placeholder'}" />
+                                <span invisible="name or name_placeholder or quick_edit_mode">Draft</span>
+                            </h1>
+
+							<!-- sekcja KSeF -->
+							<field name="xsd_validation_state" invisible="1" />
+							<field name="order_id" invisible="1" />
+							<field name="xml_export_template_id" invisible="1" />
+							<field name="ksef_issue_mode" invisible="1" />
+							<group invisible="not xml_export_template_id"  >
+								<field name="ksef_process_state" invisible="1" />
+								<field name="ksef_offline_state" invisible="1" />
+								<field name="ksef_process_message" invisible="1" />
+								<field name="ksef_rodzaj_faktury" 
+									readonly="1"
+									string="Rodzaj faktury KSeF" 
+									invisible="not ksef_number and not xml_export_template_id" />
+								<field name="ksef_is_upr"
+									string="Faktura uproszczona (UPR)"
+									invisible="
+										move_type not in ('out_invoice', 'in_invoice')
+										or (
+											move_type == 'in_invoice'
+											and not ksef_is_upr
+										)
+										or (
+											move_type == 'out_invoice'
+											and ksef_rodzaj_faktury not in (False, 'VAT', 'UPR')
+										)
+										or (
+											move_type == 'out_invoice'
+											and state != 'draft'
+											and not ksef_is_upr
+										)
+									"
+									readonly="
+										move_type != 'out_invoice'
+										or state != 'draft'
+										or ksef_number
+									"
+								/>
+								<field name="order_id" 
+									readonly="1" 
+									string="Dokument Zamówienia"
+									invisible="not order_id" /> 
+								<!-- KSeF NUMBER -->
+								<field name="ksef_number" 
+									readonly="1" 
+									class="bold"
+									invisible="not ksef_number" />
+								<!-- korekty -->
+								<field name="ksef_numer_korygowanej" 
+									readonly="1" 
+									invisible="not ksef_numer_korygowanej"  />
+								<field name="ksef_corrects_move_id" 
+									readonly="1" 
+									invisible="not ksef_numer_korygowanej"  />
+								<field name="ksef_correction_type" 
+									string="Przyczyna korekty"
+									invisible="not ksef_numer_korygowanej" />
+							</group>
+
+                        </div>
+                    </group>
+
+					<div class="o_ksef_timeline_header">
+						<!-- POLA TECHNICZNE TIMELINE -->
+						<field name="xsd_validation_state" invisible="1"/>
+						<field name="xsd_validation_date" invisible="1"/>
+
+						<field name="ksef_sent_state" invisible="1"/>
+						<field name="ksef_sent_date" invisible="1"/>
+
+						<field name="ksef_accepted_state" invisible="1"/>
+						<field name="ksef_accepted_date" invisible="1"/>
+
+						<field name="ksef_upo_state" invisible="1"/>
+						<field name="ksef_upo_date" invisible="1"/>
+
+						<!-- PRAWA STRONA -->
+						<div class="o_ksef_right"
+							 invisible="not xml_export_template_id">
+							<div class="o_ksef_prototype">
+								<div class="o_ksef_prototype-header">
+									Historia komunikacji
+								</div>
+								<div class="o_ksef_prototype-list">
+
+									<!-- 1. WERYFIKACJA -->
+									<div class="o_ksef_prototype-step">
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-none"
+											  invisible="xsd_validation_state == 'valid' or xsd_validation_state == 'invalid'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-success"
+											  invisible="xsd_validation_state != 'valid'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-error"
+											  invisible="xsd_validation_state != 'invalid'"/>
+
+										<div class="o_ksef_prototype-step-title">
+											<span class="o_ksef-prototype-title-none"
+												  invisible="xsd_validation_state == 'valid' or xsd_validation_state == 'invalid'">
+												Weryfikacja
+											</span>
+											<span class="o_ksef-prototype-title-success"
+												  invisible="xsd_validation_state != 'valid'">
+												Weryfikacja
+											</span>
+											<span class="o_ksef-prototype-title-error"
+												  invisible="xsd_validation_state != 'invalid'">
+												Weryfikacja
+											</span>
+										</div>
+
+										<div class="o_ksef_prototype-step-date"
+											 invisible="(xsd_validation_state != 'valid' and xsd_validation_state != 'invalid') or not xsd_validation_date">
+											<field name="xsd_validation_date" nolabel="1" readonly="1" />
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-success"
+											 invisible="xsd_validation_state != 'valid'">
+											Pozytywna
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-error"
+											 invisible="xsd_validation_state != 'invalid'">
+											Błędna
+										</div>
+									</div>
+
+									<!-- 2. WYSŁANIE DO KSeF -->
+									<div class="o_ksef_prototype-step">
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-none"
+											  invisible="ksef_sent_state == 'success' or ksef_sent_state == 'error'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-success"
+											  invisible="ksef_sent_state != 'success'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-error"
+											  invisible="ksef_sent_state != 'error'"/>
+
+										<div class="o_ksef-prototype-step-title">
+											<span class="o_ksef-prototype-title-none"
+												  invisible="ksef_sent_state == 'success' or ksef_sent_state == 'error'">
+												Wysłanie do KSeF
+											</span>
+											<span class="o_ksef-prototype-title-success"
+												  invisible="ksef_sent_state != 'success'">
+												Wysłanie do KSeF
+											</span>
+											<span class="o_ksef-prototype-title-error"
+												  invisible="ksef_sent_state != 'error'">
+												Wysłanie do KSeF
+											</span>
+										</div>
+
+										<div class="o_ksef_prototype-step-date"
+											 invisible="not ksef_sent_date">
+											<field name="ksef_sent_date" nolabel="1" readonly="1" />
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-success"
+											 invisible="ksef_sent_state != 'success'">
+											Wysłano
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-error"
+											 invisible="ksef_sent_state != 'error'">
+											Błąd wysyłki
+										</div>
+									</div>
+
+																		
+									<!-- 3. PRZYJĘCIE PRZEZ KSeF -->
+									<div class="o_ksef_prototype-step">
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-none"
+											  invisible="ksef_accepted_state == 'success' or ksef_accepted_state == 'error'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-success"
+											  invisible="ksef_accepted_state != 'success'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-error"
+											  invisible="ksef_accepted_state != 'error'"/>
+
+										<div class="o_ksef-prototype-step-title">
+											<span class="o_ksef-prototype-title-none"
+												  invisible="ksef_accepted_state == 'success' or ksef_accepted_state == 'error'">
+												Przyjęcie przez KSeF
+											</span>
+											<span class="o_ksef-prototype-title-success"
+												  invisible="ksef_accepted_state != 'success'">
+												Przyjęcie przez KSeF
+											</span>
+											<span class="o_ksef-prototype-title-error"
+												  invisible="ksef_accepted_state != 'error'">
+												Przyjęcie przez KSeF
+											</span>
+										</div>
+
+										<div class="o_ksef_prototype-step-date"
+											 invisible="not ksef_accepted_date">
+											<field name="ksef_accepted_date" nolabel="1" readonly="1"/>
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-success"
+											 invisible="ksef_accepted_state != 'success'">
+											Przyjęto przez KSeF
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-error"
+											 invisible="ksef_accepted_state != 'error'">
+											Błąd przyjęcia przez KSeF
+										</div>
+									</div>
+
+									<!-- 4. POTWIERDZENIE ODBIORU -->
+									<div class="o_ksef_prototype-step">
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-none"
+											  invisible="ksef_upo_state == 'success' or ksef_upo_state == 'error'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-success"
+											  invisible="ksef_upo_state != 'success'"/>
+										<span class="o_ksef_prototype-marker o_ksef-prototype-marker-error"
+											  invisible="ksef_upo_state != 'error'"/>
+
+										<div class="o_ksef-prototype-step-title">
+											<span class="o_ksef-prototype-title-none"
+												  invisible="ksef_upo_state == 'success' or ksef_upo_state == 'error'">
+												Potwierdzenie Odbioru
+											</span>
+											<span class="o_ksef-prototype-title-success"
+												  invisible="ksef_upo_state != 'success'">
+												Potwierdzenie Odbioru
+											</span>
+											<span class="o_ksef-prototype-title-error"
+												  invisible="ksef_upo_state != 'error'">
+												Potwierdzenie Odbioru
+											</span>
+										</div>
+
+										<div class="o_ksef_prototype-step-date"
+											 invisible="not ksef_upo_date">
+											<field name="ksef_upo_date" nolabel="1" readonly="1"/>
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-success"
+											 invisible="ksef_upo_state != 'success'">
+											UPO pobrane
+										</div>
+
+										<div class="o_ksef_prototype-step-status o_ksef-prototype-status-error"
+											 invisible="ksef_upo_state != 'error'">
+											Błąd pobrania UPO
+										</div>
+									</div>
+
+								</div>
+							 
+							</div>
+						</div>
+					</div>
+				</group>
+			</xpath>
+
+        </field>
+    </record>
+
+</odoo>

@@ -32,7 +32,10 @@
 #################################################################################
 
 # 1. MODELE BAZOWE / ABSTRAKCYJNE (najpierw zależności)
+from . import account_move_line_ksef_extra          # Rozszerzenie dla pól faktury XML
 from . import xml_template
+from . import xml_xsd_node_type_repair
+from . import xml_xsd_value_formatter
 from . import xml_export_template
 from . import xml_import_template
 from . import xml_validation_log
@@ -57,6 +60,8 @@ from . import communication_provider_ksef      		# Dziedziczy/wykorzystuje commu
 from . import communication_provider_ksef_addons	# Rozszerzenia dla importu/konwersji faktury ksef xml do odoo
 from . import communication_provider_ksef_qrcode	# Obsługa QR Type I
 from . import communication_provider_ksef_offline	# Obsługa Trybu Offline i QR Type II
+from . import communication_provider_ksef_mfcert    # Dodatek do pobierania klucza publicznego MF
+from . import communication_provider_ksef_line_import# hardkodowany xpath, bez żadnego fallbacku do szablonu
 #from . import communication_provider_ksef_workflow # Rozszerzenie CommunicationProviderKsef o pełny workflow sesji kwalifikowanej
 #from . import communication_provider_peppol		# Rozszerzenie dla obsługo PEPPOL
 
@@ -64,5 +69,5 @@ from . import communication_provider_ksef_offline	# Obsługa Trybu Offline i QR 
 from . import invoice								# Używa providerów do wysyłki faktur
 from . import account_move_ksef_qr					# Rozszezenia obsługi QR Type I
 from . import upo_pdf								# Wizualizacja UPO
-
+from . import ksef_timeline_helpers					# Wizualizacja Timeline
 #EoF

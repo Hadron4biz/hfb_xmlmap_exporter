@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.6
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -132,38 +132,6 @@ class AccountMove(models.Model):
 	# ------------------------------------------------------------------------------------------------------
 	# Metody pomocnicze dla pól podatku: P_13_x oraz P_14_x i P_15
 	# ------------------------------------------------------------------------------------------------------
-	def ERR_get_ksef_tax_group_data(self, ksef_tax_name):
-		"""Pomocnicza metoda szukająca danych podatkowych z większą tolerancją."""
-		self.ensure_one()
-
-		# Próba 1: Użycie tax_totals (najdokładniejsze)
-		totals = self.tax_totals or {}
-		groups = totals.get('groups_by_subtotal', {}).get('Untaxed Amount', [])
-
-		for group in groups:
-			g_name = str(group.get('tax_group_name', ''))
-			# Szukamy dokładnego dopasowania lub czy szukana fraza jest częścią nazwy
-			if g_name == ksef_tax_name or ksef_tax_name in g_name:
-				return {
-					'base': group.get('tax_group_base_amount', 0.0),
-					'tax': group.get('tax_group_amount', 0.0)
-				}
-
-		# Próba 2: Jeśli tax_totals zawiodło (np. błąd cache), liczymy z linii
-		relevant_lines = self.invoice_line_ids.filtered(
-			lambda l: any(ksef_tax_name in t.name or str(ksef_tax_name) in t.name for t in l.tax_ids)
-		)
-		if relevant_lines:
-			base = sum(relevant_lines.mapped('price_subtotal'))
-			# Obliczamy podatek dla tych linii korzystając z wbudowanej metody Odoo
-			taxes = relevant_lines.tax_ids.compute_all(base, self.currency_id, 1.0, product=relevant_lines[0].product_id, partner=self.partner_id)
-			return {
-				'base': base,
-				'tax': sum(t['amount'] for t in taxes['taxes'])
-			}
-
-		return None
-
 	def _get_ksef_tax_group_data(self, ksef_tax_name):
 		self.ensure_one()
 
@@ -171,7 +139,7 @@ class AccountMove(models.Model):
 		# Price_subtotal w Odoo zawsze zawiera wartość netto (bez podatku),
 		# nawet jeśli podatek jest w cenie (tax_included).
 		relevant_lines = self.invoice_line_ids.filtered(
-			lambda l: any(ksef_tax_name in t.name for t in l.tax_ids)
+			lambda l: any(ksef_tax_name == t.name for t in l.tax_ids)
 		)
 		if not relevant_lines:
 			return None
@@ -181,7 +149,7 @@ class AccountMove(models.Model):
 		# 2. Pobierz kwotę podatku bezpośrednio z linii podatkowych (tax_line_ids)
 		# Szukamy linii, gdzie tax_line_id nie jest puste
 		tax_lines = self.line_ids.filtered(
-			lambda l: l.tax_line_id and ksef_tax_name in l.tax_line_id.name
+			lambda l: l.tax_line_id and ksef_tax_name == l.tax_line_id.name
 		)
 		
 		# 'balance' w Odoo dla kredytu (zobowiązanie) jest ujemne, 
@@ -221,66 +189,106 @@ class AccountMove(models.Model):
 		return amount_brutto
 
 	########################################################################################################
-	# pomocnicze
+	# Pomocnicze : komunikaty błędów
+	#
 	def _parse_xsd_errors_with_schema(self, raw_errors, schema_doc, xml_doc):
 		"""
-		Parsuje błędy XSD korzystając z informacji zawartych w samej schemie.
-		
-		Args:
-			raw_errors (list): Lista surowych komunikatów błędów
-			schema_doc (etree._Element): Drzewo schemy XSD
-			xml_doc (etree._Element): Drzewo XML dokumentu
-		
-		Returns:
-			list: Lista słowników z czytelnymi komunikatami błędów
+		Parsuje błędy XSD i zwraca czytelne komunikaty z mapowaniem na pola Odoo.
 		"""
 		error_details = []
 		namespace_map = {
 			'xs': 'http://www.w3.org/2001/XMLSchema',
 			'xsd': 'http://www.w3.org/2001/XMLSchema'
 		}
-		
-		# 🔹 Zbuduj mapę elementów i ich opisów z schemy
+
+		# Pobierz template i jego node'y
+		template = self.xml_export_template_id
+		nodes = template.node_ids if template else self.env['xml.export.node']
+
+		# Zbuduj mapę elementów i ich opisów z schemy XSD (fallback)
 		element_docs = {}
 		for elem in schema_doc.xpath('//xs:element', namespaces=namespace_map):
 			elem_name = elem.get('name')
 			if elem_name:
-				# Szukaj dokumentacji w annotation/documentation
 				doc = elem.xpath('xs:annotation/xs:documentation', namespaces=namespace_map)
 				if doc and doc[0].text:
 					element_docs[elem_name] = doc[0].text.strip()
-		
+
+		# Stwórz mapę nazwa elementu -> pierwszy node (dla prostoty)
+		node_by_name = {}
+		for node in nodes:
+			if node.name not in node_by_name:
+				node_by_name[node.name] = node
+
 		for error in raw_errors:
 			error_detail = {
 				'raw_error': error,
 				'element': 'Nieznany element',
-				'user_message': self._create_user_friendly_error(error, element_docs),
-				'field_name': None,
+				'user_message': '',
+				'odoo_field': None,
+				'odoo_label': None,
 			}
-			
+
 			try:
-				# 🔹 Wyodrębnij nazwę elementu
 				import re
 				elem_match = re.search(r"Element '([^']+)':", error)
-				if elem_match:
-					full_elem_name = elem_match.group(1)
-					# Usuń namespace dla czytelności
-					elem_name = full_elem_name.split('}')[-1] if '}' in full_elem_name else full_elem_name
-					error_detail['element'] = elem_name
+				if not elem_match:
+					continue
+
+				full_elem_name = elem_match.group(1)
+				elem_name = full_elem_name.split('}')[-1] if '}' in full_elem_name else full_elem_name
+				error_detail['element'] = elem_name
+
+				# Spróbuj znaleźć node po nazwie
+				node = node_by_name.get(elem_name)
+				
+				if node and node.src_rel_path:
+					error_detail['odoo_field'] = node.src_rel_path
 					
-					# 🔹 Pobierz opis pola z schemy jeśli istnieje
-					if elem_name in element_docs:
-						error_detail['field_description'] = element_docs[elem_name]
-						error_detail['field_name'] = f"{elem_name} ({element_docs[elem_name]})"
+					# Uproszczone pobieranie etykiety – tylko ostatni człon
+					field_name = node.src_rel_path.split('.')[-1]
+					if hasattr(self, '_fields') and field_name in self._fields:
+						error_detail['odoo_label'] = self._fields[field_name].string
 					else:
-						error_detail['field_name'] = elem_name
+						error_detail['odoo_label'] = field_name.replace('_', ' ').title()
 					
+					# Określ typ błędu
+					is_empty = "'' is not a valid" in error
+					
+					if is_empty:
+						error_detail['user_message'] = _(
+							"🚩 Pole '%s' (%s) w Odoo jest puste.\n"
+							"👉 To pole odpowiada za element '%s' w strukturze KSeF."
+						) % (error_detail['odoo_label'], error_detail['odoo_field'], elem_name)
+					else:
+						error_detail['user_message'] = _(
+							"🚩 Pole '%s' (%s) w Odoo zawiera nieprawidłową wartość.\n"
+							"👉 Błąd dotyczy elementu '%s' w strukturze KSeF."
+						) % (error_detail['odoo_label'], error_detail['odoo_field'], elem_name)
+					
+					# Dodaj opis z XSD jeśli dostępny
+					if elem_name in element_docs:
+						error_detail['user_message'] += _("\n💡 Opis KSeF: %s\n") % element_docs[elem_name]
+						
+				else:
+					# Fallback – nie znaleziono node'a
+					if elem_name in element_docs:
+						error_detail['user_message'] = _(
+							"❌ Element '%s' (%s) jest nieprawidłowy."
+						) % (elem_name, element_docs[elem_name])
+					else:
+						error_detail['user_message'] = _(
+							"❌ Element '%s' w strukturze KSeF jest nieprawidłowy."
+						) % elem_name
+
 			except Exception as e:
-				_logger.warning(f"Błąd podczas parsowania błędu XSD: {e}")
-			
+				_logger.warning(f"🚨 Błąd podczas parsowania błędu XSD: {e}")
+				error_detail['user_message'] = str(error)
+
 			error_details.append(error_detail)
-		
+
 		return error_details
+
 
 	def _create_user_friendly_error(self, error_msg, element_docs):
 		"""
@@ -356,6 +364,11 @@ class AccountMove(models.Model):
 		return "Wystąpił błąd walidacji danych."
 
 	# ########################################################################
+	xsd_validation_date = fields.Datetime(
+		string='Weryfikowano dnia',
+		help="Data i czas ostatniej weryfikacji dokumentu"
+	)
+
 	def action_validate_template(self):
 		"""
 		Walidacja danych faktury względem szablonu XML.
@@ -410,7 +423,7 @@ class AccountMove(models.Model):
 			error_details = self._parse_xsd_errors_with_schema(raw_errors, schema_doc, xml_doc)
 			
 			# 🔹 Zbierz tylko czytelne komunikaty
-			for error in error_details[:10]:  # Ogranicz do 10 pierwszych błędów
+			for error in error_details[:20]:  # Ogranicz do 10 pierwszych błędów
 				if error.get('user_message'):
 					user_messages.append(error['user_message'])
 			
@@ -432,11 +445,18 @@ class AccountMove(models.Model):
 
 		# Zapisz log walidacji
 		try:
+			validation_date = fields.Datetime.now()
+			self.sudo().write(
+				{	
+					'xsd_validation_date': validation_date,
+					'xsd_validation_state': state
+				}
+			)
 			self.env["xml.validation.log"].sudo().create({
 				"move_id": self.id,
 				"template_id": template.id,
 				"state": state,
-				"validation_date": fields.Datetime.now(),
+				"validation_date": validation_date,				
 				"user_id": self.env.user.id,
 				"error_log": "\n".join(user_messages[:50]) if user_messages else "",
 				"xml_snapshot": xml_bytes,
@@ -451,26 +471,6 @@ class AccountMove(models.Model):
 			"res_id": self.id,
 			"view_mode": "form",
 			"target": "current",
-			"tag": "display_notification",
-			"params": {
-				"title": _("Weryfikacja XSD"),
-				"message": msg,
-				"type": color,
-				"sticky": True,
-				"exec_reload": True,
-			},
-		}
-
-		return {
-			"type": "ir.actions.act_window",
-			"res_model": "account.move",
-			"res_id": self.id,
-			"view_mode": "form",
-			"target": "current",
-		}
-
-		return {
-			"type": "ir.actions.client",
 			"tag": "display_notification",
 			"params": {
 				"title": _("Weryfikacja XSD"),

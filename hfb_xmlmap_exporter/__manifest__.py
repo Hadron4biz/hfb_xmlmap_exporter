@@ -31,9 +31,9 @@
 # property of the author.
 #################################################################################
 {
-    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 19",
+    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 18",
     "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-    "version": "19.0.1.6.3",
+    "version": "19.0.1.14",
     "license": "AGPL-3",
     "author": "Hadron for Business, Andrzej Wiśniewski",
     'category': 'Accounting/Invoicing',
@@ -54,10 +54,15 @@
 		"views/xml_template_views.xml",
 		"views/actions.xml",
 
+		# --- modyfikacja formularza faktury
+		"views/account_move_view.xml",
+
+        # --- Timeline na fakturze
+        "views/ksef_timeline.xml",
+
 		# --- Wizard's ---
 		"wizard/template_name_wizard_views.xml",
 		"wizard/wizard_xsd_upload_views.xml",
-		"views/account_move_view.xml",
 		"wizard/wizard_template_import_json.xml",
 
 		# --- dane, które odwołują się do modeli ---
@@ -81,22 +86,28 @@
 		"views/report_invoice_ksef_qr.xml",
 		"views/cron.xml",
 		"wizard/ksef_certificate_import_wizard_view.xml",
+		"views/ksef_gtu_views.xml",
 
 		# --- Wygląd faktury na podstawie XML z KSeF
 		"reports/ksef_invoice_report.xml",
 
-		# --- przykładowa konfiguracja ---
+		# --- przykładowa konfiguracja ---		
 		#"data/communication_provider_data.xml",
+		"views/ksef_gtu_data.xml",
 
 	],
 	'assets': {
+        'web.assets_backend': [
+            'hfb_xmlmap_exporter/static/src/css/ksef_timeline.css',
+        ],
 	},
 	'test': ['tests/test_basic.py'],
 	'images': [
 		'static/description/Banner.png',
 		'hfb_xmlmap_exporter/static/description/icon.png',
 	],
-	'icon': 'hfb_xmlmap_exporter/static/description/icon.png',
+	'icon': '/hfb_xmlmap_exporter/static/description/icon.png',
 	"application": True,
+	"installable": True,
 }
 #EoF

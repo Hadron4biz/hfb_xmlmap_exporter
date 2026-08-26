@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.6
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -369,7 +369,6 @@ class CommunicationLog(models.Model):
 	
 	# 1. IDENTYFIKATORY KSeF (krytyczne)
 	ksef_reference_number = fields.Char(string="Numer referencyjny KSeF", tracking=True)
-	ksef_session_token = fields.Char(string="Token sesji KSeF")
 	ksef_invoice_number = fields.Char(string="Numer faktury KSeF")
 	
 	# 4. RETRY LOGIC (już istniejące - zachowujemy)
@@ -1088,19 +1087,6 @@ class CommunicationLog(models.Model):
 		return self.ksef_operation in python_capable_operations
 
 	# Helpery dla tokens
-	def _is_token_valid(self, expiry_str):
-		"""Sprawdza czy token jest jeszcze ważny."""
-		if not expiry_str:
-			return False
-		
-		try:
-			expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
-			now = datetime.utcnow()
-			# 30-sekundowy bufor bezpieczeństwa
-			return now < (expiry - timedelta(seconds=30))
-		except Exception:
-			return False
-
 	def _update_tokens_in_context(self, refresh_result):
 		"""Aktualizuje tokeny w payload_context."""
 		new_tokens = refresh_result.get('context', {}).get('tokens', {})
@@ -1389,59 +1375,22 @@ class CommunicationLog(models.Model):
 		buffer = timedelta(minutes=5)
 		return now < (expiry - buffer)
 
-	# =============================================================================
-	# Obsługa flow KSeF dla backendu Python - _process_python_flow
-	# =============================================================================
-	def _get_next_operation(self, current_operation, result):
-
-		if current_operation == "auth":
-			return "open_session"
-
-		if current_operation == "open_session":
-			return "send_invoice"
-
-		if current_operation == "send_invoice":
-			return "check_status"
-
-		if current_operation == "check_status":
-			status = result.get("payload_response", {})
-			if status.get("processingCode") == "200":
-				return "download_upo"
-			return "check_status"
-
-		if current_operation == "download_upo":
-			return None
-
-		return None
-
-	def _handle_ksef_error(self, error_message):
-		self.write({
-			"ksef_process_state": "error",
-			"ksef_process_message": error_message,
-			"ksef_retry_count": self.ksef_retry_count + 1
-		})
-
-	def _handle_ksef_error(self, error_message):
-		self.write({
-			"ksef_process_state": "error",
-			"ksef_process_message": error_message,
-			"ksef_retry_count": self.ksef_retry_count + 1
-		})
-
 	def _attach_upo_to_move(self, upo_binary):
 		move = self.import_move_id
 		if not move:
 			return
 
-		self.env["ir.attachment"].create({
+		attachment = self.env["ir.attachment"].create({
 			'company_id': move.company_id.id,
-			"name": "UPO.xml",
+			"name": f"UPO_{move.ksef_number}.xml",
 			"type": "binary",
 			"datas": base64.b64encode(upo_binary),
 			"res_model": "account.move",
 			"res_id": move.id,
 			
 		})
+
+		return attachment
 
 	# =============================================================================
 
@@ -5004,7 +4953,8 @@ class CommunicationProviderKsef(models.Model):
 	)
 
 	alert_phone = fields.Char(
-		#related="alert_contact_id.mobile",
+		# mobile nie występuje od v19
+		related="alert_contact_id.phone",
 		store=False
 	)
 
@@ -5035,12 +4985,6 @@ class CommunicationProviderKsef(models.Model):
 	code = fields.Char(string="Kod", required=True)
 	active = fields.Boolean(string="Aktywny", default=True)
 	description = fields.Text(string="Opis")
-	company_id = fields.Many2one(
-		'res.company',
-		string="Firma",
-		required=True,
-		default=lambda self: self.env.company
-	)
 
 	import_template_id = fields.Many2one(
 		'xml.export.template', 
@@ -5254,137 +5198,6 @@ class CommunicationProviderKsef(models.Model):
 		string="Tryb debug",
 		default=False,
 	)
-
-	# ============================================
-	# METODY DO OBSŁUGI PYTHON REQUEST/RESPONSE
-	# ============================================
-	def _call_python_http(self, input_data, timeout=60):
-		"""
-		Python equivalent of _call_java_jar.
-		Returns identical format to Java output.
-		"""
-		from ksef_python_client import KSeFPythonClient
-		
-		operation = input_data.get('operation')
-		context = input_data.get('context', {})
-		params = input_data.get('params', {})
-		
-		_logger.info(f"[Python HTTP] Starting operation: {operation}")
-		
-		try:
-			# Initialize client
-			client = KSeFPythonClient(
-				environment=self.environment,
-				session_token=context.get('sessionToken')
-			)
-			
-			# Map operation to method
-			if operation == 'open_session':
-				# Get auth token from context (from previous auth operation)
-				tokens = context.get('tokens', {})
-				auth_token = tokens.get('accessToken')
-				
-				if not auth_token:
-					raise ValueError("Missing auth token for open_session")
-				
-				result = client.open_session(auth_token)
-				
-				# Format identical to Java
-				return {
-					'success': True,
-					'data': {
-						'sessionToken': result.get('sessionToken'),
-						'referenceNumber': result.get('referenceNumber'),
-						'sessionId': result.get('sessionId'),
-					},
-					'context': {
-						'session': result,
-						'runtime': {
-							'baseUrl': self._get_base_url(),
-							'integrationMode': self.environment.upper(),
-						}
-					}
-				}
-			
-			elif operation == 'send_invoice':
-				invoice_xml = params.get('invoice_xml')
-				if not invoice_xml:
-					raise ValueError("Missing invoice XML")
-				
-				result = client.send_invoice(invoice_xml)
-				
-				return {
-					'success': True,
-					'data': {
-						'referenceNumber': result.get('referenceNumber'),
-						'invoiceNumber': result.get('invoiceNumber'),
-						'processingCode': result.get('processingCode'),
-						'processingDescription': result.get('processingDescription'),
-					}
-				}
-			
-			elif operation == 'check_status':
-				# Get reference number from context or log
-				reference_number = params.get('reference_number') or context.get('referenceNumber')
-				if not reference_number:
-					raise ValueError("Missing reference number for check_status")
-				
-				result = client.check_status(reference_number)
-				
-				return {
-					'success': True,
-					'data': {
-						'processingStatus': result.get('processingStatus'),
-						'processingCode': result.get('processingCode'),
-						'processingDescription': result.get('processingDescription'),
-						'referenceNumber': reference_number,
-					}
-				}
-			
-			elif operation == 'download_upo':
-				reference_number = params.get('reference_number') or context.get('referenceNumber')
-				if not reference_number:
-					raise ValueError("Missing reference number for download_upo")
-				
-				result = client.download_upo(reference_number)
-				
-				return_data = {
-					'referenceNumber': reference_number,
-					'contentType': result.get('contentType'),
-				}
-				
-				if 'json' in result:
-					return_data['json'] = result['json']
-				if 'content' in result:
-					return_data['content'] = result['content']
-					return_data['filename'] = result.get('filename')
-				
-				return {
-					'success': True,
-					'data': return_data
-				}
-			
-			elif operation == 'close_session':
-				result = client.close_session()
-				
-				return {
-					'success': True,
-					'data': result
-				}
-			
-			else:
-				raise ValueError(f"Unsupported Python operation: {operation}")
-		
-		except Exception as e:
-			_logger.error(f"[Python HTTP] Operation failed: {operation} - {e}")
-			
-			# Format error identically to Java
-			return {
-				'success': False,
-				'error': str(e),
-				'operation': operation,
-			}
-
 
 	def _get_base_url(self):
 		"""Helper method for base URL"""

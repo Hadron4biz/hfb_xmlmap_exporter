@@ -47,6 +47,7 @@
 								string="Wyślij teraz"
 								class="btn-primary"
 								target="current"
+								groups="hfb_xmlmap_exporter.group_xml_export_admin"
 								invisible="not (ksef_operation != 'completed')" />
 
 						<field name="state" widget="statusbar"
@@ -57,7 +58,9 @@
 
 					<group>
 						<!-- LEWA KOLUMNA -->
-						<group string="Informacje główne">
+						<group string="Informacje główne" 
+							groups="hfb_xmlmap_exporter.group_xml_export_admin"
+						>
 							<field name="direction" readonly="1"/>
 							<field name="provider_id" readonly="1"/>
 							<field name="template_id" readonly="1"/>
@@ -99,7 +102,7 @@
 					<!-- SEKCJA DANYCH -->
 					<notebook>
 
-						<page string="Dane techniczne KSeF">
+						<page string="Dane techniczne KSeF" groups="hfb_xmlmap_exporter.group_xml_export_admin">
 							<group>
 								<group string="Identyfikatory Tokenów i Sesji" >
 									<field name="ksef_session_token" readonly="1"/>
@@ -122,16 +125,26 @@
 							</group>
 						</page>
 						
-						<page string="Pliki">
-							<group>
-								<field name="file_name"/>
-								<field name="file_size"/>
-								<field name="file_data" filename="file_name" widget="binary"/>
-							</group>
-						</page>
+                        <page string="Pliki">
+                            <group>
+                                <field name="file_name"/>
+                                <field name="file_size"/>
+                                <field name="file_data"
+                                       filename="file_name"
+                                       widget="binary"
+                                       nolabel="0"/>
+
+                                <button name="restore_xml_ksef_invoice"
+                                        type="object"
+                                        string="⚠️ Odtwórz Fakturę z pliku XML"
+                                        class="btn-info text-nowrap"
+                                        groups="hfb_xmlmap_exporter.group_xml_export_admin"
+                                        invisible="not file_data or document_id"/>
+                            </group>
+                        </page>
 						
-						<!-- Zakładka Payload tylko dla KSeF -->
-						<page string="Payload" invisible="provider_type != 'ksef'">
+						<!-- Zakładka Payload tylko dla KSeF i tylko dla administratora XET -->
+						<page string="Payload" invisible="provider_type != 'ksef'" groups="hfb_xmlmap_exporter.group_xml_export_admin">
 							<group>
 								<label string="Request JSON" for="payload_request" />
 								<field name="payload_request" widget="textarea" nolabel="1" readonly="1" style="height: 200px;" />
@@ -150,7 +163,7 @@
 							</group>
 						</page>
 						
-						<page string="Zaawansowane">
+						<page string="Zaawansowane" groups="hfb_xmlmap_exporter.group_xml_export_admin">
 							<group>
 								<field name="validated"/>
 								<field name="validation_message" widget="textarea"/>
@@ -159,7 +172,7 @@
 							</group>
 						</page>
 						
-						<page string="Historia">
+						<page string="Historia" groups="hfb_xmlmap_exporter.group_xml_export_admin">
 							<field name="message" widget="html"/>
 							<field name="message_ids" widget="mail_thread"/>
 						</page>

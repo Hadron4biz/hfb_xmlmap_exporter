@@ -1,0 +1,59 @@
+.ksef-timeline {
+    padding: 10px 0;
+
+    .ksef-timeline-list {
+        position: relative;
+        padding-left: 5px;
+    }
+
+    .ksef-timeline-item {
+        position: relative;
+        padding-bottom: 8px;
+
+        .ksef-timeline-icon {
+            width: 40px;
+            text-align: center;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+
+            .fa {
+                font-size: 22px;
+                line-height: 32px;
+                background: white;
+                border-radius: 50%;
+                padding: 2px;
+            }
+
+            &.text-success .fa {
+                color: #28a745;
+            }
+            &.text-muted .fa {
+                color: #adb5bd;
+            }
+            &.text-danger .fa {
+                color: #dc3545;
+            }
+        }
+
+        .ksef-timeline-content {
+            padding-bottom: 4px;
+            border-bottom: 1px solid #f0f0f0;
+
+            strong {
+                font-size: 14px;
+            }
+            .text-muted {
+                font-size: 12px;
+            }
+        }
+    }
+
+    .ksef-timeline-line {
+        width: 2px;
+        height: 18px;
+        background: #dee2e6;
+        margin-left: 19px;
+        margin-bottom: 4px;
+    }
+}

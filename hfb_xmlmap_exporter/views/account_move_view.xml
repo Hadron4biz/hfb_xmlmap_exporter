@@ -105,48 +105,6 @@
 		<field name="inherit_id" ref="account.view_move_form" />
 		<field name="arch" type="xml">
 
-			<!-- numer KSeF przy numerze głównym-->
-			<xpath expr="//div[hasclass('oe_title')]" position="inside">
-				<field name="xsd_validation_state" invisible="1" />
-				<field name="order_id" invisible="1" />
-				<field name="xml_export_template_id" invisible="1" />
-				<field name="ksef_issue_mode" invisible="1" />
-				<group string="KSeF" invisible="not xml_export_template_id and not ksef_number" >
-					<field name="ksef_process_state"
-						invisible="ksef_issue_mode != 'online' or move_type in ['in_invoice', 'in_refund'] "
-						statusbar_visible="queued,waiting_delay,processing" 
-						widget="statusbar"/>
-					<field name="ksef_offline_state" 
-						invisible="ksef_issue_mode != 'offline'"/>
-					<field name="ksef_process_message" 
-						invisible="not ksef_process_message" />
-					<field name="ksef_rodzaj_faktury" 
-						readonly="1" 
-						invisible="not ksef_number and not xml_export_template_id" />
-					<field name="order_id" 
-						readonly="1" 
-						string="Dokument Zamówienia"
-						invisible="not order_id" /> 
-					<!-- KSeF NUMBER -->
-					<field name="ksef_number" 
-						readonly="1" 
-						class="bold"
-						invisible="not ksef_number" />
-					<!-- korekty -->
-					<field name="ksef_numer_korygowanej" 
-						readonly="1" 
-						invisible="not ksef_numer_korygowanej"  />
-					<field name="ksef_corrects_move_id" 
-						readonly="1" 
-						invisible="not ksef_numer_korygowanej"  />
-					<field name="ksef_correction_type" 
-						invisible="not ksef_numer_korygowanej" />
-					<!--field name="ksef_log_id" readonly="1"/-->
-
-				</group>
-				<seperator string="KSeF" />
-			</xpath>
-
 			<!-- pola do pozycji w fakturze -->
 			<xpath expr="//field[@name='invoice_line_ids']/list" position="inside">
 				<field name="ksef_line_no"
@@ -330,7 +288,7 @@
 
 				<button name="action_send_manual"
 						type="object"
-						string="Force Send 🚀"
+						string="Wyślij Teraz 🚀"
 						class="btn-danger"
 						invisible="ksef_process_state in ['error','completed','imported','offline','none']"/>
 

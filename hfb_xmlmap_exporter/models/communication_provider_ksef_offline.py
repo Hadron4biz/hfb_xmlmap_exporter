@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 19.1.6
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -204,11 +204,14 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 		- tylko przełącza offline_pending → queued
 		"""
 
+		# Bez filtra po company_id: ta metoda jest wołana z crona jako
+		# model._name (AbstractModel), gdzie self nie reprezentuje żadnej
+		# konkretnej firmy — analogicznie do _cron_process_ksef_queue,
+		# przetwarzamy logi wszystkich firm w jednym przebiegu.
 		logs = self.env["communication.log"].search([
 			("state", "=", "offline_pending"),
 			("direction", "=", "export"),
 			("provider_id.provider_type", "=", "ksef"),
-			('company_id', '=', self.company_id.id),
 		])
 
 		for log in logs:
@@ -218,7 +221,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 			if not auto_resend:
 				continue
 
-			if self._can_resend_now(ctx):
+			if self._can_resend_now(ctx, log.company_id.id):
 				_logger.info(
 					"[KSeF OFFLINE] Auto-resend enabled, enqueue log %s",
 					log.id,
@@ -229,7 +232,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 	# 3. WARUNKI WZNOWIENIA (DWA ZEGARY)
 	# -------------------------------------------------------------------------
 
-	def _can_resend_now(self, ctx):
+	def _can_resend_now(self, ctx, company_id):
 		"""
 		Model A:
 		- jeśli KSeF technicznie dostępny → TRUE
@@ -237,7 +240,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 		"""
 
 		# Zegar techniczny (24/7)
-		if self._is_ksef_available():
+		if self._is_ksef_available(company_id):
 			return True
 
 		# Zegar prawny
@@ -253,7 +256,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 	# 4. PING KSeF (SOFT CHECK)
 	# -------------------------------------------------------------------------
 
-	def _is_ksef_available(self):
+	def _is_ksef_available(self, company_id):
 		"""
 		Minimalny soft-check dostępności KSeF.
 
@@ -265,7 +268,7 @@ class CommunicationProviderKsefOffline(models.AbstractModel):
 			provider = self.env["communication.provider"].search(
 				[
 					("provider_type", "=", "ksef"),
-					('company_id', '=', self.company_id.id),
+					('company_id', '=', company_id),
 				],
 				limit=1,
 			)
