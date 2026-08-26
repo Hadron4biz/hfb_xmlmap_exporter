@@ -1150,7 +1150,7 @@ class KSeFParserFA3:
 					# podstawowe dane pozycji
 					"name": self._safe(node, 'P_7'),
 					"unit": self._safe(node, 'P_8A'),
-					"qty": self._safe(node, 'P_8B'),
+					"qty": self._format_optional_amount(self._safe(node, 'P_8B')),
 
 					# ceny jednostkowe
 					"price": self._format_optional_amount(self._safe(node, 'P_9A')),
@@ -1483,7 +1483,7 @@ class KSeFParserFA3:
 			"line_number": self._safe(node, "NrWierszaZam"),
 
 			"name": self._safe(node, "P_7Z"),
-			"qty": self._safe(node, "P_8BZ"),
+			"qty": self._format_optional_amount(self._safe(node, "P_8BZ")),
 			"unit": self._safe(node, "P_8AZ"),
 
 			"price": self._format_optional_amount(
