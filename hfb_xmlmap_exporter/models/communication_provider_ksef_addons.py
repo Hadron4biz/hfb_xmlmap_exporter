@@ -1430,15 +1430,31 @@ class CommunicationLog(models.Model):
 			p7 = self._get_xml_value(line_container, 'P_7', ns)
 			p8a = self._get_xml_value(line_container, 'P_8A', ns)
 			p8b = self._get_xml_value(line_container, 'P_8B', ns)
+
 			p9a = self._get_xml_value(line_container, 'P_9A', ns)
 			p11 = self._get_xml_value(line_container, 'P_11', ns)
+			p9b = self._get_xml_value(line_container, 'P_9B', ns)
+			p11a = self._get_xml_value(line_container, 'P_11A', ns)
 			p12 = self._get_xml_value(line_container, 'P_12', ns)
 			
 			# Konwersje
 			qty = _to_float(p8b)
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
-			
+
+			if unit_price is None and net_value is None:
+				# wariant brutto - trzeba przeliczyć na netto stawką z P_12
+				rate = _to_float(p12)
+				divisor = (1 + rate / 100) if rate else 1.0
+
+				gross_unit_price = _to_float(p9b)
+				gross_net_value = _to_float(p11a)
+
+				if gross_unit_price is not None:
+					unit_price = gross_unit_price / divisor
+				if gross_net_value is not None:
+					net_value = gross_net_value / divisor
+
 			# Nazwa pozycji
 			line_vals['name'] = p7 or f"Pozycja {line_index + 1}"
 			
