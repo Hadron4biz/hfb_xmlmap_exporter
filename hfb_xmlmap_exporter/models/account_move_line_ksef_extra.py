@@ -123,5 +123,15 @@ class AccountMoveLineKsefExtra(models.Model):
 			"Może różnić się od kursu nagłówkowego faktury."
 		),
 	)
+	ksef_p_12_zal_15 = fields.Boolean(
+		string="Zał. 15 (MPP)",
+		copy=False,
+		help=(
+			"Znacznik dla towaru lub usługi wymienionych w załączniku nr 15 do "
+			"ustawy o VAT (element <P_12_Zal_15> w <FaWiersz>, wartość '1'). "
+			"Nie mylić z ksef_p18a - to pole dotyczy pojedynczej pozycji, "
+			"P_18A na fakturze dotyczy całego dokumentu."
+		),
+	)
 
 #EoF

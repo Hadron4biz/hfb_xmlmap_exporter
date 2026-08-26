@@ -30,7 +30,7 @@
 # solutions contained herein are not covered by this license and remain the
 # property of the author.
 #################################################################################
-"""@version 18.1.7
+"""@version 19.0.1.12.7
    @owner  Hadron for Business Sp. z o.o.
    @author Andrzej Wiśniewski (warp3r)
    @date   2026-03-07
@@ -359,6 +359,9 @@ class CommunicationLog(models.Model):
 		p9a = self._get_xml_value(element, 'P_9A', ns)
 		p11 = self._get_xml_value(element, 'P_11', ns)
 		p12 = self._get_xml_value(element, 'P_12', ns)
+		p9b = self._get_xml_value(element, 'P_9B', ns)
+		p11a = self._get_xml_value(element, 'P_11A', ns)
+		p10 = self._get_xml_value(element, 'P_10', ns)
 		
 		# Przygotuj wiersz
 		line_vals = {
@@ -385,6 +388,8 @@ class CommunicationLog(models.Model):
 		
 		# CENA JEDNOSTKOWA
 		price_set = False
+		is_gross_variant = False
+
 		if p9a:
 			try:
 				line_vals['price_unit'] = float(p9a.replace(',', '.'))
@@ -401,9 +406,49 @@ class CommunicationLog(models.Model):
 					price_set = True
 			except:
 				pass
+
+		# Wariant brutto (P_9B/P_11A, art. 106e ust. 7) - przelicz na netto stawką P_12
+		if not price_set and (p9b or p11a):
+			is_gross_variant = True
+			try:
+				rate = float(p12.replace(',', '.')) if p12 else 0.0
+			except:
+				rate = 0.0
+			divisor = (1 + rate / 100) if rate else 1.0
+
+			if p9b:
+				try:
+					line_vals['price_unit'] = float(p9b.replace(',', '.')) / divisor
+					price_set = True
+				except:
+					pass
+
+			if not price_set and p11a and p8b:
+				try:
+					netto = float(p11a.replace(',', '.')) / divisor
+					ilosc = float(p8b.replace(',', '.'))
+					if ilosc != 0:
+						line_vals['price_unit'] = abs(netto / ilosc)
+						price_set = True
+				except:
+					pass
 		
 		if not price_set:
 			line_vals['price_unit'] = 0.0
+
+		# OPUST (P_10) - w domenie zgodnej z wariantem ceny (netto albo,
+		# dla art. 106e ust. 7, brutto - wtedy sprowadzamy do netto tym
+		# samym dzielnikiem co price_unit).
+		if p10:
+			try:
+				discount_amount = float(p10.replace(',', '.'))
+				if is_gross_variant:
+					discount_amount = discount_amount / divisor
+				base = line_vals['price_unit'] * abs(line_vals.get('quantity') or 0)
+				if base:
+					line_vals['discount'] = (discount_amount / base) * 100
+			except:
+				pass
 		
 		# PODATEK
 		if p12:
@@ -420,9 +465,11 @@ class CommunicationLog(models.Model):
 		# DODATKOWE INFORMACJE
 		if is_before:
 			line_vals['ksef_is_before_correction'] = True
-	
+
+		# Wzbogacenie o UU_ID, Indeks, GTIN, CN, PKWiU, GTU, KursWaluty,
+		# P_12_Zal_15 oraz surowe pola ksef_p_* (communication_provider_ksef_line_import.py)
 		self._enrich_line_vals_ksef_extra(line_vals, element, ns)
-	
+		
 		_logger.debug("📝 Correction line: %s (before=%s), qty=%s, price=%s", 
 					  line_vals['name'], is_before, line_vals['quantity'], line_vals['price_unit'])
 		
@@ -1432,15 +1479,39 @@ class CommunicationLog(models.Model):
 			p7 = self._get_xml_value(line_container, 'P_7', ns)
 			p8a = self._get_xml_value(line_container, 'P_8A', ns)
 			p8b = self._get_xml_value(line_container, 'P_8B', ns)
+
 			p9a = self._get_xml_value(line_container, 'P_9A', ns)
 			p11 = self._get_xml_value(line_container, 'P_11', ns)
+			p9b = self._get_xml_value(line_container, 'P_9B', ns)
+			p11a = self._get_xml_value(line_container, 'P_11A', ns)
 			p12 = self._get_xml_value(line_container, 'P_12', ns)
+			p10 = self._get_xml_value(line_container, 'P_10', ns)
 			
 			# Konwersje
 			qty = _to_float(p8b)
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
-			
+			discount_amount = _to_float(p10)
+
+			# Wariant ceny wg schemy FA(3): P_10 dzieli domenę (netto/brutto)
+			# z P_9A/P_11 albo P_9B/P_11A (art. 106e ust. 7) - stąd normalizacja
+			# wszystkich trzech wielkości w jednym miejscu, pod jednym warunkiem.
+			is_gross_variant = unit_price is None and net_value is None
+
+			if is_gross_variant:
+				rate = _to_float(p12)
+				divisor = (1 + rate / 100) if rate else 1.0
+
+				gross_unit_price = _to_float(p9b)
+				gross_net_value = _to_float(p11a)
+
+				if gross_unit_price is not None:
+					unit_price = gross_unit_price / divisor
+				if gross_net_value is not None:
+					net_value = gross_net_value / divisor
+				if discount_amount:
+					discount_amount = discount_amount / divisor
+
 			# Nazwa pozycji
 			line_vals['name'] = p7 or f"Pozycja {line_index + 1}"
 			
@@ -1460,6 +1531,11 @@ class CommunicationLog(models.Model):
 				# Standardowa pozycja
 				line_vals['quantity'] = qty if qty not in (None, 0) else 1.0
 				line_vals['price_unit'] = unit_price or 0.0
+
+				if discount_amount:
+					base = line_vals['price_unit'] * line_vals['quantity']
+					if base:
+						line_vals['discount'] = (discount_amount / base) * 100
 			
 			# Podatek
 			if p12:
@@ -1483,8 +1559,10 @@ class CommunicationLog(models.Model):
 				except Exception:
 					pass
 
-			self._enrich_line_vals_ksef_extra(line_vals, line_container, ns)			
-
+			# Wzbogacenie o UU_ID, Indeks, GTIN, CN, PKWiU, GTU, KursWaluty,
+			# P_12_Zal_15 oraz surowe pola ksef_p_* (communication_provider_ksef_line_import.py)
+			self._enrich_line_vals_ksef_extra(line_vals, line_container, ns)
+			
 			lines_values.append((0, 0, line_vals))
 			
 			_logger.debug("✅ Line %d: %s | qty=%s | price=%s",

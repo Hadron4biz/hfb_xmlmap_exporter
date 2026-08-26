@@ -1113,18 +1113,28 @@ class KSeFParserFA3:
 		return lines
 
 	# ==============================================================================================
+	def _gross_to_net(self, gross_value, vat_rate):
+		"""
+		Przelicza kwotę brutto na netto na podstawie stawki VAT (P_12).
+		Dla wierszy FA(3) w wariancie brutto (P_9B/P_11A) zamiast netto
+		(P_9A/P_11) - spójne z konwersją w communication_provider_ksef_addons.py.
+		Dla stawek nieliczbowych (zw/np/oo) zwraca wartość bez przeliczenia.
+		"""
+		rate = self._to_float(vat_rate)
+		divisor = (1 + rate / 100) if rate else 1.0
+		return f"{self._to_float(gross_value) / divisor:.2f}"
+
+	# ==============================================================================================
+
 	def _parse_lines(self, invoice_type):
 		lines = []
-
 		if invoice_type == "ZAL":
 			return self._parse_zal_accounting_lines()
-
 		elif invoice_type == "KOR_ZAL":
 			nodes = self.tree.findall(
 				".//fa:ZamowienieWiersz",
 				namespaces=self.ns
 			)
-
 			for node in nodes:
 				lines.append(
 					self._parse_order_line(
@@ -1132,50 +1142,57 @@ class KSeFParserFA3:
 						correction=True
 					)
 				)
-
 		else:
 			# VAT, ROZ, KOR - linie z FaWiersz
 			nodes = self.tree.findall('.//fa:FaWiersz', namespaces=self.ns)
-
 			for node in nodes:
 				vat_rate = self._safe(node, 'P_12')
 				net = self._safe(node, 'P_11')
 				vat = self._safe(node, 'P_11Vat')
 				gross = self._safe(node, 'P_11A')
 
+				# Cena jednostkowa - wariant netto (P_9A) lub, gdy go brak,
+				# brutto (P_9B) przeliczone stawką P_12.
+				price_raw = self._safe(node, 'P_9A')
+				price_gross_raw = self._safe(node, 'P_9B')
+
+				price = price_raw
+				if not self._has_amount(price_raw) and self._has_amount(price_gross_raw):
+					price = self._gross_to_net(price_gross_raw, vat_rate)
+
+				# Wartość pozycji - analogicznie: netto (P_11) lub przeliczone
+				# z brutto (P_11A).
+				net_for_display = net
+				if not self._has_amount(net) and self._has_amount(gross):
+					net_for_display = self._gross_to_net(gross, vat_rate)
+
 				lines.append({
 					# identyfikacja wiersza
 					"line_number": self._safe(node, 'NrWierszaFa'),
-
 					# podstawowe dane pozycji
 					"name": self._safe(node, 'P_7'),
 					"unit": self._safe(node, 'P_8A'),
 					"qty": self._format_optional_amount(self._safe(node, 'P_8B')),
-
 					# ceny jednostkowe
-					"price": self._format_optional_amount(self._safe(node, 'P_9A')),
-					"price_gross": self._format_optional_amount(self._safe(node, 'P_9B')),
-
+					"price": self._format_optional_amount(price),
+					"price_gross": self._format_optional_amount(price_gross_raw),
 					# opust / obniżka, jeżeli występuje
 					"discount": self._safe(node, 'P_10'),
-
 					# wartości pozycji z XML
-					"net": self._format_optional_amount(net),
+					"net": self._format_optional_amount(net_for_display),
 					"vat": self._format_optional_amount(vat),
 					"gross": self._compute_line_gross(net, vat, gross),
-
 					# stawka podatku
 					"vat_rate": vat_rate,
 					"vat_rate_label": self._format_vat_rate_label(vat_rate),
-
 					# dane dodatkowe
 					"exchange_rate": self._safe(node, 'KursWaluty'),
 					"is_before_correction": self._safe(node, 'StanPrzed') == '1',
 					"identifiers": self._collect_line_identifiers(node, zal=False),
 				})
-
 		return lines
 
+	# ==============================================================================================
 	# Tabelka podatków
 	def _parse_totals(self, invoice_type):
 		fa = self.tree.find('.//fa:Fa', namespaces=self.ns)

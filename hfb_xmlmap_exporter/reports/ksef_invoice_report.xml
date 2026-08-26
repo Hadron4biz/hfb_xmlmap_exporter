@@ -1541,9 +1541,9 @@
 				   TABELE
 				   --------------------------------------------------------- */
 
-                .ksef-report .text-right  { text-align: right !important; }
-                .ksef-report .text-center { text-align: center !important; }
-                .ksef-report .text-left   { text-align: left !important; }
+				.ksef-report .text-right  { text-align: right !important; }
+				.ksef-report .text-center { text-align: center !important; }
+				.ksef-report .text-left   { text-align: left !important; }
 
 				.ksef-report table.table {
 					width: 100%;
