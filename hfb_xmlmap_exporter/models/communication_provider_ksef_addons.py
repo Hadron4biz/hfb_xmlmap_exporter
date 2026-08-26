@@ -1440,14 +1440,20 @@ class CommunicationLog(models.Model):
 			p9b = self._get_xml_value(line_container, 'P_9B', ns)
 			p11a = self._get_xml_value(line_container, 'P_11A', ns)
 			p12 = self._get_xml_value(line_container, 'P_12', ns)
+			p10 = self._get_xml_value(line_container, 'P_10', ns)
 			
 			# Konwersje
 			qty = _to_float(p8b)
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
+			discount_amount = _to_float(p10)
 
-			if unit_price is None and net_value is None:
-				# wariant brutto - trzeba przeliczyć na netto stawką z P_12
+			# Wariant ceny wg schemy FA(3): P_10 dzieli domenę (netto/brutto)
+			# z P_9A/P_11 albo P_9B/P_11A (art. 106e ust. 7) - stąd normalizacja
+			# wszystkich trzech wielkości w jednym miejscu, pod jednym warunkiem.
+			is_gross_variant = unit_price is None and net_value is None
+
+			if is_gross_variant:
 				rate = _to_float(p12)
 				divisor = (1 + rate / 100) if rate else 1.0
 
@@ -1458,6 +1464,8 @@ class CommunicationLog(models.Model):
 					unit_price = gross_unit_price / divisor
 				if gross_net_value is not None:
 					net_value = gross_net_value / divisor
+				if discount_amount:
+					discount_amount = discount_amount / divisor
 
 			# Nazwa pozycji
 			line_vals['name'] = p7 or f"Pozycja {line_index + 1}"
@@ -1478,6 +1486,11 @@ class CommunicationLog(models.Model):
 				# Standardowa pozycja
 				line_vals['quantity'] = qty if qty not in (None, 0) else 1.0
 				line_vals['price_unit'] = unit_price or 0.0
+
+				if discount_amount:
+					base = line_vals['price_unit'] * line_vals['quantity']
+					if base:
+						line_vals['discount'] = (discount_amount / base) * 100
 			
 			# Podatek
 			if p12:
