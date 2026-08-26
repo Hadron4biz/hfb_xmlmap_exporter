@@ -29,3 +29,6 @@ access_ksef_certificate_import_wizard_user,ksef.certificate.import.wizard user,m
 access_ksef_certificate_import_wizard_system,ksef.certificate.import.wizard system,model_ksef_certificate_import_wizard,base.group_system,1,1,1,1
 access_communication_log_reader,communication.log reader,model_communication_log,hfb_xmlmap_exporter.group_communication_log_reader,1,0,0,0
 access_ir_model_communication_log_reader,ir.model communication log reader,base.model_ir_model,hfb_xmlmap_exporter.group_communication_log_reader,1,0,0,0
+access_ksef_gtu_user,ksef.gtu user,model_ksef_gtu,base.group_user,1,0,0,0
+access_ksef_gtu_system,ksef.gtu system,model_ksef_gtu,base.group_system,1,1,1,1
+

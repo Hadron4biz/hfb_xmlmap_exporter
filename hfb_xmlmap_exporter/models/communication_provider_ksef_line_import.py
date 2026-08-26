@@ -37,8 +37,9 @@
 
    Wzbogacenie wierszy faktury KSeF (FaWiersz) o dodatkowe elementy nieobsługiwane
    dotąd przez główną logikę importu w communication_provider_ksef_addons.py:
-   UU_ID, Indeks, GTIN, CN, PKWiU, GTU, KursWaluty - oraz uzupełnienie
-   surowych pól ksef_p_* zdefiniowanych na account.move.line (dotąd puste).
+   UU_ID, Indeks, GTIN, CN, PKWiU, GTU, KursWaluty, P_12_Zal_15 - oraz
+   uzupełnienie surowych pól ksef_p_* zdefiniowanych na account.move.line
+   (dotąd puste).
 
    UWAGA - ZAKRES:
    Dotyczy WYŁĄCZNIE wierszy typu <FaWiersz> (ścieżki: VAT, ROZ, UPR, EE,
@@ -115,6 +116,10 @@ class CommunicationLogKsefLineImport(models.Model):
 		p12 = _to_float(self._get_xml_value(line_container, "P_12", ns))
 		if p12 is not None:
 			line_vals["ksef_p_12"] = p12
+
+		p12_zal_15 = self._get_xml_value(line_container, "P_12_Zal_15", ns)
+		if p12_zal_15:
+			line_vals["ksef_p_12_zal_15"] = p12_zal_15 == "1"
 
 		nr_wiersza = self._get_xml_value(line_container, "NrWierszaFa", ns)
 		if nr_wiersza:
