@@ -286,6 +286,9 @@ class KSeFParserFA3:
 			"advance": advance,
 			"settlement": self._parse_settlement(),
 			"correction_tax_analysis": self._parse_correction_tax_analysis(invoice_type),
+			"additional_info": self._parse_additional_info(),
+			"transaction_conditions": self._parse_transaction_conditions(),
+			"registries": self._parse_registries(),
 			"original_invoice": (
 				correction.get("corrected_invoices", [{}])[0]
 				if correction.get("corrected_invoices")
@@ -654,6 +657,7 @@ class KSeFParserFA3:
 				('Procedura', 'Procedura'),
 				('P_12_XII', 'P_12_XII'),
 				('Zał. 15', 'P_12_Zal_15'),
+				('UU_ID', 'UU_ID'),
 			]
 
 		result = []
@@ -885,6 +889,8 @@ class KSeFParserFA3:
 			"customer_number": self._safe(node, 'NrKlienta'),
 			"is_jst": self._safe(node, 'JST') == '1',
 			"is_gv": self._safe(node, 'GV') == '1',
+			"email": self._safe(node, 'DaneKontaktowe/Email'),
+			"phone": self._safe(node, 'DaneKontaktowe/Telefon'),
 		}
 		
 		# Adres
@@ -894,6 +900,15 @@ class KSeFParserFA3:
 				"country_code": self._safe(adres, 'KodKraju'),
 				"line1": self._safe(adres, 'AdresL1'),
 				"line2": self._safe(adres, 'AdresL2'),
+			}
+
+		# Adres korespondencyjny (opcjonalny, może wystąpić u Podmiot1 lub Podmiot2)
+		adres_koresp = node.find('.//fa:AdresKoresp', namespaces=self.ns)
+		if adres_koresp is not None:
+			result["correspondence_address"] = {
+				"country_code": self._safe(adres_koresp, 'KodKraju'),
+				"line1": self._safe(adres_koresp, 'AdresL1'),
+				"line2": self._safe(adres_koresp, 'AdresL2'),
 			}
 		
 		return result
@@ -906,6 +921,81 @@ class KSeFParserFA3:
 		if recipient.get("nip") == self.company_nip:
 			return "recipient"
 		return "unknown"
+
+	def _parse_additional_info(self):
+		"""
+		Parsuje listę Fa/DodatkowyOpis (Klucz/Wartosc).
+		Element może wystąpić wielokrotnie (dowolna liczba par).
+		"""
+		fa = self.tree.find('.//fa:Fa', namespaces=self.ns)
+		if fa is None:
+			return []
+
+		result = []
+		for node in fa.findall('fa:DodatkowyOpis', namespaces=self.ns):
+			key = self._safe(node, 'Klucz')
+			value = self._safe(node, 'Wartosc')
+			if key or value:
+				result.append({
+					"key": key or '',
+					"value": value or '',
+				})
+
+		return result
+
+	def _parse_transaction_conditions(self):
+		"""
+		Parsuje warunki transakcji:
+		- Fa/WarunkiTransakcji/Zamowienia (DataZamowienia + NrZamowienia), wielokrotne
+		- Fa/WZ (numery dokumentów magazynowych WZ), wielokrotne, bezpośrednio pod Fa
+		  (WZ NIE jest zagnieżdżone w WarunkiTransakcji w schemacie FA(3)).
+		"""
+		fa = self.tree.find('.//fa:Fa', namespaces=self.ns)
+		if fa is None:
+			return {"orders": [], "wz_documents": []}
+
+		orders = []
+		warunki = fa.find('fa:WarunkiTransakcji', namespaces=self.ns)
+		if warunki is not None:
+			for node in warunki.findall('fa:Zamowienia', namespaces=self.ns):
+				date = self._safe(node, 'DataZamowienia')
+				number = self._safe(node, 'NrZamowienia')
+				if date or number:
+					orders.append({
+						"date": date or '',
+						"number": number or '',
+					})
+
+		wz_documents = [
+			node.text.strip()
+			for node in fa.findall('fa:WZ', namespaces=self.ns)
+			if node.text and node.text.strip()
+		]
+
+		return {
+			"orders": orders,
+			"wz_documents": wz_documents,
+		}
+
+	def _parse_registries(self):
+		"""
+		Parsuje Stopka/Rejestry (KRS, REGON). Element opcjonalny na poziomie
+		całego dokumentu (nie Fa) - dotyczy wystawcy.
+		"""
+		node = self.tree.find('.//fa:Stopka/fa:Rejestry', namespaces=self.ns)
+		if node is None:
+			return {}
+
+		krs = self._safe(node, 'KRS')
+		regon = self._safe(node, 'REGON')
+
+		if not (krs or regon):
+			return {}
+
+		return {
+			"krs": krs or '',
+			"regon": regon or '',
+		}
 
 	def _parse_invoice_header(self, invoice_type):
 		fa = self.tree.find('.//fa:Fa', namespaces=self.ns)
@@ -1362,8 +1452,8 @@ class KSeFParserFA3:
 		Pojedyncza płatność składająca się na kwotę zaliczki.
 
 		Pola FA(3):
-		- P_6Z          data otrzymania płatności,
-		- P_15Z         kwota płatności,
+		- P_6Z		  data otrzymania płatności,
+		- P_15Z		 kwota płatności,
 		- KursWalutyZW  opcjonalny kurs waluty.
 		"""
 		if node is None:

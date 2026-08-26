@@ -420,7 +420,9 @@ class CommunicationLog(models.Model):
 		# DODATKOWE INFORMACJE
 		if is_before:
 			line_vals['ksef_is_before_correction'] = True
-		
+	
+		self._enrich_line_vals_ksef_extra(line_vals, element, ns)
+	
 		_logger.debug("📝 Correction line: %s (before=%s), qty=%s, price=%s", 
 					  line_vals['name'], is_before, line_vals['quantity'], line_vals['price_unit'])
 		
@@ -1480,7 +1482,9 @@ class CommunicationLog(models.Model):
 					line_vals['sequence'] = int(nr_wiersza) * 10
 				except Exception:
 					pass
-			
+
+			self._enrich_line_vals_ksef_extra(line_vals, line_container, ns)			
+
 			lines_values.append((0, 0, line_vals))
 			
 			_logger.debug("✅ Line %d: %s | qty=%s | price=%s",

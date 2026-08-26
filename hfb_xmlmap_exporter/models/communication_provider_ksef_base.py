@@ -594,7 +594,13 @@ class AccountMoveKsef(models.Model):
 
 	ksef_creation_datetime = fields.Datetime( copy=False,)
 	ksef_system_info = fields.Char( copy=False,)
-	invoice_city = fields.Char( copy=False,)
+	invoice_city = fields.Char(
+		copy=False,
+		compute='_compute_invoice_city',
+		store=True,
+		readonly=False,
+		help="Miasto wystawienia faktury. Uzupełniane automatycznie na podstawie danych firmy.",
+	)
 
 
 	# --- Podstawowe oznaczenia (sekcja Adnotacje) ---
@@ -975,12 +981,11 @@ class AccountMoveKsef(models.Model):
 		copy=False,
 	)
 
-
-
-	@api.onchange("company_id")
-	def _onchange_invoice_city(self):
-		if self.company_id and self.company_id.city:
-			self.invoice_city = self.company_id.city
+	@api.depends("company_id")
+	def _compute_invoice_city(self):
+		for move in self:
+			if not move.invoice_city and move.company_id and move.company_id.city:
+				move.invoice_city = move.company_id.city
 
 	@api.onchange("ksef_podmiot3_partner_id")
 	def _onchange_podmiot3_address(self):

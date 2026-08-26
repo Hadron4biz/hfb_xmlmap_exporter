@@ -32,6 +32,7 @@
 #################################################################################
 
 # 1. MODELE BAZOWE / ABSTRAKCYJNE (najpierw zależności)
+from . import account_move_line_ksef_extra          # Rozszerzenie dla pól faktury XML
 from . import xml_template
 from . import xml_xsd_node_type_repair
 from . import xml_xsd_value_formatter
@@ -60,6 +61,7 @@ from . import communication_provider_ksef_addons	# Rozszerzenia dla importu/konw
 from . import communication_provider_ksef_qrcode	# Obsługa QR Type I
 from . import communication_provider_ksef_offline	# Obsługa Trybu Offline i QR Type II
 from . import communication_provider_ksef_mfcert    # Dodatek do pobierania klucza publicznego MF
+from . import communication_provider_ksef_line_import# hardkodowany xpath, bez żadnego fallbacku do szablonu
 #from . import communication_provider_ksef_workflow # Rozszerzenie CommunicationProviderKsef o pełny workflow sesji kwalifikowanej
 #from . import communication_provider_peppol		# Rozszerzenie dla obsługo PEPPOL
 

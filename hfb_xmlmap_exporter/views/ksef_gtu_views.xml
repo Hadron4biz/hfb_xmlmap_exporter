@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<record id="view_ksef_gtu_list" model="ir.ui.view">
+		<field name="name">ksef.gtu.list</field>
+		<field name="model">ksef.gtu</field>
+		<field name="arch" type="xml">
+			<list string="Słownik GTU">
+				<field name="name"/>
+				<field name="description"/>
+			</list>
+		</field>
+	</record>
+
+	<record id="view_ksef_gtu_form" model="ir.ui.view">
+		<field name="name">ksef.gtu.form</field>
+		<field name="model">ksef.gtu</field>
+		<field name="arch" type="xml">
+			<form string="Kod GTU">
+				<sheet>
+					<group>
+						<field name="name" placeholder="GTU_07"/>
+						<field name="description"/>
+					</group>
+				</sheet>
+			</form>
+		</field>
+	</record>
+
+	<record id="action_ksef_gtu" model="ir.actions.act_window">
+		<field name="name">Słownik GTU</field>
+		<field name="res_model">ksef.gtu</field>
+		<field name="view_mode">list,form</field>
+		<field name="help">Kody GTU (grupa towarowo-usługowa) – obowiązkowe oznaczenia dla JPK_V7.</field>
+	</record>
+
+	<menuitem id="menu_ksef_gtu"
+			  name="Słownik GTU"
+			  parent="account.menu_finance_configuration"
+			  sequence="60"
+			  action="action_ksef_gtu"
+			  groups="account.group_account_manager"/>
+
+</odoo>

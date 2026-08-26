@@ -120,6 +120,34 @@
 					   optional="show"
 					   help="Kod jednostki miary (zgodnie ze słownikiem KSeF) dla tej pozycji."/>
 
+				<field name="ksef_uu_id"
+					   readonly="0"
+					   optional="hide"
+					   help="Unikalny identyfikator pozycji nadany przez KSeF (element UU_ID)."/>
+				<field name="ksef_indeks"
+					   readonly="0"
+					   optional="hide"
+					   help="Kod magazynowy / indeks towaru u dostawcy (element Indeks)."/>
+				<field name="ksef_gtin"
+					   readonly="0"
+					   optional="hide"
+					   help="Kod kreskowy GTIN (element GTIN)."/>
+				<field name="ksef_cn"
+					   readonly="0"
+					   optional="hide"
+					   help="Kod CN / taryfy celnej (element CN)."/>
+				<field name="ksef_pkwiu"
+					   readonly="0"
+					   optional="hide"
+					   help="Kod PKWiU, jeśli podany w fakturze."/>
+				<field name="ksef_gtu_id"
+					   optional="show"
+					   help="Kod GTU – obowiązkowe oznaczenie towaru/usługi dla JPK_V7. Edytowalne – popraw ręcznie, jeśli import nie znalazł/źle dopasował."/>
+				<field name="ksef_kurs_waluty"
+					   readonly="0"
+					   optional="hide"
+					   help="Kurs waluty przypisany do tej pozycji (element KursWaluty)."/>
+
 			</xpath>
 
 			<!-- dedykowane zakładki -->
