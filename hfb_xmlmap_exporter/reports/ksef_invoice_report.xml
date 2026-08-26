@@ -46,7 +46,6 @@
 		</t>
 	</template>
 
-
 	<!-- ======================  SKŁADOWE GŁÓWNEGO WYDRUKU FAKTURY Z XML ========================  -->
 
 	<template id="ksef_report_header">
@@ -367,7 +366,6 @@
 		<hr/>
 	</template>
 
-
 	<template id="ksef_report_invoice_meta">
 		<!-- Invoice header data -->
 		<div class="row mt-4">
@@ -375,12 +373,12 @@
 				<strong>Data wystawienia:</strong><br/>
 				<t t-esc="ksef.get('invoice', {}).get('issue_date', 'Brak')"/>
 			</div>
-			<p>
+			<div class="col-3">
 				<strong>Miejsce wystawienia:</strong>
 				<b>
 					<t t-esc="ksef.get('invoice', {}).get('place_issue') or 'Brak w XML'"/>
 				</b>
-			</p>
+			</div>
 			<div class="col-3">
 				<strong>Data sprzedaży:</strong><br/>
 				<t t-esc="ksef.get('invoice', {}).get('sale_date', 'Brak')"/>
@@ -437,7 +435,6 @@
 				</ul>
 			</div>
 		</t>
-
 
 	</template>
 
@@ -551,7 +548,6 @@
 
 			</div>
 		</t>					
-
 
 	</template>
 
@@ -1513,7 +1509,6 @@
 					color: #000;
 				}
 
-
 				/* ---------------------------------------------------------
 				   HEADER - PRAWA STRONA
 				   --------------------------------------------------------- */
@@ -1542,33 +1537,32 @@
 					font-weight: 700;
 				}
 
-/* ---------------------------------------------------------
-   TABELE
-   --------------------------------------------------------- */
+				/* ---------------------------------------------------------
+				   TABELE
+				   --------------------------------------------------------- */
 
-.ksef-report table.table {
-	width: 100%;
-	border-collapse: collapse !important;
-	border-spacing: 0 !important;
-	border: 1px solid #777 !important;
-}
+				.ksef-report table.table {
+					width: 100%;
+					border-collapse: collapse !important;
+					border-spacing: 0 !important;
+					border: 1px solid #777 !important;
+				}
 
-.ksef-report table.table th,
-.ksef-report table.table td {
-	border: 1px solid #777 !important;
-	padding: 5px 6px;
-	vertical-align: middle;
-}
+				.ksef-report table.table th,
+				.ksef-report table.table td {
+					border: 1px solid #777 !important;
+					padding: 5px 6px;
+					vertical-align: middle;
+				}
 
-.ksef-report table.table thead th {
-	font-weight: 600;
-	background-color: #f2f2f2;
-}
+				.ksef-report table.table thead th {
+					font-weight: 600;
+					background-color: #f2f2f2;
+				}
 
-.ksef-report table.table tfoot td {
-	border: 1px solid #777 !important;
-}
-
+				.ksef-report table.table tfoot td {
+					border: 1px solid #777 !important;
+				}
 
 				</style>
 
@@ -1599,7 +1593,6 @@
 			</t>
 		</t>
 	</template>
-
 
 	<!-- Definicja wydruku -->
 	<record id="paperformat_ksef" model="report.paperformat">
