@@ -359,6 +359,9 @@ class CommunicationLog(models.Model):
 		p9a = self._get_xml_value(element, 'P_9A', ns)
 		p11 = self._get_xml_value(element, 'P_11', ns)
 		p12 = self._get_xml_value(element, 'P_12', ns)
+		p9b = self._get_xml_value(element, 'P_9B', ns)
+		p11a = self._get_xml_value(element, 'P_11A', ns)
+		p10 = self._get_xml_value(element, 'P_10', ns)
 		
 		# Przygotuj wiersz
 		line_vals = {
@@ -385,6 +388,8 @@ class CommunicationLog(models.Model):
 		
 		# CENA JEDNOSTKOWA
 		price_set = False
+		is_gross_variant = False
+
 		if p9a:
 			try:
 				line_vals['price_unit'] = float(p9a.replace(',', '.'))
@@ -401,9 +406,49 @@ class CommunicationLog(models.Model):
 					price_set = True
 			except:
 				pass
+
+		# Wariant brutto (P_9B/P_11A, art. 106e ust. 7) - przelicz na netto stawką P_12
+		if not price_set and (p9b or p11a):
+			is_gross_variant = True
+			try:
+				rate = float(p12.replace(',', '.')) if p12 else 0.0
+			except:
+				rate = 0.0
+			divisor = (1 + rate / 100) if rate else 1.0
+
+			if p9b:
+				try:
+					line_vals['price_unit'] = float(p9b.replace(',', '.')) / divisor
+					price_set = True
+				except:
+					pass
+
+			if not price_set and p11a and p8b:
+				try:
+					netto = float(p11a.replace(',', '.')) / divisor
+					ilosc = float(p8b.replace(',', '.'))
+					if ilosc != 0:
+						line_vals['price_unit'] = abs(netto / ilosc)
+						price_set = True
+				except:
+					pass
 		
 		if not price_set:
 			line_vals['price_unit'] = 0.0
+
+		# OPUST (P_10) - w domenie zgodnej z wariantem ceny (netto albo,
+		# dla art. 106e ust. 7, brutto - wtedy sprowadzamy do netto tym
+		# samym dzielnikiem co price_unit).
+		if p10:
+			try:
+				discount_amount = float(p10.replace(',', '.'))
+				if is_gross_variant:
+					discount_amount = discount_amount / divisor
+				base = line_vals['price_unit'] * abs(line_vals.get('quantity') or 0)
+				if base:
+					line_vals['discount'] = (discount_amount / base) * 100
+			except:
+				pass
 		
 		# PODATEK
 		if p12:
