@@ -1572,7 +1572,8 @@ class CommunicationLog(models.Model):
 			existing_child = self.env['communication.log'].search([
 				('ksef_invoice_number', '=', ksef_number),
 				('direction', '=', 'import'),
-				('parent_id', '=', self.id),
+				#('parent_id', '=', self.id),
+				('state', 'not in', ('error', 'failed')),
 			], limit=1)
 
 			if existing_child:
@@ -4310,7 +4311,8 @@ class CommunicationLog(models.Model):
 						# 1. SPRAWDŹ czy faktura już istnieje w systemie
 						existing_move = self.env['account.move'].search([
 							('ksef_number', '=', ksef_number),
-							('move_type', '=', 'in_invoice'),
+							('move_type', 'in', ('in_invoice', 'in_refund')),
+							('company_id', '=', self.company_id.id),
 						], limit=1)
 						
 						if existing_move:

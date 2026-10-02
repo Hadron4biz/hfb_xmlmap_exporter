@@ -1126,7 +1126,7 @@ class CommunicationLog(models.Model):
 			# WALIDACJA I UZUPEŁNIENIE DANYCH
 			
 			# 1. Dla faktur zakupowych - partner
-			if invoice_values.get('move_type') == 'in_invoice':
+			if invoice_values.get('move_type') in ('in_invoice', 'in_refund'):
 				if 'partner_id' not in invoice_values:
 					# Jedna metoda - jeśli nie znajdzie partnera, tworzy go z pełnymi danymi z XML
 					partner = log._create_or_get_partner_from_xml(xml_root)
@@ -2081,10 +2081,8 @@ class CommunicationLog(models.Model):
 		clean_nip = nip.replace('PL', '').replace('-', '').replace(' ', '').strip()
 		
 		partner = self.env['res.partner'].search([
-			'|',
-			('vat', 'ilike', f'%{clean_nip}%'),
-			('vat', 'ilike', f'%PL{clean_nip}%'),
-			('company_id', '=', self.company_id.id)
+			('vat', 'ilike', clean_nip),
+			('company_id', 'in', (self.company_id.id, False)),
 		], limit=1)
 		
 		return partner
