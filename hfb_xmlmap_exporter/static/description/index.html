@@ -11,18 +11,18 @@
     <div class="row">
         <div class="col-lg-8">
             <h3>Opis</h3>
-            <p>Moduł mapuje pola modeli Odoo na strukturę XML opisaną schematem XSD (szablony XET) i generuje dokument XML. Każda operacja wymiany jest zapisywana jako rekord <code>communication.log</code> i przekazywana do dostawcy (providera).</p>
-            <p>Provider KSeF wysyła faktury do Krajowego Systemu e-Faktur 2.0, pobiera UPO, importuje faktury zakupowe, obsługuje tryb offline i kody QR. Provider LocalDir zapisuje pliki w katalogu serwera.</p>
+            <p>Modu&#322; mapuje pola modeli Odoo na struktur&#281; XML opisan&#261; schematem XSD (szablony XET) i generuje dokument XML. Ka&#380;da operacja wymiany jest zapisywana jako rekord <code>communication.log</code> i przekazywana do dostawcy (providera).</p>
+            <p>Provider KSeF wysy&#322;a faktury do Krajowego Systemu e-Faktur 2.0, pobiera UPO, importuje faktury zakupowe, obs&#322;uguje tryb offline i kody QR. Provider LocalDir zapisuje pliki w katalogu serwera.</p>
         </div>
         <div class="col-lg-4">
             <div class="card" style="margin-top:8px"><div class="card-body">
-                <h5 class="card-title">W skrócie</h5>
+                <h5 class="card-title">W skr&#243;cie</h5>
                 <table class="table table-sm" style="margin-bottom:0"><tbody>
                     <tr><td>Nazwa techniczna</td><td><code>hfb_xmlmap_exporter</code></td></tr>
                     <tr><td>Wersja</td><td>15.1.6</td></tr>
-                    <tr><td>Zależności</td><td>base, mail, sale, account</td></tr>
+                    <tr><td>Zale&#380;no&#347;ci</td><td>base, mail, sale, account</td></tr>
                     <tr><td>Licencja</td><td>AGPL-3</td></tr>
-                    <tr><td>Autor</td><td>Andrzej Wiśniewski</td></tr>
+                    <tr><td>Autor</td><td>Andrzej Wi&#347;niewski</td></tr>
                 </tbody></table>
             </div></div>
         </div>
@@ -33,7 +33,7 @@
     <h3>Funkcje</h3>
     <div class="row">
         <div class="col-md-4"><h5>XET</h5><ul>
-            <li>szablon z drzewem węzłów, przestrzeniami nazw i typami XSD</li>
+            <li>szablon z drzewem w&#281;z&#322;&#243;w, przestrzeniami nazw i typami XSD</li>
             <li>tworzenie szablonu z XSD, import i eksport JSON</li>
             <li>generowanie XML i walidacja faktury wg XSD</li>
         </ul></div>
@@ -43,59 +43,59 @@
             <li>kolejka przetwarzana przez zadanie cykliczne</li>
         </ul></div>
         <div class="col-md-4"><h5>KSeF 2.0</h5><ul>
-            <li>wysyłka faktury, status, UPO</li>
+            <li>wysy&#322;ka faktury, status, UPO</li>
             <li>import faktur zakupowych</li>
-            <li>tryb offline, QR, podgląd faktury z XML</li>
+            <li>tryb offline, QR, podgl&#261;d faktury z XML</li>
             <li>backend python lub klient Java</li>
         </ul></div>
     </div>
 </section>
 
 <section class="container" style="margin-top:24px">
-    <h3>Jak to działa</h3>
+    <h3>Jak to dzia&#322;a</h3>
     <ol>
-        <li><b>Walidacja</b> – faktura sprawdzana względem XSD szablonu.</li>
-        <li><b>Zatwierdź wysłanie</b> – XML generowany z szablonu, log w stanie <code>queued</code>.</li>
-        <li><b>Kolejka</b> – zadanie cykliczne wykonuje kroki: auth, open_session, send_invoice, check_status, download_upo, close_session.</li>
-        <li><b>Import</b> – zadanie cykliczne tworzy log listy; dla nowych faktur powstają logi potomne, które pobierają XML i tworzą fakturę zakupową.</li>
+        <li><b>Walidacja</b> &#8211; faktura sprawdzana wzgl&#281;dem XSD szablonu.</li>
+        <li><b>Zatwierd&#378; wys&#322;anie</b> &#8211; XML generowany z szablonu, log w stanie <code>queued</code>.</li>
+        <li><b>Kolejka</b> &#8211; zadanie cykliczne wykonuje kroki: auth, open_session, send_invoice, check_status, download_upo, close_session.</li>
+        <li><b>Import</b> &#8211; zadanie cykliczne tworzy log listy; dla nowych faktur powstaj&#261; logi potomne, kt&#243;re pobieraj&#261; XML i tworz&#261; faktur&#281; zakupow&#261;.</li>
     </ol>
 </section>
 
 <section class="container" style="margin-top:24px">
     <h3>Konfiguracja</h3>
     <ol>
-        <li><b>Provider KSeF</b> – środowisko, adres API, autoryzacja, backend, parametry importu.</li>
-        <li><b>Certyfikaty</b> – kreator importu certyfikatów, pobranie kluczy publicznych MF.</li>
-        <li><b>Dostawcy Usług</b> – provider typu <code>ksef</code> z wybraną konfiguracją.</li>
-        <li><b>Szablony</b> – szablon XET z providerem, przypisany do faktury.</li>
-        <li><b>Zadania cykliczne</b> – włączenie zadań KSeF (domyślnie nieaktywne).</li>
+        <li><b>Provider KSeF</b> &#8211; &#347;rodowisko, adres API, autoryzacja, backend, parametry importu.</li>
+        <li><b>Certyfikaty</b> &#8211; kreator importu certyfikat&#243;w, pobranie kluczy publicznych MF.</li>
+        <li><b>Dostawcy Us&#322;ug</b> &#8211; provider typu <code>ksef</code> z wybran&#261; konfiguracj&#261;.</li>
+        <li><b>Szablony</b> &#8211; szablon XET z providerem, przypisany do faktury.</li>
+        <li><b>Zadania cykliczne</b> &#8211; w&#322;&#261;czenie zada&#324; KSeF (domy&#347;lnie nieaktywne).</li>
     </ol>
 </section>
 
 <section class="container" style="margin-top:24px">
     <h3>Informacje techniczne</h3>
     <table class="table table-sm"><tbody>
-        <tr><td><code>xml.export.template</code>, <code>xml.export.node</code></td><td>szablon XET i jego węzły</td></tr>
+        <tr><td><code>xml.export.template</code>, <code>xml.export.node</code></td><td>szablon XET i jego w&#281;z&#322;y</td></tr>
         <tr><td><code>communication.provider</code></td><td>dostawca komunikacji</td></tr>
         <tr><td><code>communication.log</code></td><td>operacja wymiany: stan, kroki KSeF, ponowienia</td></tr>
         <tr><td><code>communication.provider.ksef</code></td><td>konfiguracja KSeF</td></tr>
-        <tr><td><code>account.move</code> (rozszerzenie)</td><td>numer KSeF, stan obsługi, akcje eksportu, offline, korekty</td></tr>
+        <tr><td><code>account.move</code> (rozszerzenie)</td><td>numer KSeF, stan obs&#322;ugi, akcje eksportu, offline, korekty</td></tr>
     </tbody></table>
 </section>
 
 <section class="container" id="hfb_doc" style="margin-top:24px;margin-bottom:32px">
     <h3>Dokumentacja techniczna (UML, BPMN 2.0)</h3>
     <p class="text-center">
-        <a class="btn btn-primary" href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Otwórz pełną dokumentację w nowej karcie</a>
+        <a class="btn btn-primary" href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Otw&#243;rz pe&#322;n&#261; dokumentacj&#281; w nowej karcie</a>
     </p>
     <table class="table table-sm">
-        <thead><tr><th>Dokument</th><th>Zawartość</th></tr></thead>
+        <thead><tr><th>Dokument</th><th>Zawarto&#347;&#263;</th></tr></thead>
         <tbody>
-            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Przegląd modułu</a></td><td>przeznaczenie, crony, wolumen danych, struktura plików</td></tr>
-            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/architektura.html" target="_blank" rel="noopener">Architektura</a></td><td>kontekst, komponenty, wdrożenie, prawa, menu</td></tr>
-            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/przypadki_uzycia.html" target="_blank" rel="noopener">Przypadki użycia</a></td><td>użytkownicy i zadania automatyczne</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Przegl&#261;d modu&#322;u</a></td><td>przeznaczenie, crony, wolumen danych, struktura plik&#243;w</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/architektura.html" target="_blank" rel="noopener">Architektura</a></td><td>kontekst, komponenty, wdro&#380;enie, prawa, menu</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/przypadki_uzycia.html" target="_blank" rel="noopener">Przypadki u&#380;ycia</a></td><td>u&#380;ytkownicy i zadania automatyczne</td></tr>
             <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/model_danych.html" target="_blank" rel="noopener">Model danych</a></td><td>relacje, klasy, rozszerzenia</td></tr>
-            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/stany.html" target="_blank" rel="noopener">Stany i przejścia</a></td><td>pola stanu, przyciski</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/stany.html" target="_blank" rel="noopener">Stany i przej&#347;cia</a></td><td>pola stanu, przyciski</td></tr>
             <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/sekwencje.html" target="_blank" rel="noopener">Sekwencje</a></td><td>eksport, kolejka, import, offline</td></tr>
             <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/procesy_bpmn.html" target="_blank" rel="noopener">Procesy BPMN</a></td><td>eksport, import, kolejka</td></tr>
         </tbody>

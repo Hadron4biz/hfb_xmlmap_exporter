@@ -1621,6 +1621,8 @@ class CommunicationLog(models.Model):
 				('ksef_invoice_number', '=', ksef_number),
 				('direction', '=', 'import'),
 				#('parent_id', '=', self.id),
+				#('state', 'not in', ('error', 'failed')),
+				#('ksef_state', 'not in', ('failed', 'success')),
 			], limit=1)
 
 			if existing_child:
