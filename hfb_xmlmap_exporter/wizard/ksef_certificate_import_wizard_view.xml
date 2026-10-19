@@ -138,11 +138,11 @@
 								<group string="Hasło dla plików .p12">
 									<field name="p12_password" 
 										   password="1"
-										   required="1"
+										   required="0"
 										   placeholder="Hasło dla plików .p12"/>
 									<field name="p12_password_confirm" 
 										   password="1"
-										   required="1"
+										   required="0"
 										   placeholder="Potwierdź hasło"/>
 								</group>
 								<group string="Opcje">

@@ -25,7 +25,7 @@
 						<group string="Środowisko i autoryzacja">
 							<field name="base_url" />
 							<field name="qr_code_url" />
-							<field name="environment" invisible="1"/>
+							<field name="environment" widget="radio"/>
 							<field name="api_backend"/>
 							<field name="auth_type"/>
 							<field name="jar_directory" />
@@ -83,11 +83,28 @@
 
 								</group>
 							</group>
-							<group>
-								<group>
-									<field name="mf_certificate_pem" />
-								</group>
-							</group>
+                            <group name="keys_group" string="Klucze Publiczne MF">
+                                <group>
+                                    <button name="action_fetch_public_keys" 
+                                            type="object" 
+                                            string="Pobierz klucze publiczne MF" 
+                                            class="btn-info text-nowrap" 
+                                            icon="fa-download" 
+                                            confirm="Czy na pewno chcesz pobrać nowe klucze publiczne z API KSeF?"/>
+                                </group>
+                                <field name="mf_certificate_pem" 
+                                       nolabel="1"
+                                       placeholder="Kliknij 'Pobierz klucze' aby pobrać klucze publiczne MF"/>
+                                <group>
+                                    <field name="last_key_fetch_date" 
+                                           readonly="1"
+                                           string="Data ostatniego pobrania"/>
+                                    <field name="key_fetch_status" 
+                                           readonly="1"
+                                           string="Status"/>
+                                </group>
+                            </group>
+
 						</page>
 						
 						<!-- KARTA 3: Token sesyjny -->

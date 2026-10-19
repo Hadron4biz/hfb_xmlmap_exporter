@@ -21,7 +21,7 @@
 {
 	"name": "eXtensible Exchange Template Base Provider",
 	"summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-	"version": "15.1.3",
+	"version": "15.1.6",
 	"license": "AGPL-3",
 	"author": "Andrzej Wiśniewski",
 	"website": "https://wisand.eu",
@@ -68,6 +68,10 @@
 		"views/cron.xml",
 		"wizard/communication_provider_config_wizard_view.xml",
 		"wizard/ksef_certificate_import_wizard_view.xml",
+
+        # --- Wygląd faktury na podstawie XML z KSeF
+        "reports/ksef_invoice_report.xml",
+
 	],
 	'assets': {
 		'web.assets_backend': [

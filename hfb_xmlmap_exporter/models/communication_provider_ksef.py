@@ -1620,7 +1620,7 @@ class CommunicationLog(models.Model):
 			existing_child = self.env['communication.log'].search([
 				('ksef_invoice_number', '=', ksef_number),
 				('direction', '=', 'import'),
-				('parent_id', '=', self.id),
+				#('parent_id', '=', self.id),
 			], limit=1)
 
 			if existing_child:

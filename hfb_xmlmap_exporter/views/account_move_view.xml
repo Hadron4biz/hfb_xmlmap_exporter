@@ -6,8 +6,7 @@
 		<field name="model">res.partner</field>
 		<field name="inherit_id" ref="base.view_partner_form" />
 		<field name="arch" type="xml">
-			<xpath expr="//field[@name='vat']" position="after">
-				<group string="Dane KSeF">
+			<xpath expr="//div[hasclass('o_address_format')]" position="after">
 					<field name="ksef_address_line"
 						   readonly="1"
 						   help="Sformatowany adres kontrahenta – generowany automatycznie na podstawie pól adresowych."
@@ -15,7 +14,6 @@
 					<field name="ksef_is_foreign"
 						   readonly="1"
 						   help="Czy kontrahent jest podmiotem zagranicznym (kraj różny od PL)."/>
-				</group>
 			</xpath>
 		</field>
 	</record>
