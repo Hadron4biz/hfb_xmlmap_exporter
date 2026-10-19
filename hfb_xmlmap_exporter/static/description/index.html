@@ -1,233 +1,103 @@
-<section class="oe_container">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12" style="text-align:center;">
-            <img src="header.png"
-                 alt="XET – architektura wymiany danych"
-                 style="max-width:100%; height:auto;"/>
+<section class="container" style="margin-top:24px">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h2 class="oe_slogan" style="margin-bottom:6px">eXtensible Exchange Template (XET)</h2>
+            <h3 class="oe_slogan" style="font-size:18px;font-weight:400;color:#56676d">Szablony XML wg XSD, kolejka komunikacji i integracja z KSeF 2.0 dla Odoo 15</h3>
         </div>
     </div>
 </section>
 
-<section class="oe_container">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <h2 class="oe_slogan">eXtensible Exchange Template (XET)</h2>
-            <h3 class="oe_slogan">
-                Konfigurowalna platforma wymiany danych strukturalnych dla Odoo
-            </h3>
+<section class="container" style="margin-top:24px">
+    <div class="row">
+        <div class="col-lg-8">
+            <h3>Opis</h3>
+            <p>Moduł mapuje pola modeli Odoo na strukturę XML opisaną schematem XSD (szablony XET) i generuje dokument XML. Każda operacja wymiany jest zapisywana jako rekord <code>communication.log</code> i przekazywana do dostawcy (providera).</p>
+            <p>Provider KSeF wysyła faktury do Krajowego Systemu e-Faktur 2.0, pobiera UPO, importuje faktury zakupowe, obsługuje tryb offline i kody QR. Provider LocalDir zapisuje pliki w katalogu serwera.</p>
+        </div>
+        <div class="col-lg-4">
+            <div class="card" style="margin-top:8px"><div class="card-body">
+                <h5 class="card-title">W skrócie</h5>
+                <table class="table table-sm" style="margin-bottom:0"><tbody>
+                    <tr><td>Nazwa techniczna</td><td><code>hfb_xmlmap_exporter</code></td></tr>
+                    <tr><td>Wersja</td><td>15.1.6</td></tr>
+                    <tr><td>Zależności</td><td>base, mail, sale, account</td></tr>
+                    <tr><td>Licencja</td><td>AGPL-3</td></tr>
+                    <tr><td>Autor</td><td>Andrzej Wiśniewski</td></tr>
+                </tbody></table>
+            </div></div>
         </div>
     </div>
 </section>
 
-<section class="oe_container">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <p class="oe_mt32">
-                <strong>XET</strong> to moduł Odoo zaprojektowany w celu
-                uporządkowania i ustandaryzowania integracji z systemami
-                zewnętrznymi, takimi jak KSeF, EDI czy platformy API.
-                Zamiast tworzyć jednorazowe integracje oparte na kodzie,
-                XET wprowadza <strong>przenośne szablony wymiany danych</strong>.
-            </p>
-        </div>
+<section class="container" style="margin-top:24px">
+    <h3>Funkcje</h3>
+    <div class="row">
+        <div class="col-md-4"><h5>XET</h5><ul>
+            <li>szablon z drzewem węzłów, przestrzeniami nazw i typami XSD</li>
+            <li>tworzenie szablonu z XSD, import i eksport JSON</li>
+            <li>generowanie XML i walidacja faktury wg XSD</li>
+        </ul></div>
+        <div class="col-md-4"><h5>Komunikacja</h5><ul>
+            <li>providery <code>ksef</code> i <code>localdir</code></li>
+            <li>log operacji ze stanem i krokami</li>
+            <li>kolejka przetwarzana przez zadanie cykliczne</li>
+        </ul></div>
+        <div class="col-md-4"><h5>KSeF 2.0</h5><ul>
+            <li>wysyłka faktury, status, UPO</li>
+            <li>import faktur zakupowych</li>
+            <li>tryb offline, QR, podgląd faktury z XML</li>
+            <li>backend python lub klient Java</li>
+        </ul></div>
     </div>
 </section>
 
-<section class="oe_container oe_dark">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <h3>Jak działa XET?</h3>
-            <ul>
-                <li>dane biznesowe pozostają w Odoo (faktury, kontrahenci),</li>
-                <li>struktura dokumentu definiowana jest w szablonie XET,</li>
-                <li>dokument jest walidowany przed wysyłką,</li>
-                <li>komunikacja realizowana jest przez wyspecjalizowany provider.</li>
-            </ul>
-            <p>
-                Takie podejście pozwala oddzielić logikę biznesową od
-                wymagań technicznych systemów zewnętrznych.
-            </p>
-        </div>
-    </div>
+<section class="container" style="margin-top:24px">
+    <h3>Jak to działa</h3>
+    <ol>
+        <li><b>Walidacja</b> – faktura sprawdzana względem XSD szablonu.</li>
+        <li><b>Zatwierdź wysłanie</b> – XML generowany z szablonu, log w stanie <code>queued</code>.</li>
+        <li><b>Kolejka</b> – zadanie cykliczne wykonuje kroki: auth, open_session, send_invoice, check_status, download_upo, close_session.</li>
+        <li><b>Import</b> – zadanie cykliczne tworzy log listy; dla nowych faktur powstają logi potomne, które pobierają XML i tworzą fakturę zakupową.</li>
+    </ol>
 </section>
 
-<section class="oe_container">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span4">
-            <h4>Szablony XET</h4>
-            <p>
-                Szablony opisują strukturę dokumentów zgodnie z XSD
-                i mogą być wielokrotnie używane oraz przenoszone
-                pomiędzy instancjami Odoo.
-            </p>
-        </div>
-
-        <div class="oe_span4">
-            <h4>Walidacja przed wysyłką</h4>
-            <p>
-                Dokumenty są sprawdzane przed opuszczeniem systemu.
-                Użytkownik otrzymuje jasną informację, czy dokument
-                jest gotowy do wysyłki.
-            </p>
-        </div>
-
-        <div class="oe_span4">
-            <h4>Providery komunikacyjne</h4>
-            <p>
-                Wymienna warstwa komunikacji umożliwia obsługę
-                różnych systemów zewnętrznych bez zmiany struktury
-                dokumentów.
-            </p>
-        </div>
-    </div>
+<section class="container" style="margin-top:24px">
+    <h3>Konfiguracja</h3>
+    <ol>
+        <li><b>Provider KSeF</b> – środowisko, adres API, autoryzacja, backend, parametry importu.</li>
+        <li><b>Certyfikaty</b> – kreator importu certyfikatów, pobranie kluczy publicznych MF.</li>
+        <li><b>Dostawcy Usług</b> – provider typu <code>ksef</code> z wybraną konfiguracją.</li>
+        <li><b>Szablony</b> – szablon XET z providerem, przypisany do faktury.</li>
+        <li><b>Zadania cykliczne</b> – włączenie zadań KSeF (domyślnie nieaktywne).</li>
+    </ol>
 </section>
 
-<section class="oe_container oe_dark">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <h3>Dołączony klient Java – komunikacja i bezpieczeństwo</h3>
-            <p>
-                W przypadku integracji z Krajowym Systemem e-Faktur (KSeF)
-                wymagane są operacje kryptograficzne, takie jak podpisy,
-                szyfrowanie oraz obsługa sesji.
-            </p>
-            <p>
-                Z tego powodu XET wykorzystuje <strong>dołączony klient Java</strong>,
-                który realizuje wyłącznie warstwę technicznej komunikacji:
-            </p>
-            <ul>
-                <li>podpisy i weryfikację komunikatów,</li>
-                <li>szyfrowanie i deszyfrowanie danych,</li>
-                <li>obsługę tokenów i sesji KSeF,</li>
-                <li>komunikację zgodną z protokołem KSeF.</li>
-            </ul>
-            <p>
-                Odoo oraz XET nie przechowują kluczy kryptograficznych
-                i nie realizują operacji podpisu – klient Java jest
-                w pełni odseparowanym komponentem technicznym.
-            </p>
-        </div>
-    </div>
+<section class="container" style="margin-top:24px">
+    <h3>Informacje techniczne</h3>
+    <table class="table table-sm"><tbody>
+        <tr><td><code>xml.export.template</code>, <code>xml.export.node</code></td><td>szablon XET i jego węzły</td></tr>
+        <tr><td><code>communication.provider</code></td><td>dostawca komunikacji</td></tr>
+        <tr><td><code>communication.log</code></td><td>operacja wymiany: stan, kroki KSeF, ponowienia</td></tr>
+        <tr><td><code>communication.provider.ksef</code></td><td>konfiguracja KSeF</td></tr>
+        <tr><td><code>account.move</code> (rozszerzenie)</td><td>numer KSeF, stan obsługi, akcje eksportu, offline, korekty</td></tr>
+    </tbody></table>
 </section>
 
-<section class="oe_container">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span4">
-            <h4>Użytkownik biznesowy</h4>
-            <p>
-                Waliduje dokumenty i podejmuje świadomą decyzję
-                o ich wysyłce.
-            </p>
-        </div>
-
-        <div class="oe_span4">
-            <h4>Zespół wdrożeniowy</h4>
-            <p>
-                Konfiguruje szablony i mapowania bez potrzeby
-                tworzenia dedykowanego kodu.
-            </p>
-        </div>
-
-        <div class="oe_span4">
-            <h4>Organizacja</h4>
-            <p>
-                Zyskuje stabilną i skalowalną platformę integracyjną,
-                odporną na zmiany regulacyjne.
-            </p>
-        </div>
-    </div>
+<section class="container" id="hfb_doc" style="margin-top:24px;margin-bottom:32px">
+    <h3>Dokumentacja techniczna (UML, BPMN 2.0)</h3>
+    <p class="text-center">
+        <a class="btn btn-primary" href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Otwórz pełną dokumentację w nowej karcie</a>
+    </p>
+    <table class="table table-sm">
+        <thead><tr><th>Dokument</th><th>Zawartość</th></tr></thead>
+        <tbody>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/index.html" target="_blank" rel="noopener">Przegląd modułu</a></td><td>przeznaczenie, crony, wolumen danych, struktura plików</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/architektura.html" target="_blank" rel="noopener">Architektura</a></td><td>kontekst, komponenty, wdrożenie, prawa, menu</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/przypadki_uzycia.html" target="_blank" rel="noopener">Przypadki użycia</a></td><td>użytkownicy i zadania automatyczne</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/model_danych.html" target="_blank" rel="noopener">Model danych</a></td><td>relacje, klasy, rozszerzenia</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/stany.html" target="_blank" rel="noopener">Stany i przejścia</a></td><td>pola stanu, przyciski</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/sekwencje.html" target="_blank" rel="noopener">Sekwencje</a></td><td>eksport, kolejka, import, offline</td></tr>
+            <tr><td><a href="/hfb_xmlmap_exporter/static/description/doc/procesy_bpmn.html" target="_blank" rel="noopener">Procesy BPMN</a></td><td>eksport, import, kolejka</td></tr>
+        </tbody>
+    </table>
 </section>
-
-<section class="oe_container oe_separator"></section>
-
-<section class="oe_container">
-    <div class="oe_row">
-        <div class="oe_span12">
-            <p class="oe_mt32">
-                <strong>XET</strong> jest fundamentem długowiecznych integracji
-                w Odoo – nie jednorazowym dodatkiem, lecz platformą,
-                która porządkuje wymianę danych w całej organizacji.
-            </p>
-        </div>
-    </div>
-</section>
-
-<section class="oe_container oe_dark">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <h3>Integracja z Krajowym Systemem e-Faktur (KSeF)</h3>
-
-            <p>
-                Integracja z <strong>Krajowym Systemem e-Faktur (KSeF)</strong>
-                została w XET zaprojektowana jako kontrolowany proces
-                biznesowo–techniczny, a nie prosty eksport pliku XML.
-            </p>
-
-            <p>
-                Punktem wyjścia są następujące założenia:
-            </p>
-            <ul>
-                <li>KSeF narzuca ścisłą strukturę dokumentów (XSD),</li>
-                <li>wymaga podpisów, szyfrowania i obsługi sesji,</li>
-                <li>proces wysyłki jest wieloetapowy i asynchroniczny,</li>
-                <li>błędy formalne skutkują odrzuceniem dokumentu.</li>
-            </ul>
-
-            <p>
-                W związku z tym XET rozdziela odpowiedzialności:
-            </p>
-            <ul>
-                <li>
-                    <strong>Odoo / XET</strong> odpowiada za dane biznesowe,
-                    strukturę dokumentu, warunki oraz walidację przed wysyłką,
-                </li>
-                <li>
-                    <strong>dołączony klient Java</strong> realizuje wyłącznie
-                    techniczną komunikację z KSeF (kryptografia, sesje, protokół),
-                </li>
-                <li>
-                    <strong>użytkownik biznesowy</strong> podejmuje świadomą
-                    decyzję o wysyłce dokumentu po pozytywnej walidacji.
-                </li>
-            </ul>
-
-            <p>
-                Dzięki temu dokument jest sprawdzany i oceniany
-                <strong>zanim opuści system Odoo</strong>,
-                a użytkownik nie wysyła danych „w ciemno”.
-            </p>
-        </div>
-    </div>
-</section>
-
-<section class="oe_container oe_dark">
-    <div class="oe_row oe_spaced">
-        <div class="oe_span12">
-            <h3>Integracja z Krajowym Systemem e-Faktur (KSeF)</h3>
-
-            <p>
-                Moduł XET umożliwia integrację Odoo z Krajowym Systemem e-Faktur (KSeF)
-                w oparciu o konfigurowalne szablony XET oraz walidację dokumentów
-                przed wysyłką.
-            </p>
-
-            <p>
-                XET odpowiada za przygotowanie struktury dokumentu zgodnej z XSD,
-                kontrolę warunków występowania elementów oraz weryfikację poprawności
-                danych po stronie Odoo.
-            </p>
-
-            <p>
-                Komunikacja z KSeF realizowana jest przez wydzielony komponent
-                techniczny (klient Java), odpowiedzialny za obsługę protokołu KSeF
-                oraz operacje kryptograficzne.
-            </p>
-
-            <p>
-                Proces wysyłki, odbioru statusów oraz potwierdzeń (UPO)
-                jest rejestrowany w systemie i dostępny do dalszej analizy.
-            </p>
-        </div>
-    </div>
-</section>
-

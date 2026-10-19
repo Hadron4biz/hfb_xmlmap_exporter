@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Przegląd modułu – hfb_xmlmap_exporter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --ink:#1d2a2f; --muted:#56676d; --line:#d3ddd9;
+  --accent:#1e6b52; --accent-soft:#e3f0ea; --link:#245b8f; --warn:#8a5a12; --warn-soft:#fbf1df;
+  --code:#eef2f1; --diagram:#ffffff; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11191c; --surface:#172126; --ink:#e2ebe8; --muted:#9db0aa; --line:#2b3a3f;
+    --accent:#62c49c; --accent-soft:#1c3129; --link:#8fbbe8; --warn:#e2b25e; --warn-soft:#2e2717;
+    --code:#1f2b30; --diagram:#f7f9f8; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11191c; --surface:#172126; --ink:#e2ebe8; --muted:#9db0aa; --line:#2b3a3f;
+  --accent:#62c49c; --accent-soft:#1c3129; --link:#8fbbe8; --warn:#e2b25e; --warn-soft:#2e2717;
+  --code:#1f2b30; --diagram:#f7f9f8; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif}
+a{color:var(--link)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+nav.side{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 20px;border-right:1px solid var(--line);background:var(--surface)}
+nav.side .mod{font:600 13px/1.3 "IBM Plex Mono",ui-monospace,monospace;color:var(--accent);word-break:break-all}
+nav.side .sub{font-size:13px;color:var(--muted);margin:4px 0 22px}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:p}
+nav.side li{counter-increment:p}
+nav.side li a{display:flex;gap:10px;padding:7px 10px;border-radius:6px;text-decoration:none;color:var(--ink);font-size:14px}
+nav.side li a::before{content:counter(p);color:var(--muted);font:12px/1.9 "IBM Plex Mono",monospace;min-width:14px}
+nav.side li a:hover{background:var(--accent-soft)}
+nav.side li a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav.side .toc{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px}
+nav.side .toc a{display:block;padding:3px 0;color:var(--muted);text-decoration:none}
+nav.side .toc a:hover{color:var(--ink)}
+main{padding:40px 48px 80px;max-width:1280px}
+header.page h1{font-size:30px;line-height:1.2;margin:0 0 8px;font-weight:600;letter-spacing:-.01em}
+header.page p.lead{margin:0 0 28px;color:var(--muted);max-width:75ch}
+h2{font-size:21px;margin:44px 0 10px;padding-top:12px;border-top:1px solid var(--line);font-weight:600}
+h3{font-size:16px;margin:28px 0 8px;font-weight:600}
+p,ul,ol{max-width:80ch}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+.tablewrap{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--accent-soft);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+figure.dia{margin:14px 0 26px;border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+figure.dia .canvas{background:var(--diagram);overflow:auto;padding:18px;line-height:normal;font-size:16px;color:#1d2a2f}
+figure.dia .canvas svg{display:block;margin:0 auto;height:auto;max-width:100%}
+figure.dia.zoom .canvas svg{max-width:none}
+figure.dia figcaption{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+figure.dia button{font:inherit;font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);cursor:pointer}
+figure.dia button:focus-visible,nav a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.src{margin:0;border-top:1px solid var(--line)}
+details.src summary{cursor:pointer;padding:8px 14px;font-size:12.5px;color:var(--muted)}
+details.src pre{margin:0;padding:12px 14px;background:var(--code);overflow:auto;font-size:12px;line-height:1.45}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 6px 6px 0;margin:14px 0;max-width:80ch}
+.note.warn{border-color:var(--warn);background:var(--warn-soft)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 18px;font-size:14px;max-width:80ch}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+footer{margin-top:60px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr}
+  nav.side{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+  main{padding:28px 18px 60px}
+}
+@media print{nav.side{display:none}.layout{display:block}figure.dia{break-inside:avoid}}
+</style></head>
+<body><div class="layout">
+<nav class="side" aria-label="Dokumentacja">
+<div class="mod">hfb_xmlmap_exporter</div><div class="sub">Odoo 15 – dokumentacja UML i BPMN</div>
+<ol><li><a href="index.html" aria-current="page">Przegląd modułu</a></li><li><a href="architektura.html">Architektura</a></li><li><a href="przypadki_uzycia.html">Przypadki użycia</a></li><li><a href="model_danych.html">Model danych</a></li><li><a href="stany.html">Stany i przejścia</a></li><li><a href="sekwencje.html">Sekwencje</a></li><li><a href="procesy_bpmn.html">Procesy BPMN</a></li></ol><div class="toc"><a href="#cel">Przeznaczenie</a><a href="#dane">Dane modułu</a><a href="#konfiguracja">Konfiguracja</a><a href="#crony">Zadania cykliczne</a><a href="#wolumen">Wolumen danych</a><a href="#pliki">Struktura plików</a><a href="#spis">Spis dokumentów</a></div>
+</nav>
+<main>
+<header class="page"><h1>Przegląd modułu</h1><p class="lead">Moduł hfb_xmlmap_exporter – XET, komunikacja i KSeF dla Odoo 15.</p></header>
+<h2 id="cel">Przeznaczenie</h2><p>Moduł ma trzy warstwy. <b>XET</b> (eXtensible Exchange Template) mapuje pola modeli Odoo na strukturę XML opisaną schematem XSD i generuje dokument XML. <b>Warstwa komunikacji</b> rejestruje każdą operację wymiany jako rekord <code>communication.log</code> i przekazuje ją do dostawcy (providera). <b>Provider KSeF</b> realizuje wysyłkę faktur do KSeF 2.0, pobieranie UPO, import faktur zakupowych, tryb offline i kody QR. Drugi provider, <b>LocalDir</b>, zapisuje pliki w katalogu serwera.</p><h2 id="dane">Dane modułu</h2><dl class="kv"><dt>Nazwa techniczna</dt><dd><code>hfb_xmlmap_exporter</code></dd><dt>Nazwa</dt><dd>eXtensible Exchange Template Base Provider</dd><dt>Wersja</dt><dd>15.1.6</dd><dt>Autor</dt><dd>Andrzej Wiśniewski</dd><dt>Strona</dt><dd>https://wisand.eu</dd><dt>Licencja</dt><dd>AGPL-3</dd><dt>Zależności</dt><dd><code>base</code>, <code>mail</code>, <code>sale</code>, <code>account</code></dd><dt>Aplikacja</dt><dd>tak</dd></dl><h2 id="konfiguracja">Konfiguracja na instancji</h2><p>Providery <code>communication.provider</code> (instancja Odoo15, 19.10.2026):</p><div class="tablewrap"><table><thead><tr><th>id</th><th>Nazwa</th><th>Typ</th><th>Konfiguracja</th><th>Aktywny</th></tr></thead><tbody><tr><td>4</td><td>KSeF Provider: &gt;&gt;&gt; UWAGA &lt;&lt;&lt; PRODUKCJA !!!!</td><td>ksef</td><td>communication.provider.ksef 18</td><td>tak</td></tr><tr><td>2</td><td>KSeF Provider: x</td><td>ksef</td><td>communication.provider.ksef 16</td><td>nie</td></tr><tr><td>3</td><td>KSeF Provider: x2</td><td>ksef</td><td>communication.provider.ksef 17</td><td>nie</td></tr><tr><td>1</td><td>KSeF TEST</td><td>ksef</td><td>communication.provider.ksef 10</td><td>nie</td></tr></tbody></table></div><p>Konfiguracja 18:</p><div class="tablewrap"><table><thead><tr><th>Pole</th><th>Wartość</th></tr></thead><tbody><tr><td><code>api_backend</code></td><td>python</td></tr><tr><td><code>api_mode</code></td><td>java_only</td></tr><tr><td><code>use_python_http</code></td><td>True</td></tr><tr><td><code>python_operations</code></td><td>all</td></tr><tr><td><code>import_enabled</code></td><td>True</td></tr><tr><td><code>import_frequency_hours</code></td><td>12</td></tr><tr><td><code>import_days_back</code></td><td>4</td></tr><tr><td><code>import_page_size</code></td><td>100</td></tr><tr><td><code>import_max_pages</code></td><td>10</td></tr><tr><td><code>import_last_success_date</code></td><td>puste</td></tr></tbody></table></div><h2 id="crony">Zadania cykliczne</h2><div class="tablewrap"><table><thead><tr><th>id</th><th>Nazwa (views/cron.xml)</th><th>Metoda</th><th>Interwał (XML)</th><th>Aktywny (XML)</th><th>Instancja: aktywny / lastcall</th></tr></thead><tbody><tr><td>41</td><td>🚩 Provider KSeF: Communication Queue</td><td><code>_cron_process_ksef_queue</code></td><td>1 min</td><td>nie</td><td>nie / 19.10.2026 11:33</td></tr><tr><td>42</td><td>🚩 Provider KSeF: Schedule Import List</td><td><code>_cron_ksef_schedule_import_list</code></td><td>1 h</td><td>nie</td><td>nie / 19.10.2026 11:32</td></tr><tr><td>43</td><td>Provider KSeF – Environment Health Check</td><td><code>cron_ksef_environment_check</code></td><td>1 h</td><td>nie</td><td>nie / brak</td></tr><tr><td>44</td><td>Provider KSeF – Communication Report</td><td><code>cron_ksef_daily_report</code></td><td>1 dzień</td><td>nie</td><td>nie / brak</td></tr><tr><td>45</td><td>Provider KSeF – Monitor Health Check</td><td><code>cron_ksef_monitor_failures</code></td><td>1 h</td><td>nie</td><td>nie / brak</td></tr></tbody></table></div><div class="note warn">Metoda <code>cron_ksef_offline_monitor</code> (<code>communication_provider_ksef_offline.py</code> l. 187) nie ma rekordu <code>ir.cron</code> w module.</div><h2 id="wolumen">Wolumen danych</h2><div class="tablewrap"><table><thead><tr><th>Model / grupa</th><th class="num">Liczba</th></tr></thead><tbody><tr><td><code>communication.log</code> – razem (wszystkie direction = import)</td><td class="num">375</td></tr><tr><td>logi list (parent_id puste), state = draft</td><td class="num">352</td></tr><tr><td>logi potomne, state = received</td><td class="num">23</td></tr><tr><td>ksef_operation = completed i ksef_status = success</td><td class="num">375</td></tr><tr><td>logi eksportu</td><td class="num">0</td></tr><tr><td><code>xml.export.template</code>, state = draft</td><td class="num">4</td></tr></tbody></table></div><h2 id="pliki">Struktura plików</h2><div class="tablewrap"><table><thead><tr><th>Katalog</th><th>Zawartość</th></tr></thead><tbody><tr><td>models/</td><td>XET: xml_template.py, xml_export_template.py, xml_import_template.py, xml_validation_log.py, xml_xsd_import_wizard.py; komunikacja: communication_provider.py, communication_log.py, communication_provider_localdir.py; KSeF: communication_provider_ksef*.py (główny 5806 l.), account_move_ksef_qr.py, invoice.py, upo_pdf.py; ksef_api_client.py i ksef_v2_client.py – nieimportowane</td></tr><tr><td>wizard/</td><td>kreatory: XSD → XET, wgranie XSD, import JSON, wybór konfiguracji providera, import certyfikatów KSeF</td></tr><tr><td>reports/</td><td>invoice_report.py, ksef_invoice_report.xml – podgląd faktury KSeF z XML</td></tr><tr><td>views/</td><td>widoki, menu, crony, szablony UPO i QR; 6 plików spoza manifestu</td></tr><tr><td>data/</td><td>szablony XET FA(3) w JSON (VAT, KOR, ROZ), szablon importu, dane providera (zakomentowane w manifeście)</td></tr><tr><td>security/</td><td>grupa XML Export Administrator, ir.model.access.csv, reguła odczytu communication.provider</td></tr><tr><td>static/</td><td>opis modułu, ikony, reload_after_notification.js</td></tr></tbody></table></div><h2 id="spis">Spis dokumentów</h2><div class="tablewrap"><table><thead><tr><th>Strona</th><th>Zawartość</th></tr></thead><tbody><tr><td><a href="architektura.html">Architektura</a></td><td>kontekst, komponenty, wdrożenie, prawa dostępu, menu</td></tr><tr><td><a href="przypadki_uzycia.html">Przypadki użycia</a></td><td>użytkownicy i zadania automatyczne</td></tr><tr><td><a href="model_danych.html">Model danych</a></td><td>relacje, klasy XET, komunikacji, KSeF i rozszerzenia</td></tr><tr><td><a href="stany.html">Stany i przejścia</a></td><td>state, ksef_operation, ksef_status, ksef_process_state, szablon; przyciski</td></tr><tr><td><a href="sekwencje.html">Sekwencje</a></td><td>eksport, kolejka, planowanie i import, faktura, offline</td></tr><tr><td><a href="procesy_bpmn.html">Procesy BPMN</a></td><td>eksport, import, kolejka – pliki .bpmn dla Camunda Modeler</td></tr></tbody></table></div>
+<footer>Stan na 19.10.2026. Źródła: kod gałęzi 15.0 (commit d02c4e7, wersja 15.1.6) – github.com/Hadron4biz/hfb_xmlmap_exporter; dane instancji Odoo15 (KAPE) odczytane przez konektor w trybie tylko do odczytu.</footer>
+</main></div>
+<script>
+document.querySelectorAll('figure.dia button.zoom').forEach(b=>{
+  b.addEventListener('click',()=>{const f=b.closest('figure');const z=f.classList.toggle('zoom');
+    b.textContent=z?'Dopasuj do szerokości':'Rozmiar rzeczywisty';b.setAttribute('aria-pressed',z)});
+});
+</script>
+</body></html>

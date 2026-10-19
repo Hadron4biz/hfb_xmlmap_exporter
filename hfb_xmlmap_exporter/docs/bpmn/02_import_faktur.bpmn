@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Defs_02" targetNamespace="http://hadron.eu.com/bpmn/hfb_transfer_order_febelco" exporter="Camunda Modeler" exporterVersion="5.28.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.22.0">
+  <bpmn:collaboration id="Collab_02" name="Import faktur z KSeF">
+    <bpmn:participant id="Part_KSeF" name="API KSeF 2.0 (MF)">
+    </bpmn:participant>
+    <bpmn:participant id="Part_Odoo" name="Odoo 15 – hfb_xmlmap_exporter" processRef="Process_Import">
+    </bpmn:participant>
+    <bpmn:messageFlow id="M_List" name="Zapytanie o metadane" sourceRef="T_List" targetRef="Part_KSeF" />
+    <bpmn:messageFlow id="M_Xml" name="XML faktury" sourceRef="Part_KSeF" targetRef="T_Imp" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Import" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Process_Import">
+      <bpmn:lane id="Lane_Plan" name="ir.cron 42 – planowanie listy">
+        <bpmn:flowNodeRef>S_Plan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Should</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Should</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Create</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_Plan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_Skip</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_List" name="ir.cron 41 – log listy">
+        <bpmn:flowNodeRef>S_List</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_List</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_List</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_LFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Done</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_List</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Child" name="ir.cron 41 – log potomny">
+        <bpmn:flowNodeRef>S_Ch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Imp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Res</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_Ch</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Plan" name="Co 1 h">
+      <bpmn:outgoing>Flow_S_Plan_T_Should</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_S_Plan" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="T_Should" name="_should_create_import_list_job">
+      <bpmn:incoming>Flow_S_Plan_T_Should</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_Should_G_Should</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_Should" name="Utworzyć?" default="Flow_G_Should_E_Skip">
+      <bpmn:incoming>Flow_T_Should_G_Should</bpmn:incoming>
+      <bpmn:outgoing>Flow_G_Should_T_Create</bpmn:outgoing>
+      <bpmn:outgoing>Flow_G_Should_E_Skip</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Create" name="_create_import_list_record [import_list | auth]">
+      <bpmn:incoming>Flow_G_Should_T_Create</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_Create_E_Plan</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="E_Plan" name="Log listy utworzony">
+      <bpmn:incoming>Flow_T_Create_E_Plan</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="E_Skip" name="Pominięto">
+      <bpmn:incoming>Flow_G_Should_E_Skip</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="S_List" name="Cron kolejki">
+      <bpmn:outgoing>Flow_S_List_T_List</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_S_List" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="T_List" name="import_list: get_received_invoices">
+      <bpmn:incoming>Flow_S_List_T_List</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_List_G_List</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_List" name="Sukces?" default="Flow_G_List_E_LFail">
+      <bpmn:incoming>Flow_T_List_G_List</bpmn:incoming>
+      <bpmn:outgoing>Flow_G_List_Sub</bpmn:outgoing>
+      <bpmn:outgoing>Flow_G_List_E_LFail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="E_LFail" name="failed, ponowienie +5 min">
+      <bpmn:incoming>Flow_G_List_E_LFail</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="Sub" name="Dla każdej faktury z listy">
+      <bpmn:incoming>Flow_G_List_Sub</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_T_Done</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" />
+      <bpmn:startEvent id="SS" name="">
+        <bpmn:outgoing>Flow_SS_G1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:exclusiveGateway id="G1" name="Faktura w Odoo?">
+        <bpmn:incoming>Flow_SS_G1</bpmn:incoming>
+        <bpmn:outgoing>Flow_G1_G2</bpmn:outgoing>
+        <bpmn:outgoing>Flow_G1_SE</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:exclusiveGateway id="G2" name="Log importu istnieje?">
+        <bpmn:incoming>Flow_G1_G2</bpmn:incoming>
+        <bpmn:outgoing>Flow_G2_T_Child</bpmn:outgoing>
+        <bpmn:outgoing>Flow_G2_SE</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="T_Child" name="Utwórz log potomny [draft]">
+        <bpmn:incoming>Flow_G2_T_Child</bpmn:incoming>
+        <bpmn:outgoing>Flow_T_Child_SE</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SE" name="">
+        <bpmn:incoming>Flow_G1_SE</bpmn:incoming>
+        <bpmn:incoming>Flow_G2_SE</bpmn:incoming>
+        <bpmn:incoming>Flow_T_Child_SE</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_SS_G1" sourceRef="SS" targetRef="G1" />
+      <bpmn:sequenceFlow id="Flow_G1_G2" name="nie" sourceRef="G1" targetRef="G2" />
+      <bpmn:sequenceFlow id="Flow_G1_SE" name="tak" sourceRef="G1" targetRef="SE" />
+      <bpmn:sequenceFlow id="Flow_G2_T_Child" name="nie" sourceRef="G2" targetRef="T_Child" />
+      <bpmn:sequenceFlow id="Flow_G2_SE" name="tak" sourceRef="G2" targetRef="SE" />
+      <bpmn:sequenceFlow id="Flow_T_Child_SE" sourceRef="T_Child" targetRef="SE" />
+    </bpmn:subProcess>
+    <bpmn:serviceTask id="T_Done" name="ksef_operation = completed">
+      <bpmn:incoming>Flow_Sub_T_Done</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_Done_E_List</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="E_List" name="Koniec">
+      <bpmn:incoming>Flow_T_Done_E_List</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="S_Ch" name="Cron kolejki">
+      <bpmn:outgoing>Flow_S_Ch_T_Imp</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_S_Ch" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="T_Imp" name="import_invoice: pobranie XML [queued]">
+      <bpmn:incoming>Flow_S_Ch_T_Imp</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_Imp_T_Res</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="T_Res" name="restore_invoice: account.move [received]">
+      <bpmn:incoming>Flow_T_Imp_T_Res</bpmn:incoming>
+      <bpmn:outgoing>Flow_T_Res_E_Ch</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="E_Ch" name="completed">
+      <bpmn:incoming>Flow_T_Res_E_Ch</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_S_Plan_T_Should" sourceRef="S_Plan" targetRef="T_Should" />
+    <bpmn:sequenceFlow id="Flow_T_Should_G_Should" sourceRef="T_Should" targetRef="G_Should" />
+    <bpmn:sequenceFlow id="Flow_G_Should_T_Create" name="tak" sourceRef="G_Should" targetRef="T_Create" />
+    <bpmn:sequenceFlow id="Flow_G_Should_E_Skip" name="nie" sourceRef="G_Should" targetRef="E_Skip" />
+    <bpmn:sequenceFlow id="Flow_T_Create_E_Plan" sourceRef="T_Create" targetRef="E_Plan" />
+    <bpmn:sequenceFlow id="Flow_S_List_T_List" sourceRef="S_List" targetRef="T_List" />
+    <bpmn:sequenceFlow id="Flow_T_List_G_List" sourceRef="T_List" targetRef="G_List" />
+    <bpmn:sequenceFlow id="Flow_G_List_Sub" name="tak" sourceRef="G_List" targetRef="Sub" />
+    <bpmn:sequenceFlow id="Flow_G_List_E_LFail" name="nie" sourceRef="G_List" targetRef="E_LFail" />
+    <bpmn:sequenceFlow id="Flow_Sub_T_Done" sourceRef="Sub" targetRef="T_Done" />
+    <bpmn:sequenceFlow id="Flow_T_Done_E_List" sourceRef="T_Done" targetRef="E_List" />
+    <bpmn:sequenceFlow id="Flow_S_Ch_T_Imp" sourceRef="S_Ch" targetRef="T_Imp" />
+    <bpmn:sequenceFlow id="Flow_T_Imp_T_Res" sourceRef="T_Imp" targetRef="T_Res" />
+    <bpmn:sequenceFlow id="Flow_T_Res_E_Ch" sourceRef="T_Res" targetRef="E_Ch" />
+    <bpmn:textAnnotation id="N2"><bpmn:text>Kontrola duplikatów: numer KSeF wśród logów importu (bez warunku parent_id, wersja 15.1.6).</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_N2" sourceRef="G2" targetRef="N2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Collab_02">
+    <bpmndi:BPMNPlane id="BPMNPlane_Collab_02" bpmnElement="Collab_02">
+      <bpmndi:BPMNShape id="Part_KSeF_di" bpmnElement="Part_KSeF" isHorizontal="true">
+        <dc:Bounds x="160" y="20" width="1500" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Part_Odoo_di" bpmnElement="Part_Odoo" isHorizontal="true">
+        <dc:Bounds x="160" y="110" width="1500" height="600" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Plan_di" bpmnElement="Lane_Plan" isHorizontal="true">
+        <dc:Bounds x="190" y="110" width="1470" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_List_di" bpmnElement="Lane_List" isHorizontal="true">
+        <dc:Bounds x="190" y="280" width="1470" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Child_di" bpmnElement="Lane_Child" isHorizontal="true">
+        <dc:Bounds x="190" y="530" width="1470" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_di" bpmnElement="Sub" isExpanded="true">
+        <dc:Bounds x="590" y="300" width="660" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Plan_di" bpmnElement="S_Plan">
+        <dc:Bounds x="232" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Should_di" bpmnElement="T_Should">
+        <dc:Bounds x="310" y="145" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Should_di" bpmnElement="G_Should" isMarkerVisible="true">
+        <dc:Bounds x="485" y="165" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="480" y="140" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Create_di" bpmnElement="T_Create">
+        <dc:Bounds x="590" y="145" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Plan_di" bpmnElement="E_Plan">
+        <dc:Bounds x="772" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Skip_di" bpmnElement="E_Skip">
+        <dc:Bounds x="492" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="540" y="242" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_List_di" bpmnElement="S_List">
+        <dc:Bounds x="232" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_List_di" bpmnElement="T_List">
+        <dc:Bounds x="310" y="335" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_List_di" bpmnElement="G_List" isMarkerVisible="true">
+        <dc:Bounds x="485" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="485" y="330" width="50" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_LFail_di" bpmnElement="E_LFail">
+        <dc:Bounds x="492" y="472" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="540" y="482" width="150" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SS_di" bpmnElement="SS">
+        <dc:Bounds x="612" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G1_di" bpmnElement="G1" isMarkerVisible="true">
+        <dc:Bounds x="705" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="700" y="335" width="100" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G2_di" bpmnElement="G2" isMarkerVisible="true">
+        <dc:Bounds x="835" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="830" y="335" width="120" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Child_di" bpmnElement="T_Child">
+        <dc:Bounds x="940" y="335" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SE_di" bpmnElement="SE">
+        <dc:Bounds x="1152" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Done_di" bpmnElement="T_Done">
+        <dc:Bounds x="1300" y="335" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_List_di" bpmnElement="E_List">
+        <dc:Bounds x="1482" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Ch_di" bpmnElement="S_Ch">
+        <dc:Bounds x="232" y="602" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Imp_di" bpmnElement="T_Imp">
+        <dc:Bounds x="310" y="575" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Res_di" bpmnElement="T_Res">
+        <dc:Bounds x="450" y="575" width="120" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Ch_di" bpmnElement="E_Ch">
+        <dc:Bounds x="632" y="602" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N2_di" bpmnElement="N2">
+        <dc:Bounds x="700" y="480" width="360" height="42" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_S_Plan_T_Should_di" bpmnElement="Flow_S_Plan_T_Should">
+        <di:waypoint x="268" y="190" />
+        <di:waypoint x="310" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Should_G_Should_di" bpmnElement="Flow_T_Should_G_Should">
+        <di:waypoint x="430" y="190" />
+        <di:waypoint x="485" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G_Should_T_Create_di" bpmnElement="Flow_G_Should_T_Create">
+        <di:waypoint x="535" y="190" />
+        <di:waypoint x="590" y="190" />
+        <bpmndi:BPMNLabel><dc:Bounds x="570" y="172" width="30" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G_Should_E_Skip_di" bpmnElement="Flow_G_Should_E_Skip">
+        <di:waypoint x="510" y="215" />
+        <di:waypoint x="510" y="232" />
+        <bpmndi:BPMNLabel><dc:Bounds x="480" y="220" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Create_E_Plan_di" bpmnElement="Flow_T_Create_E_Plan">
+        <di:waypoint x="710" y="190" />
+        <di:waypoint x="772" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S_List_T_List_di" bpmnElement="Flow_S_List_T_List">
+        <di:waypoint x="268" y="380" />
+        <di:waypoint x="310" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_List_G_List_di" bpmnElement="Flow_T_List_G_List">
+        <di:waypoint x="430" y="380" />
+        <di:waypoint x="485" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G_List_Sub_di" bpmnElement="Flow_G_List_Sub">
+        <di:waypoint x="535" y="380" />
+        <di:waypoint x="590" y="380" />
+        <bpmndi:BPMNLabel><dc:Bounds x="555" y="362" width="30" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G_List_E_LFail_di" bpmnElement="Flow_G_List_E_LFail">
+        <di:waypoint x="510" y="405" />
+        <di:waypoint x="510" y="472" />
+        <bpmndi:BPMNLabel><dc:Bounds x="480" y="420" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SS_G1_di" bpmnElement="Flow_SS_G1">
+        <di:waypoint x="648" y="380" />
+        <di:waypoint x="705" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G1_G2_di" bpmnElement="Flow_G1_G2">
+        <di:waypoint x="755" y="380" />
+        <di:waypoint x="835" y="380" />
+        <bpmndi:BPMNLabel><dc:Bounds x="770" y="362" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G1_SE_di" bpmnElement="Flow_G1_SE">
+        <di:waypoint x="730" y="405" />
+        <di:waypoint x="730" y="440" />
+        <di:waypoint x="1170" y="440" />
+        <di:waypoint x="1170" y="398" />
+        <bpmndi:BPMNLabel><dc:Bounds x="740" y="422" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G2_T_Child_di" bpmnElement="Flow_G2_T_Child">
+        <di:waypoint x="885" y="380" />
+        <di:waypoint x="940" y="380" />
+        <bpmndi:BPMNLabel><dc:Bounds x="900" y="362" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_G2_SE_di" bpmnElement="Flow_G2_SE">
+        <di:waypoint x="860" y="405" />
+        <di:waypoint x="860" y="430" />
+        <di:waypoint x="1150" y="430" />
+        <di:waypoint x="1157" y="393" />
+        <bpmndi:BPMNLabel><dc:Bounds x="870" y="412" width="24" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Child_SE_di" bpmnElement="Flow_T_Child_SE">
+        <di:waypoint x="1060" y="380" />
+        <di:waypoint x="1152" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_T_Done_di" bpmnElement="Flow_Sub_T_Done">
+        <di:waypoint x="1250" y="380" />
+        <di:waypoint x="1300" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Done_E_List_di" bpmnElement="Flow_T_Done_E_List">
+        <di:waypoint x="1420" y="380" />
+        <di:waypoint x="1482" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S_Ch_T_Imp_di" bpmnElement="Flow_S_Ch_T_Imp">
+        <di:waypoint x="268" y="620" />
+        <di:waypoint x="310" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Imp_T_Res_di" bpmnElement="Flow_T_Imp_T_Res">
+        <di:waypoint x="430" y="620" />
+        <di:waypoint x="450" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T_Res_E_Ch_di" bpmnElement="Flow_T_Res_E_Ch">
+        <di:waypoint x="570" y="620" />
+        <di:waypoint x="632" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M_List_di" bpmnElement="M_List">
+        <di:waypoint x="400" y="335" />
+        <di:waypoint x="400" y="300" />
+        <di:waypoint x="460" y="300" />
+        <di:waypoint x="460" y="80" />
+        <bpmndi:BPMNLabel><dc:Bounds x="468" y="90" width="120" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M_Xml_di" bpmnElement="M_Xml">
+        <di:waypoint x="290" y="80" />
+        <di:waypoint x="290" y="555" />
+        <di:waypoint x="340" y="555" />
+        <di:waypoint x="340" y="575" />
+        <bpmndi:BPMNLabel><dc:Bounds x="210" y="90" width="70" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_N2_di" bpmnElement="Assoc_N2">
+        <di:waypoint x="860" y="405" />
+        <di:waypoint x="720" y="480" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
