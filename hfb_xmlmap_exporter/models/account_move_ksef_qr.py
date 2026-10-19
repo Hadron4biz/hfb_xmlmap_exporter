@@ -384,6 +384,7 @@ class AccountMove(models.Model):
 			_logger.info(f"[KSeF QR] Faktura przychodząca, używam NIP partnera: {nip}")
 		
 		if len(nip) != 10 or not nip.isdigit():
+			return None
 			raise UserError(_("Nieprawidłowy NIP sprzedawcy."))
 
 		base_url = self._get_ksef_qr_base_url()

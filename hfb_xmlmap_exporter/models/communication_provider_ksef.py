@@ -5635,15 +5635,17 @@ class CommunicationProviderKsef(models.Model):
 						"Dla autoryzacji JET API wymagane są zarówno klucz jak i token API"
 					)
 	
+	"""
 	@api.constrains('auth_type', 'auth_keystore_p12', 'sign_keystore_p12')
 	def _check_certificate_credentials(self):
-		"""Walidacja dla certyfikatu"""
+		"Walidacja dla certyfikatu"
 		for record in self:
 			if record.auth_type == 'certificate':
 				if not record.auth_keystore_p12 or not record.sign_keystore_p12:
 					raise ValidationError(
 						"Dla autoryzacji certyfikatem wymagane są oba keystore (AUTH i SIGN)"
 					)
+	"""
 
 	# -------------------------------------------------------------------------
 	# PROVIDER TEST

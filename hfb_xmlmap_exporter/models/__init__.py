@@ -46,6 +46,7 @@ from . import communication_provider_ksef      # Dziedziczy/wykorzystuje communi
 from . import communication_provider_ksef_addons # Rozszerzenia dla importu/konwersji faktury ksef xml do odoo
 from . import communication_provider_ksef_qrcode # Obsługa QR Type I
 from . import communication_provider_ksef_offline # Obsługa Trybu Offline i QR Type II
+from . import communication_provider_ksef_mfcert    # Dodatek do pobierania klucza publicznego MF
 #from . import communication_provider_ksef_workflow # Rozszerzenie CommunicationProviderKsef o pełny workflow sesji kwalifikowanej
 
 # 5. MODELE BIZNESOWE (używają providerów)

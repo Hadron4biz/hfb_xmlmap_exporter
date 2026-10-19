@@ -46,7 +46,7 @@ import time
 import signal
 from markupsafe import Markup, escape
 _logger = logging.getLogger(__name__)
-
+from decimal import Decimal, ROUND_HALF_UP
 
 class CommunicationLog(models.Model):
 	_inherit = "communication.log"
@@ -648,101 +648,8 @@ class CommunicationLog(models.Model):
 		return None
 
 	# =========================================================================
-	# GŁÓWNA METODA IMPORTU
+	# GŁÓWNA METODA IMPORTU :: usunięta _process_invoice_lines_zal
 	# =========================================================================
-	def _process_invoice_lines_zal(self, xml_root, line_nodes, ns):
-		"""
-		Przetwarza wiersze dla faktur zaliczkowych (ZamowienieWiersz).
-		"""
-		lines_values = []
-		ns_uri = ns.get('ns') if ns else None
-		
-		# Znajdź WSZYSTKIE ZamowienieWiersz
-		if ns_uri:
-			line_containers = xml_root.findall(f'.//{{{ns_uri}}}ZamowienieWiersz')
-		else:
-			line_containers = xml_root.findall('.//ZamowienieWiersz')
-		
-		_logger.info("📄 Found %d ZAL invoice lines (ZamowienieWiersz)", len(line_containers))
-		
-		for line_index, line_container in enumerate(line_containers):
-			line_vals = {'sequence': (line_index + 1) * 10}
-			
-			# Pobierz wartości (z suffix Z!)
-			p7z = self._get_xml_value(line_container, 'P_7Z', ns)		 # Nazwa
-			p8az = self._get_xml_value(line_container, 'P_8AZ', ns)	   # Jednostka
-			p8bz = self._get_xml_value(line_container, 'P_8BZ', ns)	   # Ilość
-			p9az = self._get_xml_value(line_container, 'P_9AZ', ns)	   # Cena jednostkowa
-			p11nettoz = self._get_xml_value(line_container, 'P_11NettoZ', ns)  # Netto
-			p11vatz = self._get_xml_value(line_container, 'P_11VatZ', ns) # VAT
-			p12z = self._get_xml_value(line_container, 'P_12Z', ns)	   # Stawka VAT
-			
-			# Nazwa
-			if p7z:
-				line_vals['name'] = p7z
-			else:
-				line_vals['name'] = f"Zaliczka {line_index + 1}"
-			
-			# Ilość
-			if p8bz:
-				try:
-					line_vals['quantity'] = float(p8bz.replace(',', '.'))
-				except:
-					line_vals['quantity'] = 1.0
-			else:
-				line_vals['quantity'] = 1.0
-			
-			# CENA JEDNOSTKOWA - preferuj P_9AZ, potem oblicz z netto
-			price_unit_set = False
-			if p9az:
-				try:
-					line_vals['price_unit'] = float(p9az.replace(',', '.'))
-					price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set and p11nettoz and p8bz:
-				try:
-					netto = float(p11nettoz.replace(',', '.'))
-					ilosc = float(p8bz.replace(',', '.'))
-					if ilosc != 0:
-						line_vals['price_unit'] = netto / ilosc
-						price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set:
-				line_vals['price_unit'] = 0.0
-			
-			# Podatek (P_12Z)
-			if p12z:
-				tax_ids = self._find_tax_ids_by_name(p12z)
-				if tax_ids:
-					line_vals['tax_ids'] = [(6, 0, tax_ids)]
-			
-			# Jednostka (P_8AZ)
-			if p8az:
-				uom = self._find_uom_by_name(p8az)
-				if uom:
-					line_vals['product_uom_id'] = uom.id
-			
-			# Numer wiersza
-			nr_wiersza = self._get_xml_value(line_container, 'NrWierszaZam', ns)
-			if nr_wiersza:
-				try:
-					line_vals['sequence'] = int(nr_wiersza) * 10
-				except:
-					pass
-			
-			lines_values.append((0, 0, line_vals))
-				
-			_logger.debug("✅ ZAL Line %d: %s, qty: %s, price: %s", 
-						 line_index + 1, 
-						 line_vals.get('name', 'No name')[:30],
-						 line_vals.get('quantity'),
-						 line_vals.get('price_unit'))
-		
-		return lines_values
 
 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	# metoda pomocnicza dla głwnej metody odtwarzania faktury przychodzącej
@@ -1257,18 +1164,32 @@ class CommunicationLog(models.Model):
 		
 		# 7. PRZETWÓRZ WIERSZE FAKTURY (nowa metoda dla FaWiersz!)
 		lines_values = []
-		
-		if rodzaj in ['ZAL', 'KOR_ZAL']:
-			# Faktury zaliczkowe - ZamowienieWiersz
-			lines_values = self._process_invoice_lines_zal(xml_root, line_field_nodes, ns)
+		if rodzaj == 'ZAL':
+			lines_values = self._process_zal_accounting_lines(
+				xml_root,
+				ns,
+			)
+		elif rodzaj == 'ROZ':
+			lines_values = self._process_roz_accounting_lines(
+				xml_root,
+				line_field_nodes,
+				ns,
+			)
 		else:
-			# Pozostałe typy - FaWiersz
-			lines_values = self._process_invoice_lines_fawiersz(xml_root, line_field_nodes, ns)
+			lines_values = self._process_invoice_lines_fawiersz(
+				xml_root,
+				line_field_nodes,
+				ns,
+			)
 
 		if lines_values:
 			values['invoice_line_ids'] = lines_values
-			_logger.info("✅ Added %d invoice lines", len(lines_values))
-		
+			_logger.info(
+				"Added %d invoice lines for %s",
+				len(lines_values),
+				rodzaj,
+			)
+
 		# 8. DODAJ POLA SPECJALNE Z FAKTURY
 		self._add_invoice_specific_fields(values, xml_root, rodzaj)
 		values['ksef_rodzaj_faktury'] = rodzaj
@@ -1291,6 +1212,466 @@ class CommunicationLog(models.Model):
 					 rodzaj, values.get('move_type'), len(values), len(lines_values) if 'invoice_line_ids' in values else 0)
 		
 		return values
+
+	# -------------------------------------------------------------------------
+	# Helper'y na potrzeby ZAL, 
+	# gdy w przysłanym XML nie ma wierszy a jest np. kwota
+	# -------------------------------------------------------------------------
+	def _format_ksef_vat_rate_label(self, rate):
+		if rate in (None, ''):
+			return ''
+
+		raw = str(rate).strip()
+
+		special_labels = {
+			'zw': 'zw',
+			'np': 'np',
+			'oo': 'oo',
+			'0': '0%',
+			'0 WDT': '0% WDT',
+			'0 EX': '0% EX',
+		}
+
+		if raw in special_labels:
+			return special_labels[raw]
+
+		try:
+			value = float(raw.replace(',', '.'))
+
+			if value.is_integer():
+				return f"{int(value)}%"
+
+			return f"{value:g}%"
+
+		except ValueError:
+			return raw
+
+	###
+	def _process_roz_accounting_lines(
+		self,
+		xml_root,
+		line_nodes,
+		ns,
+	):
+		"""
+		Tworzy księgowe wiersze faktury rozliczeniowej ROZ.
+		Logika:
+		1. FaWiersz tworzą pełne pozycje sprzedaży.
+		2. Pełne wartości FaWiersz są grupowane według stawki VAT.
+		3. P_13_* określają wartości netto pozostałe
+		   po rozliczeniu zaliczek.
+		4. Różnica:
+			   pełne netto FaWiersz - P_13_*
+		   tworzy ujemne techniczne linie rozliczenia zaliczek.
+		5. P_15 służy do kontroli końcowej wartości dokumentu.
+		FakturaZaliczkowa służy do identyfikacji i powiązania
+		wcześniejszych dokumentów ZAL, ale nie jest źródłem
+		kwot technicznych linii rozliczenia.
+		"""
+
+		def _to_decimal(value):
+			if value in (None, ''):
+				return Decimal('0.00')
+			try:
+				return Decimal(
+					str(value).replace(',', '.').strip()
+				)
+			except Exception:
+				return Decimal('0.00')
+
+		def _money(value):
+			return value.quantize(
+				Decimal('0.01'),
+				rounding=ROUND_HALF_UP,
+			)
+
+		def _normalize_rate(rate):
+			if rate in (None, ''):
+				return ''
+
+			raw = str(rate).strip()
+			lower = raw.lower()
+
+			aliases = {
+				'0%': '0',
+				'0 wdt': '0 WDT',
+				'0% wdt': '0 WDT',
+				'0 ex': '0 EX',
+				'0% ex': '0 EX',
+				'zw': 'zw',
+				'np': 'np',
+				'oo': 'oo',
+			}
+
+			return aliases.get(lower, raw)
+
+		# ------------------------------------------------------------
+		# 1. Pełne pozycje sprzedaży z FaWiersz
+		# ------------------------------------------------------------
+		lines_values = self._process_invoice_lines_fawiersz(
+			xml_root,
+			line_nodes,
+			ns,
+		)
+
+		ns_uri = ns.get('ns') if ns else None
+		if ns_uri:
+			fa_lines = xml_root.findall(
+				f'.//{{{ns_uri}}}FaWiersz'
+			)
+		else:
+			fa_lines = xml_root.findall(
+				'.//FaWiersz'
+			)
+
+		# ------------------------------------------------------------
+		# 2. Pełne wartości netto FaWiersz według stawki VAT
+		# ------------------------------------------------------------
+		full_net_by_rate = {}
+		for node in fa_lines:
+			rate = _normalize_rate(
+				self._get_xml_value(
+					node,
+					'P_12',
+					ns,
+				)
+			)
+
+			net = _money(
+				_to_decimal(
+					self._get_xml_value(
+						node,
+						'P_11',
+						ns,
+					)
+				)
+			)
+
+			if not rate:
+				_logger.warning(
+					"ROZ: FaWiersz bez P_12; "
+					"nie można przypisać pozycji do stawki VAT"
+				)
+				continue
+
+			full_net_by_rate.setdefault(
+				rate,
+				Decimal('0.00'),
+			)
+
+			full_net_by_rate[rate] += net
+
+
+		# ------------------------------------------------------------
+		# 3. Wartości ROZ po rozliczeniu zaliczek
+		# ------------------------------------------------------------
+		summary_fields = [
+			('P_13_1', 'P_14_1', '23'),
+			('P_13_2', 'P_14_2', '8'),
+			('P_13_3', 'P_14_3', '5'),
+
+			('P_13_6_1', None, '0'),
+			('P_13_6_2', None, '0 WDT'),
+			('P_13_6_3', None, '0 EX'),
+
+			('P_13_7', None, 'zw'),
+			('P_13_8', None, 'np'),
+			('P_13_10', None, 'oo'),
+		]
+
+		target_net_by_rate = {}
+		target_vat_by_rate = {}
+
+		for net_field, vat_field, vat_rate in summary_fields:
+			net_raw = self._extract_direct_value(
+				xml_root,
+				f'.//{net_field}',
+			)
+
+			if net_raw in (None, ''):
+				continue
+
+			rate = _normalize_rate(vat_rate)
+			target_net_by_rate[rate] = _money(
+				_to_decimal(net_raw)
+			)
+
+			vat_raw = None
+
+			if vat_field:
+				vat_raw = self._extract_direct_value(
+					xml_root,
+					f'.//{vat_field}',
+				)
+
+			target_vat_by_rate[rate] = _money(
+				_to_decimal(vat_raw)
+			)
+
+		# ------------------------------------------------------------
+		# 4. Techniczne linie rozliczenia zaliczek
+		# ------------------------------------------------------------
+		max_sequence = max(
+			[
+				command[2].get('sequence', 0)
+				for command in lines_values
+				if (
+					isinstance(command, tuple)
+					and len(command) >= 3
+					and isinstance(command[2], dict)
+				)
+			]
+			or [0]
+		)
+
+		sequence = max_sequence + 10
+		all_rates = (
+			set(full_net_by_rate)
+			| set(target_net_by_rate)
+		)
+
+		def _rate_sort_key(rate):
+			try:
+				return (
+					0,
+					Decimal(
+						str(rate).replace(',', '.')
+					),
+				)
+			except Exception:
+				return (
+					1,
+					str(rate),
+				)
+
+		for vat_rate in sorted(
+			all_rates,
+			key=_rate_sort_key,
+		):
+
+			full_net = _money(
+				full_net_by_rate.get(
+					vat_rate,
+					Decimal('0.00'),
+				)
+			)
+
+			target_net = _money(
+				target_net_by_rate.get(
+					vat_rate,
+					Decimal('0.00'),
+				)
+			)
+
+			settled_net = _money(
+				full_net - target_net
+			)
+
+			if settled_net == Decimal('0.00'):
+				continue
+
+			line_amount = -settled_net
+			if settled_net < Decimal('0.00'):
+				_logger.warning(
+					"ROZ: dla stawki %s wartość P_13 jest większa "
+					"od pełnej wartości FaWiersz: full=%s target=%s",
+					vat_rate,
+					full_net,
+					target_net,
+				)
+
+			rate_label = self._format_ksef_vat_rate_label(
+				vat_rate
+			)
+
+			line_vals = {
+				'name': (
+					f'Rozliczenie zaliczek KSeF – '
+					f'stawka {rate_label}'
+				),
+				'quantity': 1.0,
+				'price_unit': float(line_amount),
+				'sequence': sequence,
+			}
+
+			tax_ids = self._find_tax_ids_by_name(
+				vat_rate
+			)
+
+			if tax_ids:
+				line_vals['tax_ids'] = [
+					(6, 0, tax_ids)
+				]
+
+			else:
+				_logger.warning(
+					"ROZ: tax not found for rate %s",
+					vat_rate,
+				)
+
+			lines_values.append(
+				(0, 0, line_vals)
+			)
+
+			_logger.info(
+				"ROZ settlement line: "
+				"rate=%s full_net=%s target_net=%s "
+				"settled_net=%s line_amount=%s",
+				vat_rate,
+				full_net,
+				target_net,
+				settled_net,
+				line_amount,
+			)
+
+			sequence += 10
+
+		# ------------------------------------------------------------
+		# 5. Kontrola P_13 + P_14 == P_15
+		# ------------------------------------------------------------
+		target_net_total = _money(
+			sum(
+				target_net_by_rate.values(),
+				Decimal('0.00'),
+			)
+		)
+
+		target_vat_total = _money(
+			sum(
+				target_vat_by_rate.values(),
+				Decimal('0.00'),
+			)
+		)
+
+		target_gross_total = _money(
+			target_net_total
+			+ target_vat_total
+		)
+
+		p15_raw = self._extract_direct_value(
+			xml_root,
+			'.//P_15',
+		)
+
+		p15 = _money(
+			_to_decimal(p15_raw)
+		)
+
+		difference = _money(
+			target_gross_total - p15
+		)
+
+		if abs(difference) > Decimal('0.01'):
+			_logger.warning(
+				"ROZ totals mismatch: "
+				"P_13/P_14 gross=%s, "
+				"P_15=%s, "
+				"difference=%s",
+				target_gross_total,
+				p15,
+				difference,
+			)
+		else:
+			_logger.info(
+				"ROZ totals OK: "
+				"net=%s vat=%s gross=%s P_15=%s",
+				target_net_total,
+				target_vat_total,
+				target_gross_total,
+				p15,
+			)
+
+		_logger.info(
+			"ROZ: created %d accounting lines",
+			len(lines_values),
+		)
+
+		return lines_values
+
+	###
+	def _process_zal_accounting_lines(self, xml_root, ns):
+		"""
+		Tworzy księgowe wiersze faktury zaliczkowej ZAL
+		na podstawie pól podsumowania P_13_*.
+
+		Każda występująca podstawa opodatkowania tworzy
+		osobny wiersz account.move.line dla odpowiedniej
+		stawki VAT.
+
+		ZamowienieWiersz nie jest źródłem invoice_line_ids.
+		"""
+		lines_values = []
+
+		summary_fields = [
+			('P_13_1', 'P_14_1', '23'),
+			('P_13_2', 'P_14_2', '8'),
+			('P_13_3', 'P_14_3', '5'),
+			('P_13_6_1', None, '0'),
+			('P_13_6_2', None, '0 WDT'),
+			('P_13_6_3', None, '0 EX'),
+			('P_13_7', None, 'zw'),
+			('P_13_8', None, 'np'),
+			('P_13_10', None, 'oo'),
+		]
+
+		sequence = 10
+
+		for net_field, vat_field, vat_rate in summary_fields:
+			net_raw = self._extract_direct_value(
+				xml_root,
+				f'.//{net_field}'
+			)
+
+			if not net_raw:
+				continue
+
+			try:
+				net_amount = float(
+					net_raw.replace(',', '.')
+				)
+			except (ValueError, TypeError):
+				continue
+
+			# Tylko do czytelnej nazwy wiersza.
+			rate_label = self._format_ksef_vat_rate_label(
+				vat_rate
+			)
+
+			line_vals = {
+				'name': f'Zaliczka KSeF – stawka {rate_label}',
+				'quantity': 1.0,
+				'price_unit': net_amount,
+				'sequence': sequence,
+			}
+
+			# Do wyszukania podatku przekazujemy wartość surową,
+			# np. "23", "8", "zw", "np".
+			tax_ids = self._find_tax_ids_by_name(
+				vat_rate
+			)
+
+			if tax_ids:
+				line_vals['tax_ids'] = [
+					(6, 0, tax_ids)
+				]
+			else:
+				_logger.warning(
+					"ZAL fallback: tax not found for rate %s",
+					vat_rate,
+				)
+
+			lines_values.append(
+				(0, 0, line_vals)
+			)
+
+			sequence += 10
+
+		_logger.info(
+			"ZAL: created %d accounting lines from VAT summary",
+			len(lines_values),
+		)
+
+		return lines_values
 
 	# =========================================================================
 	# NOWE METODY DLA STRUKTURY FAWIERSZ
@@ -1392,15 +1773,16 @@ class CommunicationLog(models.Model):
 			}
 
 			# --- pobranie wartości XML ---
-			p7 = self._get_xml_value(line_container, 'P_7', ns)	 # opis
-			p8a = self._get_xml_value(line_container, 'P_8A', ns)   # jednostka miary
-			p9a = self._get_xml_value(line_container, 'P_9A', ns)   # cena jedn. netto
-			p10 = self._get_xml_value(line_container, 'P_10', ns)   # ilość
-			p11 = self._get_xml_value(line_container, 'P_11', ns)   # wartość netto
-			p12 = self._get_xml_value(line_container, 'P_12', ns)   # stawka VAT
+			p7 = self._get_xml_value( line_container, 'P_7', ns)	 # opis
+			p8a = self._get_xml_value( line_container, 'P_8A', ns)   # jednostka miary
+			p8b = self._get_xml_value( line_container, 'P_8B', ns)   # poprawka dla qty
+			p9a = self._get_xml_value( line_container, 'P_9A', ns)   # cena jedn. netto
+			p10 = self._get_xml_value( line_container, 'P_10', ns)   # ilość
+			p11 = self._get_xml_value( line_container, 'P_11', ns)   # wartość netto
+			p12 = self._get_xml_value( line_container, 'P_12', ns)   # stawka VAT
 
 			# --- konwersje ---
-			qty = _to_float(p10)
+			qty = _to_float(p8b)	# poprawka z p10
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
 
@@ -1463,121 +1845,7 @@ class CommunicationLog(models.Model):
 
 		return lines_values
 
-
-	def XXX_process_invoice_lines_fawiersz(self, xml_root, line_nodes, ns):
-		"""
-		Przetwarza wiersze faktury z FaWiersz (nowa struktura KSeF).
-		
-		Returns:
-			list: [(0, 0, line_vals), ...] dla invoice_line_ids
-		"""
-		lines_values = []
-		ns_uri = ns.get('ns') if ns else None
-		
-		# 1. Znajdź WSZYSTKIE FaWiersz
-		if ns_uri:
-			line_containers = xml_root.findall(f'.//{{{ns_uri}}}FaWiersz')
-		else:
-			line_containers = xml_root.findall('.//FaWiersz')
-		
-		# 2. Fallback: stara struktura Pozycje/P_2A
-		if not line_containers:
-			if ns_uri:
-				line_containers = xml_root.findall(f'.//{{{ns_uri}}}Pozycje/{{{ns_uri}}}P_2A')
-			else:
-				line_containers = xml_root.findall('.//Pozycje/P_2A')
-		
-		_logger.info("📄 Found %d invoice lines (FaWiersz)", len(line_containers))
-		
-		# 3. Przetwórz każdy wiersz
-		for line_index, line_container in enumerate(line_containers):
-			line_vals = {'sequence': (line_index + 1) * 10}
-			
-			# Pobierz kluczowe wartości bezpośrednio (szybsze i pewniejsze)
-			p7 = self._get_xml_value(line_container, 'P_7', ns)	 # Nazwa
-			p8a = self._get_xml_value(line_container, 'P_8A', ns)   # Jednostka
-			p8b = self._get_xml_value(line_container, 'P_8B', ns)   # Ilość
-			p9a = self._get_xml_value(line_container, 'P_9A', ns)   # Cena jednostkowa
-			p10 = self._get_xml_value(line_container, 'P_10', ns)   # Rabat
-			p11 = self._get_xml_value(line_container, 'P_11', ns)   # Wartość netto
-			p12 = self._get_xml_value(line_container, 'P_12', ns)   # Podatek
-			
-			# 4. Nazwa (wymagane)
-			if p7:
-				line_vals['name'] = p7
-			else:
-				line_vals['name'] = f"Pozycja {line_index + 1}"
-			
-			# 5. Ilość (wymagane)
-			if p8b:
-				try:
-					line_vals['quantity'] = float(p8b.replace(',', '.'))
-				except:
-					line_vals['quantity'] = 1.0
-			else:
-				line_vals['quantity'] = 1.0
-			
-			# 6. CENA JEDNOSTKOWA (KLUCZOWE!) - preferuj P_9A, jeśli nie ma, oblicz z P_11
-			price_unit_set = False
-			if p9a:
-				try:
-					line_vals['price_unit'] = float(p9a.replace(',', '.'))
-					price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set and p11 and p8b:
-				try:
-					netto = float(p11.replace(',', '.'))
-					ilosc = float(p8b.replace(',', '.'))
-					if ilosc != 0:
-						line_vals['price_unit'] = netto / ilosc
-						price_unit_set = True
-				except:
-					pass
-			
-			if not price_unit_set:
-				line_vals['price_unit'] = 0.0
-			
-			# 7. Rabat
-			if p10:
-				try:
-					line_vals['discount'] = float(p10.replace(',', '.'))
-				except:
-					pass
-			
-			# 8. PODATEK (NAJWAŻNIEJSZE!)
-			if p12:
-				tax_ids = self._find_tax_ids_by_name(p12)
-				if tax_ids:
-					line_vals['tax_ids'] = [(6, 0, tax_ids)]
-				else:
-					_logger.warning("⚠️ Tax not found for value: %s", p12)
-			
-			# 9. Jednostka miary
-			if p8a:
-				uom = self._find_uom_by_name(p8a)
-				if uom:
-					line_vals['product_uom_id'] = uom.id
-			
-			# 10. Numer wiersza (jeśli jest w XML)
-			nr_wiersza = self._get_xml_value(line_container, 'NrWierszaFa', ns)
-			if nr_wiersza:
-				try:
-					line_vals['sequence'] = int(nr_wiersza) * 10
-				except:
-					pass
-			
-			# 11. Dodaj wiersz (zawsze, nawet jeśli puste wartości)
-			lines_values.append((0, 0, line_vals))
-			
-			_logger.debug("✅ Line %d: %s, qty: %s, price: %s", 
-						 line_index + 1, 
-						 line_vals.get('name', 'No name')[:30],
-						 line_vals.get('quantity'),
-						 line_vals.get('price_unit'))
-		
-		return lines_values
+	# END _process_invoice_lines_fawiersz
 
 	def _get_xml_value(self, container, field_name, ns):
 		"""
