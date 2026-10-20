@@ -21,7 +21,7 @@
 {
 	"name": "eXtensible Exchange Template Base Provider",
 	"summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-	"version": "15.1.7",
+	"version": "15.1.9",
 	"license": "AGPL-3",
 	"author": "Andrzej Wiśniewski",
 	"website": "https://wisand.eu",

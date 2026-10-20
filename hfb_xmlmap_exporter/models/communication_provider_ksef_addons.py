@@ -341,6 +341,8 @@ class CommunicationLog(models.Model):
 		p9a = self._get_xml_value(element, 'P_9A', ns)
 		p11 = self._get_xml_value(element, 'P_11', ns)
 		p12 = self._get_xml_value(element, 'P_12', ns)
+		p9b = self._get_xml_value(element, 'P_9B', ns)
+		p11a = self._get_xml_value(element, 'P_11A', ns)
 		
 		# Przygotuj wiersz
 		line_vals = {
@@ -383,6 +385,29 @@ class CommunicationLog(models.Model):
 					price_set = True
 			except:
 				pass
+		
+		# Wariant brutto (P_9B / P_11A) - przelicz na netto stawką P_12
+		if not price_set and (p9b or p11a):
+			try:
+				rate = float(p12.replace(',', '.')) if p12 else 0.0
+			except Exception:
+				rate = 0.0
+			divisor = (1 + rate / 100) if rate else 1.0
+			if p9b:
+				try:
+					line_vals['price_unit'] = float(p9b.replace(',', '.')) / divisor
+					price_set = True
+				except Exception:
+					pass
+			if not price_set and p11a and p8b:
+				try:
+					netto = float(p11a.replace(',', '.')) / divisor
+					ilosc = float(p8b.replace(',', '.'))
+					if ilosc != 0:
+						line_vals['price_unit'] = abs(netto / ilosc)
+						price_set = True
+				except Exception:
+					pass
 		
 		if not price_set:
 			line_vals['price_unit'] = 0.0
@@ -1781,11 +1806,24 @@ class CommunicationLog(models.Model):
 			p10 = self._get_xml_value( line_container, 'P_10', ns)   # ilość
 			p11 = self._get_xml_value( line_container, 'P_11', ns)   # wartość netto
 			p12 = self._get_xml_value( line_container, 'P_12', ns)   # stawka VAT
+			p9b = self._get_xml_value( line_container, 'P_9B', ns)   # cena jedn. brutto
+			p11a = self._get_xml_value( line_container, 'P_11A', ns) # wartość brutto
 
 			# --- konwersje ---
 			qty = _to_float(p8b)	# poprawka z p10
 			unit_price = _to_float(p9a)
 			net_value = _to_float(p11)
+
+			# --- wariant brutto (P_9B / P_11A): przeliczenie na netto stawką P_12 ---
+			if unit_price is None and net_value is None:
+				rate = _to_float(p12) or 0.0
+				divisor = (1 + rate / 100) if rate else 1.0
+				gross_unit_price = _to_float(p9b)
+				gross_value = _to_float(p11a)
+				if gross_unit_price is not None:
+					unit_price = gross_unit_price / divisor
+				if gross_value is not None:
+					net_value = gross_value / divisor
 
 			# --- nazwa pozycji ---
 			line_vals['name'] = p7 or f"Pozycja {line_index + 1}"
@@ -1810,6 +1848,9 @@ class CommunicationLog(models.Model):
 			# 3) Standardowa pozycja
 			else:
 				line_vals['quantity'] = qty if qty not in (None, 0) else 1.0
+				# brak ceny jedn., ale jest wartość netto -> cena = netto / ilość
+				if unit_price is None and net_value is not None:
+					unit_price = net_value / line_vals['quantity']
 				line_vals['price_unit'] = unit_price or 0.0
 
 			# --- PODATEK ---
