@@ -72,7 +72,7 @@ class CommunicationLog(models.Model):
 		"""
 		Wyciąga specjalne pola dla faktur KOR_ZAL
 		"""
-		ns_uri = xml_root.nsmap.get(None)
+		ns_uri = etree.QName(xml_root).namespace
 		
 		# 1. Wartość zamówienia (ważne dla zaliczek)
 		wartosc_zam = self._extract_direct_value(xml_root, './/WartoscZamowienia')
@@ -414,7 +414,7 @@ class CommunicationLog(models.Model):
 		z bezpośrednim parsowaniem XML (niezależnie od template node'ów)
 		"""
 		values = {}
-		ns_uri = xml_root.nsmap.get(None)
+		ns_uri = etree.QName(xml_root).namespace
 		ns = {'ns': ns_uri} if ns_uri else {}
 		
 		_logger.info("=" * 80)
@@ -626,7 +626,7 @@ class CommunicationLog(models.Model):
 			
 			if elem is None:
 				# Dodaj namespace jeśli jest w root
-				ns_uri = xml_root.nsmap.get(None)
+				ns_uri = etree.QName(xml_root).namespace
 				if ns_uri:
 					# Konwertuj prosty xpath na xpath z namespace
 					# Zamienia './/RodzajFaktury' na './/{namespace}RodzajFaktury'
@@ -661,7 +661,7 @@ class CommunicationLog(models.Model):
 		Jeśli nie istnieje - tworzy z pełnymi danymi z XML.
 		"""
 		try:
-			ns_uri = xml_root.nsmap.get(None)
+			ns_uri = etree.QName(xml_root).namespace
 			ns_prefix = f"{{{ns_uri}}}" if ns_uri else ""
 			
 			# 1. Pobierz NIP (wymagany) - POPRAWIONE testowanie
@@ -932,7 +932,7 @@ class CommunicationLog(models.Model):
 			# WALIDACJA I UZUPEŁNIENIE DANYCH
 			
 			# 1. Dla faktur zakupowych - partner
-			if invoice_values.get('move_type') == 'in_invoice':
+			if invoice_values.get('move_type') in ('in_invoice', 'in_refund'):
 				if 'partner_id' not in invoice_values:
 					# Jedna metoda - jeśli nie znajdzie partnera, tworzy go z pełnymi danymi z XML
 					partner = log._create_or_get_partner_from_xml(xml_root)
@@ -966,7 +966,8 @@ class CommunicationLog(models.Model):
 			chatter = []
 			msg = ""
 			try:
-				ns = {'ns': xml_root.nsmap.get(None)} if None in xml_root.nsmap else {}
+				ns_uri = etree.QName(xml_root).namespace
+				ns = {'ns': ns_uri} if ns_uri else {}
 				kod_waluty = xml_root.xpath( "//*[local-name()='KodWaluty']/text()" )
 
 				company_currency = self.env.company.currency_id
@@ -1112,7 +1113,7 @@ class CommunicationLog(models.Model):
 		
 		# 6. PRZETWÓRZ POZOSTAŁE POLA Z SZABLONU
 		p2_value = None
-		ns_uri = xml_root.nsmap.get(None)
+		ns_uri = etree.QName(xml_root).namespace
 		ns = {'ns': ns_uri} if ns_uri else {}
 		if ns_uri:
 			p2_elem = xml_root.find(f'.//{{{ns_uri}}}P_2')
@@ -1681,7 +1682,7 @@ class CommunicationLog(models.Model):
 		Wyciąga rodzaj faktury z RodzajFaktury (nowa struktura KSeF FA(3)).
 		"""
 		# Namespace
-		ns_uri = xml_root.nsmap.get(None)
+		ns_uri = etree.QName(xml_root).namespace
 		
 		# 1. Spróbuj z RodzajFaktury
 		rodzaj_elem = None
@@ -2111,7 +2112,7 @@ class CommunicationLog(models.Model):
 			elem = xml_root.find(xpath)
 			if elem is None:
 				# Spróbuj z namespace
-				ns_uri = xml_root.nsmap.get(None)
+				ns_uri = etree.QName(xml_root).namespace
 				if ns_uri:
 					elem = xml_root.find(f'.//{{{ns_uri}}}{xpath.split("//")[-1]}')
 			
@@ -2211,7 +2212,7 @@ class CommunicationLog(models.Model):
 		def find_flag(flag_name):
 			elem = xml_root.find(f'.//{flag_name}')
 			if elem is None:
-				ns_uri = xml_root.nsmap.get(None)
+				ns_uri = etree.QName(xml_root).namespace
 				if ns_uri:
 					elem = xml_root.find(f'.//{{{ns_uri}}}{flag_name}')
 			return elem
