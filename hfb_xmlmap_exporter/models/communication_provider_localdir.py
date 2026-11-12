@@ -297,7 +297,7 @@ class CommunicationProviderLocalDir(models.Model):
 			file_path = self._prepare_file_path(log)
 			
 			# 3. Zapis pliku
-			success = self._save_file(log.file_data, file_path)
+			success = self._save_file(log.file_data.content, file_path)  # Odoo 20: surowe bytes
 			
 			if success:
 				# 4. Aktualizuj log
@@ -514,7 +514,7 @@ class CommunicationProviderLocalDir(models.Model):
 			
 			# Zapis danych
 			with open(file_path, 'wb') as f:
-				f.write(base64.b64decode(file_data))
+				f.write(file_data)
 			
 			return True
 			
@@ -536,7 +536,7 @@ class CommunicationProviderLocalDir(models.Model):
 				'status': 'success',
 				'provider_id': self.id,  # To się może różnić w zależności od architektury
 				'file_name': os.path.basename(file_path),
-				'file_data': base64.b64encode(file_content),
+				'file_data': base64.b64encode(file_content).decode(),  # Odoo 20: str, nie bytes
 				'receive_date': fields.Datetime.now(),
 				'company_id': self.company_id.id,
 			}

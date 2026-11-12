@@ -487,7 +487,7 @@ class KsefCertificateImportWizard(models.TransientModel):
 		
 		# AUTH cert
 		if self.auth_cert_file:
-			auth_cert_data = base64.b64decode(self.auth_cert_file)
+			auth_cert_data = self.auth_cert_file.content  # Odoo 20: BinaryValue -> surowe bytes
 			auth_cert_path = os.path.join(temp_dir, self.auth_cert_filename or 'auth.crt')
 			with open(auth_cert_path, 'wb') as f:
 				f.write(auth_cert_data)
@@ -495,7 +495,7 @@ class KsefCertificateImportWizard(models.TransientModel):
 		
 		# AUTH key
 		if self.auth_key_file:
-			auth_key_data = base64.b64decode(self.auth_key_file)
+			auth_key_data = self.auth_key_file.content  # Odoo 20: BinaryValue -> surowe bytes
 			auth_key_path = os.path.join(temp_dir, self.auth_key_filename or 'auth.key')
 			with open(auth_key_path, 'wb') as f:
 				f.write(auth_key_data)
@@ -503,7 +503,7 @@ class KsefCertificateImportWizard(models.TransientModel):
 		
 		# SIGN cert (tylko dla Java)
 		if self.api_backend == 'java' and self.sign_cert_file:
-			sign_cert_data = base64.b64decode(self.sign_cert_file)
+			sign_cert_data = self.sign_cert_file.content  # Odoo 20: BinaryValue -> surowe bytes
 			sign_cert_path = os.path.join(temp_dir, self.sign_cert_filename or 'sign.crt')
 			with open(sign_cert_path, 'wb') as f:
 				f.write(sign_cert_data)
@@ -511,7 +511,7 @@ class KsefCertificateImportWizard(models.TransientModel):
 		
 		# SIGN key (tylko dla Java)
 		if self.api_backend == 'java' and self.sign_key_file:
-			sign_key_data = base64.b64decode(self.sign_key_file)
+			sign_key_data = self.sign_key_file.content  # Odoo 20: BinaryValue -> surowe bytes
 			sign_key_path = os.path.join(temp_dir, self.sign_key_filename or 'sign.key')
 			with open(sign_key_path, 'wb') as f:
 				f.write(sign_key_data)
@@ -706,7 +706,8 @@ class KsefCertificateImportWizard(models.TransientModel):
 		# Utwórz nowy załącznik
 		attachment = self.env['ir.attachment'].create({
 			'name': name,
-			'datas': base64.b64encode(p12_data),
+			# Odoo 20: ir.attachment nie ma pola datas
+			'raw': p12_data,
 			'res_model': 'communication.provider.ksef',
 			'res_id': config.id,
 			'type': 'binary',

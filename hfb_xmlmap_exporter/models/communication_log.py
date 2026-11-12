@@ -221,7 +221,7 @@ class CommunicationLog(models.Model):
 	@api.depends("file_data")
 	def _compute_file_size(self):
 		for rec in self:
-			rec.file_size = len(base64.b64decode(rec.file_data)) if rec.file_data else 0
+			rec.file_size = rec.file_data.size if rec.file_data else 0  # Odoo 20: BinaryValue.size
 
 	# Walidacja XSD
 	validated = fields.Boolean(string="Zwalidowany")

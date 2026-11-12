@@ -399,7 +399,7 @@ class AccountMove(models.Model):
 
 		try:
 			# Pobierz zawartość XSD
-			xsd_content = base64.b64decode(template.xsd_attachment_id.datas)
+			xsd_content = template.xsd_attachment_id.raw.content  # Odoo 20: brak pola datas
 			schema_doc = etree.XML(xsd_content)
 			xml_doc = etree.XML(xml_bytes)
 			schema = etree.XMLSchema(schema_doc)
@@ -459,7 +459,8 @@ class AccountMove(models.Model):
 				"validation_date": validation_date,				
 				"user_id": self.env.user.id,
 				"error_log": "\n".join(user_messages[:50]) if user_messages else "",
-				"xml_snapshot": xml_bytes,
+				# Odoo 20: pole Binary przyjmuje base64 jako str, nie bytes
+				"xml_snapshot": base64.b64encode(xml_bytes).decode(),
 				'company_id': self.company_id.id,
 			})
 		except Exception as e:
@@ -663,7 +664,7 @@ class AccountMove(models.Model):
 
 			# Dane pliku
 			"file_name": file_name,
-			"file_data": base64.b64encode(xml_bytes),
+			"file_data": base64.b64encode(xml_bytes).decode(),  # Odoo 20: str, nie bytes
 
 			# Kontekst dodatkowy
 			"context_json": {

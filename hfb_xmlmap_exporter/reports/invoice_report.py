@@ -1636,7 +1636,7 @@ class AccountMove(models.Model):
 
 		try:
 
-			xml_content = base64.b64decode(communication.file_data).decode('utf-8')
+			xml_content = communication.file_data.decode('utf-8')  # Odoo 20: BinaryValue.decode
 
 			parser = KSeFParserFA3(
 				xml_content,
@@ -1721,7 +1721,7 @@ class AccountMove(models.Model):
 		attachment = self.env['ir.attachment'].create({
 			'name': report_file_name,
 			'type': 'binary',
-			'datas': base64.b64encode(pdf_content),
+			'raw': pdf_content,  # Odoo 20: brak pola datas
 			'res_model': 'account.move',
 			'res_id': self.id,
 			'mimetype': 'application/pdf',

@@ -80,10 +80,10 @@ class XmlExportTemplate(models.Model):
 		self.ensure_one()
 
 		# --- Wczytanie JSON ---
-		if not (self.json_attachment_id and self.json_attachment_id.datas):
+		if not (self.json_attachment_id and self.json_attachment_id.raw):  # Odoo 20: brak pola datas
 			raise UserError("Brak załączonego pliku JSON.")
 
-		json_bytes = base64.b64decode(self.json_attachment_id.datas)
+		json_bytes = self.json_attachment_id.raw.content
 		json_data = json.loads(json_bytes)
 
 		tpl = json_data.get("template", json_data)

@@ -1053,7 +1053,7 @@ class CommunicationLog(models.Model):
 				raise ValidationError(_("Brak pliku XML z fakturą w polu 'file_data'."))
 			
 			try:
-				decoded_data = base64.b64decode(log.file_data)
+				decoded_data = log.file_data.content  # Odoo 20: BinaryValue -> surowe bytes
 				xml_root = etree.fromstring(decoded_data)
 			except Exception as e:
 				raise ValidationError(_("Nieprawidłowy XML: %s") % str(e))
@@ -1242,7 +1242,7 @@ class CommunicationLog(models.Model):
 					'res_id': invoice.id,
 					'type': 'binary',
 					'mimetype': 'application/xml',
-					'datas': log.file_data,
+					'raw': log.file_data.content,  # Odoo 20: brak pola datas
 					'description': f"Faktura KSeF {log.ksef_invoice_number} zaimportowana {fields.Datetime.now()}",
 				})
 				

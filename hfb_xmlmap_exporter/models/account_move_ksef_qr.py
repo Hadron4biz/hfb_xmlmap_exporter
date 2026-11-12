@@ -281,10 +281,8 @@ class AccountMove(models.Model):
 		if not log or not log.file_data:
 			return None
 
-		if isinstance(log.file_data, bytes):
-			return log.file_data
-
-		return log.file_data.encode("utf-8")
+		# Odoo 20: file_data to BinaryValue; zwracamy surowy XML (bytes)
+		return log.file_data.content
 
 	def _get_ksef_invoice_hash_from_log(self, ksef_invoice_hash=None):
 		"""
@@ -358,13 +356,8 @@ class AccountMove(models.Model):
 			_logger.info(f'\n⚡️ _compute_ksef_invoice_hash: NOT file_data')
 			return None
 
-		if isinstance(file_data, bytes):
-			try:
-				xml_bytes = base64.b64decode(file_data)
-			except:
-				xml_bytes = file_data
-		else:
-			xml_bytes = file_data.encode('utf-8')
+		# Odoo 20: _get_ksef_invoice_xml_bytes zwraca już surowy XML
+		xml_bytes = file_data
 
 		xml_hash = hashlib.sha256(xml_bytes).digest()
 		xml_hash_b64 = base64.b64encode(xml_hash).decode('utf-8')
