@@ -8,7 +8,7 @@
 		<field name="sequence">25</field>
 	</record>
 
-	<!-- Niezależne obszary uprawnień Odoo 19. -->
+	<!-- Niezależne obszary uprawnień (od Odoo 19). -->
 	<record id="privilege_xet_templates" model="res.groups.privilege">
 		<field name="name">Szablony XET</field>
 		<field name="category_id" ref="module_category_xet_ksef"/>
@@ -44,43 +44,12 @@
 		<field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
 	</record>
 
-	<!-- Użytkownik widzi tylko logi dotyczące faktur -->
-	<record id="rule_communication_log_account_move_read"
-			model="ir.rule">
-		<field name="name">Communication logs: account.move read</field>
-		<field name="model_id" ref="model_communication_log"/>
-		<field name="groups"
-			   eval="[(4, ref('hfb_xmlmap_exporter.group_communication_log_reader'))]"/>
-		<field name="domain_force">
-			[('document_model', '=', 'account.move'), ('company_id', 'in', company_ids)]
-		</field>
-		<field name="perm_read" eval="True"/>
-		<field name="perm_write" eval="False"/>
-		<field name="perm_create" eval="False"/>
-		<field name="perm_unlink" eval="False"/>
-	</record>
-
-	<!-- Dotychczasowa reguła providerów -->
-	<record id="rule_communication_provider_read" model="ir.rule">
-		<field name="name">communication.provider public read</field>
-		<field name="model_id" ref="model_communication_provider"/>
-		<field name="groups" eval="[(4, ref('base.group_user'))]"/>
-		<field name="domain_force">[('company_id', 'in', company_ids)]</field>
-		<field name="perm_read" eval="True"/>
-		<field name="perm_write" eval="False"/>
-		<field name="perm_create" eval="False"/>
-		<field name="perm_unlink" eval="False"/>
-	</record>
-
-	<!-- ADMIN: pełny dostęp do communication.log dla group_system, niezależnie od reguły "reader" -->
-	<record id="rule_communication_log_system_full" model="ir.rule">
-		<field name="name">Communication logs: system full access</field>
-		<field name="model_id" ref="model_communication_log"/>
-		<field name="groups" eval="[(4, ref('base.group_system'))]"/>
-		<field name="domain_force">[(1, '=', 1)]</field>
-		<field name="perm_read" eval="True"/>
-		<field name="perm_write" eval="True"/>
-		<field name="perm_create" eval="True"/>
-		<field name="perm_unlink" eval="True"/>
-	</record>
+	<!--
+		Odoo 20: modele ir.rule i ir.model.access zastąpione przez ir.access.
+		Dotychczasowe reguły rekordów są w security/ir.access.csv jako domeny
+		uprawnień:
+		- access_communication_log_reader (dawniej rule_communication_log_account_move_read)
+		- access_communication_provider_read_user (dawniej rule_communication_provider_read)
+		- rule_communication_log_system_full - zbędna, pokrywa ją access_communication_log
+	-->
 </odoo>

@@ -2361,9 +2361,10 @@ class XmlExportNode(models.Model):
 		index=True,
 		help="Kolejność generowania węzłów XML"
 	)
-	_sql_constraints = [
-		('sequence_positive', 'CHECK(sequence >= 0)', 'Sequence musi być >= 0')
-	]
+	_sequence_positive = models.Constraint(
+		'CHECK(sequence >= 0)',
+		'Sequence musi być >= 0',
+	)
 	snapshot_sequence = fields.Integer(
 		string="Snapshot Sequence",
 		copy=False,

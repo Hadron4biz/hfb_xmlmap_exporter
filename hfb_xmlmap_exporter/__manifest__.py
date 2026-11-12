@@ -31,9 +31,9 @@
 # property of the author.
 #################################################################################
 {
-    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 18",
+    "name": "eXtensible Exchange Template (XET) - KSeF, XML, EDI Integration for Odoo 20",
     "summary": "Mapowanie pól modeli Odoo do struktury XML na podstawie XSD + eksport z walidacją.",
-    "version": "19.0.1.15",
+    "version": "20.0.1.2",
     "license": "AGPL-3",
     "author": "Hadron for Business, Andrzej Wiśniewski",
     'category': 'Accounting/Invoicing',
@@ -47,7 +47,7 @@
 	"data": [
 		# --- security zawsze pierwsze ---
 		"security/security.xml",
-		"security/ir.model.access.csv",
+		"security/ir.access.csv",
 
 		# --- widoki modeli, które tworzą modele ---
 		"views/xml_node_views.xml",

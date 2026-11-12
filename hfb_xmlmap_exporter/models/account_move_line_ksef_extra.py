@@ -66,9 +66,10 @@ class KsefGtu(models.Model):
 		help="Pełny opis ustawowy oznaczenia GTU.",
 	)
 
-	_sql_constraints = [
-		("ksef_gtu_name_uniq", "unique(name)", "Kod GTU musi być unikalny."),
-	]
+	_ksef_gtu_name_uniq = models.Constraint(
+		"UNIQUE(name)",
+		"Kod GTU musi być unikalny.",
+	)
 
 	def name_get(self):
 		result = []

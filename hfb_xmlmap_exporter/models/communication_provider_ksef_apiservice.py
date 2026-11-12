@@ -626,8 +626,8 @@ class ProviderKsefApiService:
 			update_vals = {
 				'ksef_session_token': data.get('referenceNumber'), ###data.get('sessionId') or data.get('referenceNumber'),	XXX
 				'ksef_session_valid_until': convert_ksef_date(data.get('validUntil')),
-				'ksef_session_key': base64.b64encode(raw_key),  # Binary!
-				'ksef_session_iv': base64.b64encode(raw_iv),	 # Binary!
+				'ksef_session_key': base64.b64encode(raw_key).decode(),  # Binary!
+				'ksef_session_iv': base64.b64encode(raw_iv).decode(),	 # Binary!
 				###'ksef_reference_number': data.get('referenceNumber'),	XXX
 			}
 			
@@ -725,8 +725,9 @@ class ProviderKsefApiService:
 		
 		try:
 			# 2. Pobierz klucze Z LOGU
-			key = base64.b64decode(self.log.ksef_session_key)
-			iv = base64.b64decode(self.log.ksef_session_iv)
+			# Odoo 20: odczyt pola Binary zwraca BinaryValue z surową zawartością
+			key = self.log.ksef_session_key.content
+			iv = self.log.ksef_session_iv.content
 			
 			# 3. Oblicz hash oryginalnego XML
 			xml_hash = hashlib.sha256(xml_bytes).digest()
@@ -1324,7 +1325,7 @@ class ProviderKsefApiService:
 			'company_id': rekord.company_id.id,
 			'name': filename,
 			'type': 'binary',
-			'datas': base64.b64encode(upo_binary),
+			'raw': upo_binary,
 			'res_model': model,
 			'res_id': rekord,
 			'mimetype': 'application/xml',
@@ -1356,19 +1357,7 @@ class ProviderXadesSigner:
 			raise UserError("Brak keystore AUTH w konfiguracji providera KSeF")
 		
 		# Pobierz dane p12 z załącznika
-		p12_data = self.provider.auth_keystore_p12.datas
-		
-		# Konwersja - dane mogą być już base64 lub surowe
-		if isinstance(p12_data, bytes):
-			try:
-				# Sprawdź czy to base64
-				p12_bytes = base64.b64decode(p12_data)
-			except:
-				# To już surowe dane p12
-				p12_bytes = p12_data
-		else:
-			# String - musi być base64
-			p12_bytes = base64.b64decode(p12_data)
+		p12_bytes = self.provider.auth_keystore_p12.raw.content
 		
 		# Wczytaj p12
 		password = self.provider.auth_keystore_password or ''

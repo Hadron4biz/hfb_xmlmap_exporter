@@ -154,7 +154,7 @@ class XmlTemplateImportJsonWizard(models.TransientModel):
 		# 1. Dekodowanie JSON
 		# ============================================================
 		try:
-			raw = base64.b64decode(self.json_file)
+			raw = self.json_file.content
 			data = json.loads(raw)
 		except Exception as e:
 			raise UserError(f"Błąd dekodowania JSON: {e}")
@@ -203,7 +203,7 @@ class XmlTemplateImportJsonWizard(models.TransientModel):
 				'company_id': template.company_id.id,
 				"name": tpl["schema_filename"],
 				"type": "binary",
-				"datas": tpl["schema_b64"],
+				"raw": base64.b64decode(tpl["schema_b64"]),
 				"res_model": "xml.export.template",
 				"res_id": template.id,
 			})
