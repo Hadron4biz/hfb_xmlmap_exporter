@@ -3700,7 +3700,7 @@ class CommunicationLog(models.Model):
 			partner_vals = {
 				'name': name or f"KSeF {nip}",
 				'vat': f"PL{nip}" if len(nip) == 10 else nip,
-				'company_type': 'company',
+				'is_company': True,
 				'supplier_rank': 1,
 				'company_id': self.company_id.id
 			}
