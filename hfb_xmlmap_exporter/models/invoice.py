@@ -48,6 +48,29 @@ from markupsafe import Markup, escape
 import logging
 _logger = logging.getLogger(__name__)
 
+import logging
+from urllib.parse import urlparse
+
+
+class _XsdAttachmentResolver(etree.Resolver):
+	"""
+	Podaje schemy importowane przez XSD (import/include) z załączników szablonu
+	(xsd_type_attachment_ids), bez pobierania z sieci.
+	"""
+
+	def __init__(self, attachments):
+		super().__init__()
+		self.by_name = {att.name: att for att in attachments if att.name}
+		self.missing = []
+
+	def resolve(self, url, pubid, context):
+		name = urlparse(url).path.rsplit('/', 1)[-1]
+		attachment = self.by_name.get(name)
+		if attachment:
+			return self.resolve_string(attachment.raw, context, base_url=url)
+		self.missing.append(name)
+		return None
+
 """
 Faktura (account.move) 
 	→ Szablon (xml.export.template) 
@@ -405,6 +428,25 @@ class AccountMove(models.Model):
 			schema = etree.XMLSchema(schema_doc)
 		except Exception as e:
 			_logger.exception("❌ Błąd inicjalizacji schemy XSD")
+			raise UserError(_("Nie można wczytać schemy XSD: %s") % str(e))
+
+		resolver = _XsdAttachmentResolver([])
+		try:
+			# Pobierz zawartość XSD; importy/include z załączników szablonu (bez sieci)
+			xsd_content = base64.b64decode(template.xsd_attachment_id.datas)
+			resolver = _XsdAttachmentResolver(template.xsd_type_attachment_ids)
+			parser = etree.XMLParser(no_network=True, resolve_entities=False)
+			parser.resolvers.add(resolver)
+			schema_doc = etree.XML(xsd_content, parser)
+			xml_doc = etree.XML(xml_bytes)
+			schema = etree.XMLSchema(schema_doc)
+		except Exception as e:
+			_logger.exception("❌ Błąd inicjalizacji schemy XSD")
+			if resolver.missing:
+				raise UserError(_(
+					"Nie można wczytać schemy XSD - brak zależnych plików XSD w szablonie: %s. "
+					"Uruchom \"Import typów XSD\" na szablonie, aby je pobrać.\n\n%s"
+				) % (", ".join(sorted(set(resolver.missing))), str(e)))
 			raise UserError(_("Nie można wczytać schemy XSD: %s") % str(e))
 
 		# 🔹 Przetwarzanie błędów z użyciem informacji ze schemy
