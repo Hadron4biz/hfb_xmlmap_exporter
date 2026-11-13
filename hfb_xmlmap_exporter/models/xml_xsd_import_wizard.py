@@ -96,7 +96,7 @@ class XmlXsdImportWizard(models.TransientModel):
 		if not template.xsd_attachment_id:
 			raise UserError(_("Brak załączonej głównej schemy XSD."))
 
-		xml_data = template.xsd_attachment_id.raw.content  # Odoo 20: BinaryValue -> bytes
+		xml_data = template.xsd_attachment_id.raw.content
 		ns = {"xsd": "http://www.w3.org/2001/XMLSchema"}
 		parser = etree.XMLParser(
 			resolve_entities=False,
@@ -350,7 +350,6 @@ class XmlXsdImportWizard(models.TransientModel):
 					], limit=1)
 
 				if existing:
-					# Odoo 20: raw zwraca BinaryValue; pola datas już nie ma
 					content = existing.raw.content
 					root = self._parse_xsd_content(content, existing.name)
 					final_url = url
@@ -363,7 +362,7 @@ class XmlXsdImportWizard(models.TransientModel):
 						company
 					).create({
 						"name": self._attachment_name_from_url(final_url),
-						"raw": content,  # Odoo 20: brak pola datas
+						"raw": content,
 						"res_model": "xml.export.template",
 						"res_id": Template.id,
 						"mimetype": "application/xml",

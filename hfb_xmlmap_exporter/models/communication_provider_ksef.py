@@ -1384,7 +1384,7 @@ class CommunicationLog(models.Model):
 			'company_id': move.company_id.id,
 			"name": f"UPO_{move.ksef_number}.xml",
 			"type": "binary",
-			"raw": upo_binary,  # Odoo 20: brak pola datas
+			"raw": upo_binary,
 			"res_model": "account.move",
 			"res_id": move.id,
 			
@@ -1794,7 +1794,6 @@ class CommunicationLog(models.Model):
 					return {"success": False, "error": "No file_data in log record"}
 				
 				# Przygotuj XML do wysyłki
-				# Odoo 20: file_data to BinaryValue z surowym XML
 				xml_bytes = self.file_data.content
 				
 				result = service.send_invoice(xml_bytes)
@@ -1844,7 +1843,7 @@ class CommunicationLog(models.Model):
 							else:
 								# Nie ma faktury - zapisz w logu
 								self.write({
-									'file_data': base64.b64encode(upo_content).decode(),  # Odoo 20: str, nie bytes
+									'file_data': base64.b64encode(upo_content).decode(),
 									'file_name': f"UPO_{self.ksef_reference_number}.xml"
 								})
 								_logger.warning(f"[KSeF] No account.move, saved UPO to file_data")
@@ -2763,7 +2762,7 @@ class CommunicationLog(models.Model):
 			attachment = self.env['ir.attachment'].with_company(self.company_id).create({
 				'company_id': self.company_id.id,
 				'name': f"UPO_{upo_reference or 'unknown'}.xml",
-				'raw': xml_content,  # Odoo 20: brak pola datas
+				'raw': xml_content,
 				'res_model': self.document_model,
 				'res_id': self.document_id,
 				'type': 'binary',
@@ -2839,7 +2838,6 @@ class CommunicationLog(models.Model):
 			credentials = {}
 			
 			if ksef_config.auth_type == 'certificate':
-				# Odoo 20: brak pola datas; to_base64() daje ten sam base64 co dawne datas
 				if ksef_config.auth_keystore_p12 and ksef_config.auth_keystore_p12.raw:
 					data = ksef_config.auth_keystore_p12.raw.to_base64()
 					
@@ -2855,7 +2853,7 @@ class CommunicationLog(models.Model):
 					credentials['auth_alias'] = "ksef-auth"
 
 				if ksef_config.sign_keystore_p12 and ksef_config.sign_keystore_p12.raw:
-					data = ksef_config.sign_keystore_p12.raw.to_base64()  # Odoo 20: brak pola datas
+					data = ksef_config.sign_keystore_p12.raw.to_base64()
 					
 					if isinstance(data, bytes):
 						data = data.decode('ascii')
@@ -2977,7 +2975,6 @@ class CommunicationLog(models.Model):
 				"base_url": ksef_config.base_url,
 			}
 			
-			# Odoo 20: file_data to BinaryValue z surowym XML; API oczekuje base64 (str)
 			invoice_xml_base64 = self.file_data.to_base64()
 			
 			input_data = {
@@ -3069,10 +3066,9 @@ class CommunicationLog(models.Model):
 			
 			if ksef_config.auth_type == 'certificate':
 				# AUTH certificate - WYMAGANY dla certificate auth
-				if not ksef_config.auth_keystore_p12 or not ksef_config.auth_keystore_p12.raw:  # Odoo 20: brak pola datas
+				if not ksef_config.auth_keystore_p12 or not ksef_config.auth_keystore_p12.raw:
 					raise ValueError("Missing auth certificate for certificate auth")
 				
-				# Odoo 20: odpowiednik dawnego datas (base64 w bytes) - dalsza logika bez zmian
 				auth_data = ksef_config.auth_keystore_p12.raw.to_base64().encode()
 				
 				# Konwersja bytes → base64 string
@@ -3086,7 +3082,7 @@ class CommunicationLog(models.Model):
 				
 				# SIGN certificate - WYMAGANY dla certificate auth
 				if ksef_config.sign_keystore_p12 and ksef_config.sign_keystore_p12.raw:
-					sign_data = ksef_config.sign_keystore_p12.raw.to_base64().encode()  # Odoo 20: odpowiednik datas
+					sign_data = ksef_config.sign_keystore_p12.raw.to_base64().encode()
 					
 					if isinstance(sign_data, bytes):
 						sign_data = base64.b64encode(sign_data).decode('ascii')
@@ -3227,7 +3223,7 @@ class CommunicationLog(models.Model):
 				
 				if self.ksef_operation == 'send_invoice' and self.file_data:
 					try:
-						invoice_xml = self.file_data.decode('utf-8')  # Odoo 20: BinaryValue.decode
+						invoice_xml = self.file_data.decode('utf-8')
 						params['invoice_xml'] = invoice_xml
 						_logger.info(f"[KSeF] Prepared invoice XML, length: {len(invoice_xml)} chars")
 					except Exception as e:
@@ -3603,7 +3599,7 @@ class CommunicationLog(models.Model):
 			attachment_vals = {
 				'company_id': move.company_id.id,
 				'name': f"KSeF_{ksef_number}.xml",
-				'raw': base64.b64decode(invoice_xml_base64),  # Odoo 20: brak pola datas
+				'raw': base64.b64decode(invoice_xml_base64),
 				'res_model': 'account.move',
 				'res_id': move.id,  # <-- KLUCZOWE: powiązanie z account.move
 				'type': 'binary',

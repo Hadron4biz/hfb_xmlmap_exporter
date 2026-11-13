@@ -864,37 +864,66 @@ class CommunicationLog(models.Model):
 			# 1. Znajdź kontener party_type (Podmiot1 lub Podmiot2)
 			party_container = find_element(party_type)
 			if party_container is None:
-				_logger.warning("⚠️ Brak elementu %s w XML", party_type)
-				return None
+				# Import nie może zostać zablokowany - partner zastępczy
+				_logger.warning("⚠️ Brak elementu %s w XML - tworzę partnera zastępczego", party_type)
+				return self._ksef_create_partner_safe(
+					{'name': f"Kontrahent KSeF {self.ksef_invoice_number or ''}".strip()},
+					f"Brak elementu {party_type} w XML faktury KSeF {self.ksef_invoice_number}.",
+				)
 			
-			# 2. Pobierz NIP (wymagany)
+			# 2. Identyfikator podatkowy: NIP, a dla podmiotów zagranicznych
+			#    KodUE + NrVatUE albo NrID (BrakID - brak identyfikatora)
 			nip = find_value('NIP', party_container)
+			vat_value = nip
+			id_label = 'NIP'
 			if not nip:
-				_logger.warning("⚠️ Brak NIP w %s", party_type)
-				return None
-			
-			# 3. Najpierw spróbuj znaleźć istniejącego partnera (po czystym NIP)
-			existing_partner = self._find_partner_by_nip(nip)
-			if existing_partner:
-				_logger.info("✅ Found existing partner: %s (NIP: %s)", 
-							existing_partner.name, nip)
-				return existing_partner
-			
-			# 4. Jeśli nie ma partnera, utwórz go z danymi z XML
-			_logger.info("🆕 Creating new partner from XML data (NIP: %s)", nip)
+				kod_ue = find_value('KodUE', party_container)
+				nr_vat_ue = find_value('NrVatUE', party_container)
+				nr_id = find_value('NrID', party_container)
+				if nr_vat_ue:
+					vat_value = f"{kod_ue or ''}{nr_vat_ue}"
+					id_label = 'NrVatUE'
+				elif nr_id:
+					vat_value = nr_id
+					id_label = 'NrID'
+				else:
+					vat_value = None
+					id_label = 'brak identyfikatora'
 			
 			# Pobierz nazwę
 			nazwa = find_value('Nazwa', party_container)
 			if not nazwa:
-				nazwa = f"Partner {nip}"
+				nazwa = f"Partner {vat_value or self.ksef_invoice_number or ''}".strip()
+			
+			# 3. Najpierw spróbuj znaleźć istniejącego partnera
+			existing_partner = None
+			if nip:
+				existing_partner = self._find_partner_by_nip(nip)
+			elif vat_value:
+				existing_partner = self.env['res.partner'].search([
+					('vat', '=ilike', vat_value),
+					('company_id', 'in', (self.company_id.id, False)),
+				], limit=1)
+			if not existing_partner and not vat_value:
+				existing_partner = self.env['res.partner'].search([
+					('name', '=ilike', nazwa),
+					('company_id', 'in', (self.company_id.id, False)),
+				], limit=1)
+			if existing_partner:
+				_logger.info("✅ Found existing partner: %s (%s: %s)",
+							existing_partner.name, id_label, vat_value)
+				return existing_partner
+			
+			# 4. Jeśli nie ma partnera, utwórz go z danymi z XML
+			_logger.info("🆕 Creating new partner from XML data (%s: %s)", id_label, vat_value)
 			
 			# Przygotuj wartości dla partnera
 			partner_vals = {
 				'name': nazwa,
-				'vat': nip,  # BEZ PL - czysty NIP
-				'company_type': 'company',
 				'is_company': True,
 			}
+			if vat_value:
+				partner_vals['vat'] = vat_value  # NIP bez PL
 			
 			# 5. REGON (jeśli istnieje)
 			regon = find_value('REGON', party_container)
@@ -933,7 +962,7 @@ class CommunicationLog(models.Model):
 			
 			# 7. Adres korespondencyjny (AdresKoresp) - tylko do komentarza
 			adres_koresp = find_element('AdresKoresp', party_container)
-			if adres_koresp:
+			if adres_koresp is not None:
 				comment_parts = ["Adres korespondencyjny:"]
 				for i in range(1, 5):
 					adresl = find_value(f'AdresL{i}', adres_koresp)
@@ -949,7 +978,7 @@ class CommunicationLog(models.Model):
 			
 			# 8. Dane kontaktowe (Email, Telefon)
 			dane_kontaktowe = find_element('DaneKontaktowe', party_container)
-			if dane_kontaktowe:
+			if dane_kontaktowe is not None:
 				email = find_value('Email', dane_kontaktowe)
 				if email:
 					partner_vals['email'] = email
@@ -972,7 +1001,7 @@ class CommunicationLog(models.Model):
 			ksef_info = []
 			ksef_info.append(f"Importowany z KSeF: {self.ksef_invoice_number}")
 			ksef_info.append(f"Data importu: {fields.Date.today()}")
-			ksef_info.append(f"NIP oryginalny: {nip} (bez PL)")
+			ksef_info.append(f"{id_label} oryginalny: {vat_value or '-'}")
 			ksef_info.append("⚠️ UWAGA: Prosimy zweryfikować i uzupełnić dane adresowe!")
 			
 			existing_comment = partner_vals.get('comment', '')
@@ -981,18 +1010,19 @@ class CommunicationLog(models.Model):
 			else:
 				partner_vals['comment'] = ' | '.join(ksef_info)
 			
-			# 12. Utwórz partnera
-			try:
-				partner = self.env['res.partner'].with_company(self.company_id).create(partner_vals)
-				
+			# 12. Utwórz partnera - zawsze kończy się partnerem (bez blokowania importu)
+			partner = self._ksef_create_partner_safe(
+				partner_vals,
+				f"Utworzony automatycznie z KSeF. {id_label}: {vat_value or '-'}. Prosimy uzupełnić dane.",
+			)
+			if partner:
 				# Dodaj dodatkową informację o źródle
 				source_info = f"\n\n--- Import z KSeF ---\nFaktura: {self.ksef_invoice_number}\nData: {fields.Datetime.now()}"
-				partner.write({'comment': partner_vals.get('comment', '') + source_info})
+				partner.write({'comment': (partner.comment or '') + source_info})
+				_logger.info("✅ Created new partner: %s (%s: %s, ID: %d)",
+							partner.name, id_label, vat_value, partner.id)
 				
-				_logger.info("✅ Created new partner: %s (NIP: %s, ID: %d)", 
-							partner.name, nip, partner.id)
-				
-				# Jeśli brak kraju, dodaj notatkę w chatter faktury
+				# Jeśli brak kraju, dodaj notatkę w chatter logu
 				if not partner.country_id and hasattr(self, 'id') and self.id:
 					self.message_post(
 						body=Markup(f"""
@@ -1002,24 +1032,7 @@ class CommunicationLog(models.Model):
 						"""),
 						message_type='notification'
 					)
-				
-				return partner
-				
-			except Exception as create_error:
-				_logger.error("❌ Error creating partner: %s", create_error, exc_info=True)
-				# Fallback: utwórz partnera z minimalnymi danymi
-				try:
-					minimal_partner = self.env['res.partner'].with_company(self.company_id).create({
-						'name': nazwa,
-						'vat': nip,  # BEZ PL
-						'company_type': 'company',
-						'comment': f"Utworzony automatycznie z KSeF. Oryginalny NIP: {nip}. Prosimy uzupełnić dane."
-					})
-					_logger.warning("⚠️ Created minimal partner due to error: %s", minimal_partner.name)
-					return minimal_partner
-				except Exception as fallback_error:
-					_logger.error("❌ Even fallback failed: %s", fallback_error)
-					return None
+			return partner
 						
 		except Exception as e:
 			_logger.error("❌ Error in _create_or_get_partner_from_xml: %s", e, exc_info=True)
@@ -1053,7 +1066,7 @@ class CommunicationLog(models.Model):
 				raise ValidationError(_("Brak pliku XML z fakturą w polu 'file_data'."))
 			
 			try:
-				decoded_data = log.file_data.content  # Odoo 20: BinaryValue -> surowe bytes
+				decoded_data = log.file_data.content
 				xml_root = etree.fromstring(decoded_data)
 			except Exception as e:
 				raise ValidationError(_("Nieprawidłowy XML: %s") % str(e))
@@ -1242,7 +1255,7 @@ class CommunicationLog(models.Model):
 					'res_id': invoice.id,
 					'type': 'binary',
 					'mimetype': 'application/xml',
-					'raw': log.file_data.content,  # Odoo 20: brak pola datas
+					'raw': log.file_data.content,
 					'description': f"Faktura KSeF {log.ksef_invoice_number} zaimportowana {fields.Datetime.now()}",
 				})
 				
@@ -2070,6 +2083,48 @@ class CommunicationLog(models.Model):
 		
 		_logger.warning("⚠️ Tax not found for XML value: %s", tax_name)
 		return []
+
+	def _ksef_create_partner_safe(self, partner_vals, fallback_comment):
+		"""
+		Tworzy partnera tak, aby import faktury nigdy nie został zablokowany.
+		Kolejne próby (każda w savepoint):
+		  1. pełne dane z XML,
+		  2. dane minimalne (nazwa, identyfikator, is_company),
+		  3. bez pola vat (np. gdy walidacja NIP/VAT odrzuca wartość) -
+		     identyfikator trafia do ref i komentarza,
+		  4. sama nazwa.
+		"""
+		Partner = self.env['res.partner'].with_company(self.company_id)
+		vat_value = partner_vals.get('vat')
+		name = partner_vals.get('name') or f"Kontrahent KSeF {self.ksef_invoice_number or ''}".strip()
+		attempts = [
+			('pełne dane', dict(partner_vals)),
+			('dane minimalne', {
+				'name': name,
+				'vat': vat_value,
+				'is_company': True,
+				'comment': fallback_comment,
+			}),
+			('bez vat', {
+				'name': name,
+				'ref': vat_value or False,
+				'is_company': True,
+				'comment': f"{fallback_comment} Identyfikator z KSeF nie został zapisany w polu NIP: {vat_value or '-'}.",
+			}),
+			('sama nazwa', {'name': name, 'comment': fallback_comment}),
+		]
+		for label, vals in attempts:
+			if not vals.get('vat'):
+				vals.pop('vat', None)
+			try:
+				with self.env.cr.savepoint():
+					partner = Partner.create(vals)
+				if label != 'pełne dane':
+					_logger.warning("⚠️ Partner KSeF utworzony w trybie '%s': %s (ID: %d)", label, partner.name, partner.id)
+				return partner
+			except Exception as create_error:
+				_logger.error("❌ Tworzenie partnera KSeF (%s) nie powiodło się: %s", label, create_error, exc_info=(label == 'pełne dane'))
+		return None
 
 	def _find_partner_by_nip(self, nip):
 		"""

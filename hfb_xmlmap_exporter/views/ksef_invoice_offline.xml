@@ -60,7 +60,7 @@
                             Rodzaj trybu OFFLINE
                         </td>
                         <td>
-                            <t t-esc="o.ksef_offline_mode or '-'"/>
+                            <t t-out="o.ksef_offline_mode or '-'"/>
                         </td>
                     </tr>
 
@@ -69,7 +69,7 @@
                             Data wystawienia
                         </td>
                         <td>
-                            <t t-esc="o.invoice_date"/>
+                            <t t-out="o.invoice_date"/>
                         </td>
                     </tr>
 
@@ -89,7 +89,7 @@
                             Uzasadnienie trybu OFFLINE
                         </td>
                         <td>
-                            <t t-esc="o.ksef_offline_reason or '-'"/>
+                            <t t-out="o.ksef_offline_reason or '-'"/>
                         </td>
                     </tr>
 

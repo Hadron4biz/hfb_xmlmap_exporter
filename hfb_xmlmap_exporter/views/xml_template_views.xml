@@ -62,14 +62,14 @@
 							type="object"
 							string="Wgraj schemę (XSD)"
 							class="oe_highlight"
-							icon="fa-sitemap"
+							icon="account_tree"
 							invisible="xsd_attachment_id != False"/>
 
 					<button name="action_reset_nodes"
 							type="object"
 							string="Wyczyść węzły"
 							class="btn-danger"
-							icon="fa-trash"
+							icon="delete" icon_class="oi-filled"
 							confirm="Czy na pewno chcesz usunąć wszystkie węzły XML?"
 							invisible="xsd_attachment_id == False"/>
 
@@ -77,7 +77,7 @@
 							type="object"
 							string="Import struktury z XSD"
 							class="btn-outline-secondary"
-							icon="fa-sitemap"
+							icon="account_tree"
 							invisible="xsd_attachment_id == False"
 							confirm="Czy na pewno chcesz zaimportować strukturę z XSD? Istniejące węzły zostaną usunięte."/>
 
@@ -85,7 +85,7 @@
 							type="object"
 							string="Import typów XSD"
 							class="btn-outline-secondary"
-							icon="fa-database"
+							icon="database"
 							confirm="Czy na pewno chcesz zaimportować elementy Type z XSD?"
 							invisible="xsd_attachment_id == False"/>
 
@@ -107,20 +107,20 @@
 							type="object"
 							string="Snapshot sequence"
 							class="btn-info"
-							icon="fa-camera"
+							icon="photo_camera"
 							invisible="node_count == 0"/>
 
 					<button name="action_increment_sequence"
 							type="object"
 							string="Sequence +10"
 							class="btn-outline-secondary"
-							icon="fa-arrow-up"
+							icon="arrow_upward"
 							confirm="Zwiększyć sekwencję wszystkich węzłów o 10?"
 							invisible="node_count == 0"/>
 
 					<button name="action_restore_selected"
 							type="object"
-							icon="fa-undo"
+							icon="undo"
 							title="Restore sequence"
 							class="btn-outline-secondary"
 							confirm="Przywrócić sekwencję dla wybranych węzłów?"
@@ -130,7 +130,7 @@
 							type="object"
 							string="Eksportuj JSON"
 							class="btn-success"
-							icon="fa-download"
+							icon="download"
 							invisible="xsd_attachment_id == False"
 							groups="base.group_system"
 							/>
@@ -142,7 +142,7 @@
 						<button name="action_show_xsd_types"
 								type="object"
 								class="oe_stat_button"
-								icon="fa-database"
+								icon="database"
 								string="Typy XSD">
 							<field name="xsd_type_count" widget="statinfo" string="Typy XSD"/>
 						</button>
@@ -151,7 +151,7 @@
 						<button name="action_show_nodes"
 								type="object"
 								class="oe_stat_button"
-								icon="fa-code"
+								icon="code"
 								string="Węzły XML">
 							<field name="node_count" widget="statinfo" string="Węzły XML"/>
 						</button>
@@ -211,7 +211,7 @@
 								<field name="src_rel_path" />
 								<button name="action_open_node_form"
 									type="object"
-									icon="fa-pencil"
+									icon="edit" icon_class="oi-filled"
 									title="Edytuj węzeł"
 									class="btn-link"/>
 							</list>
@@ -278,7 +278,7 @@
 										type="object"
 										string="Importuj typy XSD"
 										class="btn-secondary"
-										icon="fa-database"/>
+										icon="database"/>
 							</footer>
 						</page>
 

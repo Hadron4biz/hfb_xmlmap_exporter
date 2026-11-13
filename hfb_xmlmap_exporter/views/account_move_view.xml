@@ -281,21 +281,21 @@
 						string="Wymaga Weryfikacji"
 						type="object"
 						class="btn-success"
-						icon="fa-check-circle"
+						icon="check_circle" icon_class="oi-filled"
 						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['valid','invalid']" />
 
 				<button name="action_validate_template"
 						string="Weryfikacja Poprawna"
 						type="object"
 						class="btn-primary"
-						icon="fa-check-circle"
+						icon="check_circle" icon_class="oi-filled"
 						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','invalid'] " />
 
 				<button name="action_validate_template"
 						string="Błędy Weryfikacji POWTÓRZ"
 						type="object"
 						class="btn-warning"
-						icon="fa-check-circle"
+						icon="check_circle" icon_class="oi-filled"
 						invisible="move_type in ['in_invoice', 'in_refund'] or xsd_validation_state in ['none','valid'] " />
 
 				<button name="action_export_xml"
@@ -331,7 +331,7 @@
 				<button class="oe_stat_button"
 						type="object"
 						name="action_open_ksef_corrections"
-						icon="fa-exchange"
+						icon="swap_horiz"
 						invisible="ksef_correction_count == 0" >
 					<field name="ksef_correction_count" widget="statinfo" string="Korekty"/>
 				</button>
@@ -340,7 +340,7 @@
 				<button name="action_open_logs"
 						type="object"
 						class="oe_stat_button"
-						icon="fa-retweet">
+						icon="repeat">
 					<field name="log_count" widget="statinfo" string="Dziennik Komunikacji"/>
 				</button>
 			</xpath>

@@ -28,12 +28,12 @@
 								<a t-att-href="ksef_qr_url"
 								   style="color: #1a73e8; text-decoration: none;"
 								   target="_blank">
-									<t t-esc="ksef_qr_url"/>
+									<t t-out="ksef_qr_url"/>
 								</a>
 							</p>
 							<p t-if="o.ksef_issue_mode != 'offline'" style="font-size: 10px; color: #777; margin-bottom: 0;">
 								Numer KSeF:
-								<span t-esc="o.ksef_number or '-'"/>
+								<span t-out="o.ksef_number or '-'"/>
 							</p>
 							<p t-if="o.ksef_issue_mode != 'online'" style="font-size: 10px; color: #777; margin-bottom: 0;">
 								FAKTURA WYSTAWIONA W TRYBIE OFFLINE KSeF
@@ -73,19 +73,19 @@
 			<p>
 				<strong>Typ faktury:</strong>
 				<b>
-					<t t-esc="invoice_type_display"/>
+					<t t-out="invoice_type_display"/>
 				</b>
 			</p>
 			<p>
 				<strong>Numer KSeF:</strong>
 				<b>
-					<t t-esc="move.ksef_number"/>
+					<t t-out="move.ksef_number"/>
 				</b>
 			</p>
 			<p>
 				<strong>Numer Faktury:</strong>
 				<b>
-					<t t-esc="ksef.get('invoice', {}).get('number') or 'Brak w XML'"/>
+					<t t-out="ksef.get('invoice', {}).get('number') or 'Brak w XML'"/>
 				</b>
 			</p>
 		</div>
@@ -103,16 +103,16 @@
 				<t t-if="correction.get('reason')">
 					<p>
 						<strong>Przyczyna korekty:</strong>
-						<t t-esc="correction.get('reason')"/>
+						<t t-out="correction.get('reason')"/>
 					</p>
 				</t>
 
 				<t t-if="correction.get('type_label')">
 					<p>
 						<strong>Typ skutku korekty:</strong>
-						<t t-esc="correction.get('type_label')"/>
+						<t t-out="correction.get('type_label')"/>
 						<t t-if="correction.get('type_code')">
-							(<t t-esc="correction.get('type_code')"/>)
+							(<t t-out="correction.get('type_code')"/>)
 						</t>
 					</p>
 				</t>
@@ -120,21 +120,21 @@
 				<t t-if="correction.get('corrected_period')">
 					<p>
 						<strong>Okres faktury korygowanej:</strong>
-						<t t-esc="correction.get('corrected_period')"/>
+						<t t-out="correction.get('corrected_period')"/>
 					</p>
 				</t>
 
 				<t t-if="correction.get('corrected_invoice_number')">
 					<p>
 						<strong>Numer faktury korygowanej:</strong>
-						<t t-esc="correction.get('corrected_invoice_number')"/>
+						<t t-out="correction.get('corrected_invoice_number')"/>
 					</p>
 				</t>
 
 				<t t-if="correction.get('p15_before_correction')">
 					<p>
 						<strong>Kwota należności przed korektą:</strong>
-						<t t-esc="correction.get('p15_before_correction')"/>
+						<t t-out="correction.get('p15_before_correction')"/>
 					</p>
 				</t>
 
@@ -152,9 +152,9 @@
 						<tbody>
 							<t t-foreach="correction.get('corrected_invoices')" t-as="item">
 								<tr>
-									<td><t t-esc="item.get('number') or '-'"/></td>
-									<td><t t-esc="item.get('date') or '-'"/></td>
-									<td><t t-esc="item.get('ksef_id') or '-'"/></td>
+									<td><t t-out="item.get('number') or '-'"/></td>
+									<td><t t-out="item.get('date') or '-'"/></td>
+									<td><t t-out="item.get('ksef_id') or '-'"/></td>
 									<td>
 										<t t-if="item.get('outside_ksef_marker')">TAK</t>
 										<t t-if="not item.get('outside_ksef_marker')">NIE</t>
@@ -175,13 +175,13 @@
 				<h4>Wystawca</h4>
 				<address class="ksef-party-address">
 					<strong class="ksef-party-name">
-						<t t-esc="ksef.get('issuer', {}).get('name', 'Brak')"/>
+						<t t-out="ksef.get('issuer', {}).get('name', 'Brak')"/>
 					</strong>
 					<br/>
 					<t t-if="ksef.get('issuer', {}).get('nip')">
 						NIP:
 						
-						<t t-esc="ksef.get('issuer', {}).get('nip')"/>
+						<t t-out="ksef.get('issuer', {}).get('nip')"/>
 						<br/>
 					</t>
 					<t t-if="
@@ -190,17 +190,17 @@
 					">
 						Kod kraju:
 						
-						<t t-esc="ksef.get('issuer', {}).get('country_code')"/>
+						<t t-out="ksef.get('issuer', {}).get('country_code')"/>
 						<br/>
 						<t t-if="ksef.get('issuer', {}).get('foreign_tax_id')">
 							Nr ID:
 							
-							<t t-esc="ksef.get('issuer', {}).get('foreign_tax_id')"/>
+							<t t-out="ksef.get('issuer', {}).get('foreign_tax_id')"/>
 							<br/>
 						</t>
 					</t>
 					<t t-if="ksef.get('issuer', {}).get('address', {}).get('line1')">
-						<t t-esc="
+						<t t-out="
 							ksef.get('issuer', {})
 								 .get('address', {})
 								 .get('line1')
@@ -211,7 +211,7 @@
 								 .get('address', {})
 								 .get('line2')
 						">
-							<t t-esc="
+							<t t-out="
 								ksef.get('issuer', {})
 									 .get('address', {})
 									 .get('line2')
@@ -222,7 +222,7 @@
 					<t t-if="ksef.get('issuer', {}).get('correspondence_address', {}).get('line1')">
 						<span class="text-muted">Adres do korespondencji:</span>
 						<br/>
-						<t t-esc="
+						<t t-out="
 							ksef.get('issuer', {})
 								 .get('correspondence_address', {})
 								 .get('line1')
@@ -233,7 +233,7 @@
 								 .get('correspondence_address', {})
 								 .get('line2')
 						">
-							<t t-esc="
+							<t t-out="
 								ksef.get('issuer', {})
 									 .get('correspondence_address', {})
 									 .get('line2')
@@ -244,13 +244,13 @@
 					<t t-if="ksef.get('issuer', {}).get('email')">
 						E-mail:
 						
-						<t t-esc="ksef.get('issuer', {}).get('email')"/>
+						<t t-out="ksef.get('issuer', {}).get('email')"/>
 						<br/>
 					</t>
 					<t t-if="ksef.get('issuer', {}).get('phone')">
 						Tel.:
 						
-						<t t-esc="ksef.get('issuer', {}).get('phone')"/>
+						<t t-out="ksef.get('issuer', {}).get('phone')"/>
 						<br/>
 					</t>
 
@@ -272,13 +272,13 @@
 				<h4>Nabywca</h4>
 				<address class="ksef-party-address">
 					<strong class="ksef-party-name">
-						<t t-esc="ksef.get('recipient', {}).get('name', 'Brak')"/>
+						<t t-out="ksef.get('recipient', {}).get('name', 'Brak')"/>
 					</strong>
 					<br/>
 					<t t-if="ksef.get('recipient', {}).get('nip')">
 						NIP:
 						
-						<t t-esc="ksef.get('recipient', {}).get('nip')"/>
+						<t t-out="ksef.get('recipient', {}).get('nip')"/>
 						<br/>
 					</t>
 					<t t-elif="ksef.get('recipient', {}).get('no_tax_id')">
@@ -289,7 +289,7 @@
 					<t t-if="ksef.get('recipient', {}).get('customer_number')">
 						Nr klienta:
 						
-						<t t-esc="ksef.get('recipient', {}).get('customer_number')"/>
+						<t t-out="ksef.get('recipient', {}).get('customer_number')"/>
 						<br/>
 					</t>
 					<t t-if="
@@ -297,7 +297,7 @@
 							 .get('address', {})
 							 .get('line1')
 					">
-						<t t-esc="
+						<t t-out="
 							ksef.get('recipient', {})
 								 .get('address', {})
 								 .get('line1')
@@ -308,7 +308,7 @@
 								 .get('address', {})
 								 .get('line2')
 						">
-							<t t-esc="
+							<t t-out="
 								ksef.get('recipient', {})
 									 .get('address', {})
 									 .get('line2')
@@ -319,7 +319,7 @@
 					<t t-if="ksef.get('recipient', {}).get('correspondence_address', {}).get('line1')">
 						<span class="text-muted">Adres do korespondencji:</span>
 						<br/>
-						<t t-esc="
+						<t t-out="
 							ksef.get('recipient', {})
 								 .get('correspondence_address', {})
 								 .get('line1')
@@ -330,7 +330,7 @@
 								 .get('correspondence_address', {})
 								 .get('line2')
 						">
-							<t t-esc="
+							<t t-out="
 								ksef.get('recipient', {})
 									 .get('correspondence_address', {})
 									 .get('line2')
@@ -341,13 +341,13 @@
 					<t t-if="ksef.get('recipient', {}).get('email')">
 						E-mail:
 						
-						<t t-esc="ksef.get('recipient', {}).get('email')"/>
+						<t t-out="ksef.get('recipient', {}).get('email')"/>
 						<br/>
 					</t>
 					<t t-if="ksef.get('recipient', {}).get('phone')">
 						Tel.:
 						
-						<t t-esc="ksef.get('recipient', {}).get('phone')"/>
+						<t t-out="ksef.get('recipient', {}).get('phone')"/>
 						<br/>
 					</t>
 					<t t-if="ksef.get('recipient', {}).get('is_jst')">
@@ -371,21 +371,21 @@
 		<div class="row mt-4">
 			<div class="col-3">
 				<strong>Data wystawienia:</strong><br/>
-				<t t-esc="ksef.get('invoice', {}).get('issue_date', 'Brak')"/>
+				<t t-out="ksef.get('invoice', {}).get('issue_date', 'Brak')"/>
 			</div>
 			<div class="col-3">
 				<strong>Miejsce wystawienia:</strong>
 				<b>
-					<t t-esc="ksef.get('invoice', {}).get('place_issue') or 'Brak w XML'"/>
+					<t t-out="ksef.get('invoice', {}).get('place_issue') or 'Brak w XML'"/>
 				</b>
 			</div>
 			<div class="col-3">
 				<strong>Data sprzedaży:</strong><br/>
-				<t t-esc="ksef.get('invoice', {}).get('sale_date', 'Brak')"/>
+				<t t-out="ksef.get('invoice', {}).get('sale_date', 'Brak')"/>
 			</div>
 			<div class="col-3">
 				<strong>Waluta:</strong><br/>
-				<t t-esc="ksef.get('invoice', {}).get('currency', 'PLN')"/>
+				<t t-out="ksef.get('invoice', {}).get('currency', 'PLN')"/>
 			</div>
 		</div>
 
@@ -414,7 +414,7 @@
 						<li>
 							Zwolnienie z VAT
 							<t t-if="ann.get('exemption_basis')">
-								— <t t-esc="ann.get('exemption_basis')"/>
+								— <t t-out="ann.get('exemption_basis')"/>
 							</t>
 						</li>
 					</t>
@@ -428,7 +428,7 @@
 						<li>
 							Procedura marży
 							<t t-if="ann.get('margin_type')">
-								— <t t-esc="ann.get('margin_type')"/>
+								— <t t-out="ann.get('margin_type')"/>
 							</t>
 						</li>
 					</t>
@@ -447,7 +447,7 @@
 				<p>
 					Faktura wystawiona w walucie
 					<strong>
-						<t t-esc="		ksef.get('invoice', {}).get('currency')		or 'PLN'	   "/>
+						<t t-out="		ksef.get('invoice', {}).get('currency')		or 'PLN'	   "/>
 					</strong>
 				</p>
 				<t t-if="advance.get('order_value')">
@@ -456,8 +456,8 @@
 							Wartość zamówienia lub umowy
 							z uwzględnieniem kwoty podatku:
 						</strong>
-						<t t-esc="advance.get('order_value')"/>
-						<t t-esc="		ksef.get('invoice', {}).get('currency')		or ''	   "/>
+						<t t-out="advance.get('order_value')"/>
+						<t t-out="		ksef.get('invoice', {}).get('currency')		or ''	   "/>
 					</p>
 				</t>
 				<t t-if="advance.get('order_lines')">
@@ -494,15 +494,15 @@
 							<t t-foreach="advance.get('order_lines', [])" t-as="line">
 								<tr>
 									<td class="text-center">
-										<t t-esc="						line.get('line_number')						or '-'					"/>
+										<t t-out="						line.get('line_number')						or '-'					"/>
 									</td>
 									<td>
-										<t t-esc="						line.get('name')						or '-'					"/>
+										<t t-out="						line.get('name')						or '-'					"/>
 										<t t-if="line.get('identifiers')">
 											<div class="text-muted ksef-small-text">
 												<t t-foreach="								line.get('identifiers')							" t-as="identifier">
 													<span>
-														<t t-esc="identifier"/>
+														<t t-out="identifier"/>
 													</span>
 													<br/>
 												</t>
@@ -510,23 +510,23 @@
 										</t>
 									</td>
 									<td class="text-right">
-										<t t-esc="						line.get('price')						or '-'					"/>
+										<t t-out="						line.get('price')						or '-'					"/>
 									</td>
 									<td class="text-center">
-										<t t-esc="						line.get('qty')						or '-'					"/>
+										<t t-out="						line.get('qty')						or '-'					"/>
 									</td>
 
 									<td class="text-center">
-										<t t-esc="						line.get('unit')						or '-'					"/>
+										<t t-out="						line.get('unit')						or '-'					"/>
 									</td>
 									<td class="text-center">
-										<t t-esc="						line.get('vat_rate_label')						or line.get('vat_rate')						or '-'					"/>
+										<t t-out="						line.get('vat_rate_label')						or line.get('vat_rate')						or '-'					"/>
 									</td>
 									<td class="text-right">
-										<t t-esc="						line.get('net')						or '-'					"/>
+										<t t-out="						line.get('net')						or '-'					"/>
 									</td>
 									<td class="text-right">
-										<t t-esc="						line.get('vat')						or '-'					"/>
+										<t t-out="						line.get('vat')						or '-'					"/>
 									</td>
 								</tr>
 							</t>
@@ -540,8 +540,8 @@
 										<div style="font-size: 16px; margin-bottom: 3px;">
 											Kwota zapłaty (zaliczki) dokumentowana fakturą
 										</div>
-							<t t-esc="		 ksef.get('totals', {}).get('gross')		"/>
-							<t t-esc="		 ksef.get('invoice', {}).get('currency')		 or ''		"/>
+							<t t-out="		 ksef.get('totals', {}).get('gross')		"/>
+							<t t-out="		 ksef.get('invoice', {}).get('currency')		 or ''		"/>
 						</div>
 					</div>
 				</t>
@@ -575,10 +575,10 @@
 						<t t-foreach="		advance.get('advance_invoices', [])	   " t-as="item">
 							<tr>
 								<td>
-									<t t-esc="				 item.get('number')				 or '-'			 "/>
+									<t t-out="				 item.get('number')				 or '-'			 "/>
 								</td>
 								<td>
-									<t t-esc="				 item.get('ksef_id')				 or '-'			 "/>
+									<t t-out="				 item.get('ksef_id')				 or '-'			 "/>
 								</td>
 								<td class="text-center">
 									<t t-if="				 item.get('outside_ksef_marker')			 ">
@@ -608,7 +608,7 @@
 				<p class="mb-2">
 					Faktura wystawiona w walucie
 					<strong>
-						<t t-esc="ksef.get('invoice', {}).get('currency')"/>
+						<t t-out="ksef.get('invoice', {}).get('currency')"/>
 					</strong>
 				</p>
 			</t>
@@ -635,18 +635,18 @@
 
 						<tr>
 							<td class="text-center">
-								<t t-esc="line.get('line_number') or idx"/>
+								<t t-out="line.get('line_number') or idx"/>
 							</td>
 
 							<td>
-								<t t-esc="line.get('name', '')"/>
+								<t t-out="line.get('name', '')"/>
 
 								<t t-if="line.get('identifiers')">
 									<div class="text-muted ksef-small-text" style="margin-top: 2px;">
 										<t t-foreach="line.get('identifiers', [])" t-as="ident">
 											<span>
-												<t t-esc="ident.get('label')"/>:
-												<t t-esc="ident.get('value')"/>
+												<t t-out="ident.get('label')"/>:
+												<t t-out="ident.get('value')"/>
 											</span>
 											<t t-if="not ident_last">; </t>
 										</t>
@@ -656,29 +656,29 @@
 								<t t-if="line.get('discount')">
 									<div class="text-muted ksef-small-text">
 										Opust / obniżka:
-										<t t-esc="line.get('discount')"/>
+										<t t-out="line.get('discount')"/>
 									</div>
 								</t>
 							</td>
 
 							<td class="text-right">
-								<t t-esc="line.get('price') or '-'"/>
+								<t t-out="line.get('price') or '-'"/>
 							</td>
 
 							<td class="text-center">
-								<t t-esc="line.get('qty') or '-'"/>
+								<t t-out="line.get('qty') or '-'"/>
 							</td>
 
 							<td class="text-center">
-								<t t-esc="line.get('unit') or '-'"/>
+								<t t-out="line.get('unit') or '-'"/>
 							</td>
 
 							<td class="text-center">
-								<t t-esc="line.get('vat_rate_label') or line.get('vat_rate') or '-'"/>
+								<t t-out="line.get('vat_rate_label') or line.get('vat_rate') or '-'"/>
 							</td>
 
 							<td class="text-right">
-								<t t-esc="line.get('net') or '-'"/>
+								<t t-out="line.get('net') or '-'"/>
 							</td>
 
 							<t t-if="is_correction">
@@ -728,8 +728,8 @@
 								text-align: left;
 								white-space: nowrap;
 								vertical-align: middle;	   ">
-							<t t-esc="		 ksef.get('totals', {}).get('gross')		"/>
-							<t t-esc="		 ksef.get('invoice', {}).get('currency')		 or ''		"/>
+							<t t-out="		 ksef.get('totals', {}).get('gross')		"/>
+							<t t-out="		 ksef.get('invoice', {}).get('currency')		 or ''		"/>
 						</td>
 					</tr>
 				</table>
@@ -756,22 +756,22 @@
 						<t t-foreach="ksef.get('totals', {}).get('vat_breakdown', [])" t-as="vat_item">
 							<tr>
 								<td class="text-center">
-									<t t-esc="vat_item.get('rate_label') or vat_item.get('rate') or ''"/>
+									<t t-out="vat_item.get('rate_label') or vat_item.get('rate') or ''"/>
 									<t t-if="vat_item.get('description')">
 										<br/>
 										<small class="text-muted">
-											<t t-esc="vat_item.get('description')"/>
+											<t t-out="vat_item.get('description')"/>
 										</small>
 									</t>
 								</td>
 								<td class="text-right">
-									<t t-esc="vat_item.get('net', '0')"/>
+									<t t-out="vat_item.get('net', '0')"/>
 								</td>
 								<td class="text-right">
-									<t t-esc="vat_item.get('vat', '0')"/>
+									<t t-out="vat_item.get('vat', '0')"/>
 								</td>
 								<td class="text-right">
-									<t t-esc="vat_item.get('gross', '0')"/>
+									<t t-out="vat_item.get('gross', '0')"/>
 								</td>
 							</tr>
 						</t>
@@ -780,13 +780,13 @@
 						<tr class="table-active">
 							<td class="text-right"><strong>RAZEM:</strong></td>
 							<td class="text-right">
-								<strong><t t-esc="ksef.get('totals', {}).get('net', '0')"/></strong>
+								<strong><t t-out="ksef.get('totals', {}).get('net', '0')"/></strong>
 							</td>
 							<td class="text-right">
-								<strong><t t-esc="ksef.get('totals', {}).get('vat', '0')"/></strong>
+								<strong><t t-out="ksef.get('totals', {}).get('vat', '0')"/></strong>
 							</td>
 							<td class="text-right">
-								<strong><t t-esc="ksef.get('totals', {}).get('gross', '0')"/></strong>
+								<strong><t t-out="ksef.get('totals', {}).get('gross', '0')"/></strong>
 							</td>
 						</tr>
 					</tfoot>
@@ -812,9 +812,9 @@
 					<tbody>
 						<t t-foreach="ksef.get('additional_info', [])" t-as="info_item">
 							<tr>
-								<td><t t-esc="info_item_index + 1"/></td>
-								<td><t t-esc="info_item.get('key')"/></td>
-								<td><t t-esc="info_item.get('value')"/></td>
+								<td><t t-out="info_item_index + 1"/></td>
+								<td><t t-out="info_item.get('key')"/></td>
+								<td><t t-out="info_item.get('value')"/></td>
 							</tr>
 						</t>
 					</tbody>
@@ -842,8 +842,8 @@
 						<tbody>
 							<t t-foreach="transaction_conditions.get('orders', [])" t-as="order_item">
 								<tr>
-									<td><t t-esc="order_item.get('date')"/></td>
-									<td><t t-esc="order_item.get('number')"/></td>
+									<td><t t-out="order_item.get('date')"/></td>
+									<td><t t-out="order_item.get('number')"/></td>
 								</tr>
 							</t>
 						</tbody>
@@ -861,7 +861,7 @@
 						<tbody>
 							<t t-foreach="transaction_conditions.get('wz_documents', [])" t-as="wz_number">
 								<tr>
-									<td><t t-esc="wz_number"/></td>
+									<td><t t-out="wz_number"/></td>
 								</tr>
 							</t>
 						</tbody>
@@ -886,8 +886,8 @@
 					</thead>
 					<tbody>
 						<tr>
-							<t t-if="registries.get('krs')"><td><t t-esc="registries.get('krs')"/></td></t>
-							<t t-if="registries.get('regon')"><td><t t-esc="registries.get('regon')"/></td></t>
+							<t t-if="registries.get('krs')"><td><t t-out="registries.get('krs')"/></td></t>
+							<t t-if="registries.get('regon')"><td><t t-out="registries.get('regon')"/></td></t>
 						</tr>
 					</tbody>
 				</table>
@@ -925,27 +925,27 @@
 						<t t-foreach="correction_tax.get('rows', [])" t-as="row">
 							<tr>
 								<td class="text-center">
-									<t t-esc="row.get('rate_label') or row.get('rate') or '-'"/>
+									<t t-out="row.get('rate_label') or row.get('rate') or '-'"/>
 								</td>
 
 								<td class="text-right">
-									<t t-esc="row.get('before_net') or '0.00'"/>
+									<t t-out="row.get('before_net') or '0.00'"/>
 								</td>
 
 								<td class="text-right">
-									<t t-esc="row.get('after_net') or '0.00'"/>
+									<t t-out="row.get('after_net') or '0.00'"/>
 								</td>
 
 								<td class="text-right">
-									<t t-esc="row.get('net') or '0.00'"/>
+									<t t-out="row.get('net') or '0.00'"/>
 								</td>
 
 								<td class="text-right">
-									<t t-esc="row.get('vat') or '0.00'"/>
+									<t t-out="row.get('vat') or '0.00'"/>
 								</td>
 
 								<td class="text-right">
-									<t t-esc="row.get('gross') or '0.00'"/>
+									<t t-out="row.get('gross') or '0.00'"/>
 								</td>
 							</tr>
 						</t>
@@ -957,19 +957,19 @@
 
 							<td class="text-right">
 								<strong>
-									<t t-esc="correction_tax.get('total_net')"/>
+									<t t-out="correction_tax.get('total_net')"/>
 								</strong>
 							</td>
 
 							<td class="text-right">
 								<strong>
-									<t t-esc="correction_tax.get('total_vat')"/>
+									<t t-out="correction_tax.get('total_vat')"/>
 								</strong>
 							</td>
 
 							<td class="text-right">
 								<strong>
-									<t t-esc="correction_tax.get('total_gross')"/>
+									<t t-out="correction_tax.get('total_gross')"/>
 								</strong>
 							</td>
 						</tr>
@@ -997,22 +997,22 @@
 
 				<p>
 					<strong>Informacja o płatności:</strong>
-					<t t-esc="payment.get('status_label') or 'Brak zapłaty'"/>
+					<t t-out="payment.get('status_label') or 'Brak zapłaty'"/>
 				</p>
 
 				<t t-if="payment.get('paid_date')">
 					<p>
 						<strong>Data zapłaty:</strong>
-						<t t-esc="payment.get('paid_date')"/>
+						<t t-out="payment.get('paid_date')"/>
 					</p>
 				</t>
 
 				<t t-if="payment.get('method_label')">
 					<p>
 						<strong>Forma płatności:</strong>
-						<t t-esc="payment.get('method_label')"/>
+						<t t-out="payment.get('method_label')"/>
 						<t t-if="payment.get('method_code')">
-							(<t t-esc="payment.get('method_code')"/>)
+							(<t t-out="payment.get('method_code')"/>)
 						</t>
 					</p>
 				</t>
@@ -1020,7 +1020,7 @@
 				<t t-if="payment.get('other_payment')">
 					<p>
 						<strong>Inna forma płatności:</strong>
-						<t t-esc="payment.get('other_payment_description') or '-'"/>
+						<t t-out="payment.get('other_payment_description') or '-'"/>
 					</p>
 				</t>
 
@@ -1037,10 +1037,10 @@
 							<t t-foreach="payment.get('due_terms')" t-as="term">
 								<tr>
 									<td>
-										<t t-esc="term.get('date') or '-'"/>
+										<t t-out="term.get('date') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="term.get('description') or '-'"/>
+										<t t-out="term.get('description') or '-'"/>
 									</td>
 								</tr>
 							</t>
@@ -1062,13 +1062,13 @@
 							<t t-foreach="payment.get('partial_payments')" t-as="partial">
 								<tr>
 									<td>
-										<t t-esc="partial.get('date') or '-'"/>
+										<t t-out="partial.get('date') or '-'"/>
 									</td>
 									<td class="text-right">
-										<t t-esc="partial.get('amount') or '-'"/>
+										<t t-out="partial.get('amount') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="partial.get('method_label') or partial.get('other_payment_description') or '-'"/>
+										<t t-out="partial.get('method_label') or partial.get('other_payment_description') or '-'"/>
 									</td>
 								</tr>
 							</t>
@@ -1091,16 +1091,16 @@
 							<t t-foreach="payment.get('bank_accounts')" t-as="account">
 								<tr>
 									<td>
-										<t t-esc="account.get('number') or '-'"/>
+										<t t-out="account.get('number') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('bank_name') or '-'"/>
+										<t t-out="account.get('bank_name') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('swift') or '-'"/>
+										<t t-out="account.get('swift') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('description') or '-'"/>
+										<t t-out="account.get('description') or '-'"/>
 									</td>
 								</tr>
 							</t>
@@ -1123,16 +1123,16 @@
 							<t t-foreach="payment.get('factor_bank_accounts')" t-as="account">
 								<tr>
 									<td>
-										<t t-esc="account.get('number') or '-'"/>
+										<t t-out="account.get('number') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('bank_name') or '-'"/>
+										<t t-out="account.get('bank_name') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('swift') or '-'"/>
+										<t t-out="account.get('swift') or '-'"/>
 									</td>
 									<td>
-										<t t-esc="account.get('description') or '-'"/>
+										<t t-out="account.get('description') or '-'"/>
 									</td>
 								</tr>
 							</t>
@@ -1144,11 +1144,11 @@
 					<p>
 						<strong>Skonto:</strong>
 						<t t-if="payment.get('skonto').get('terms')">
-							<t t-esc="payment.get('skonto').get('terms')"/>
+							<t t-out="payment.get('skonto').get('terms')"/>
 						</t>
 						<t t-if="payment.get('skonto').get('amount')">
 							; wysokość:
-							<t t-esc="payment.get('skonto').get('amount')"/>
+							<t t-out="payment.get('skonto').get('amount')"/>
 						</t>
 					</p>
 				</t>
@@ -1157,7 +1157,7 @@
 					<p>
 						<strong>Link do płatności:</strong>
 						<a t-att-href="payment.get('payment_link')" target="_blank">
-							<t t-esc="payment.get('payment_link')"/>
+							<t t-out="payment.get('payment_link')"/>
 						</a>
 					</p>
 				</t>
@@ -1165,7 +1165,7 @@
 				<t t-if="payment.get('ipksef')">
 					<p>
 						<strong>IPKSeF:</strong>
-						<t t-esc="payment.get('ipksef')"/>
+						<t t-out="payment.get('ipksef')"/>
 					</p>
 				</t>
 			</div>
@@ -1223,10 +1223,10 @@
 
 				<div>
 					<strong>Dokument wygenerowany w Odoo:</strong>
-					<t t-esc="base_module.installed_version"/>
+					<t t-out="base_module.installed_version"/>
 
 					<strong>; Data wydruku:</strong>
-					<t t-esc="context.get('print_datetime')"/>
+					<t t-out="context.get('print_datetime')"/>
 
 					<span style="float: right;">
 						Strona <span class="page"/> / <span class="topage"/>
@@ -1265,10 +1265,10 @@
 							<tr>
 								<td>Obciążenie</td>
 								<td>
-									<t t-esc="item.get('reason') or '-'"/>
+									<t t-out="item.get('reason') or '-'"/>
 								</td>
 								<td class="text-right">
-									<t t-esc="item.get('amount') or '0.00'"/>
+									<t t-out="item.get('amount') or '0.00'"/>
 								</td>
 							</tr>
 						</t>
@@ -1280,7 +1280,7 @@
 							</td>
 							<td class="text-right">
 								<strong>
-									<t t-esc="settlement.get('total_charges')"/>
+									<t t-out="settlement.get('total_charges')"/>
 								</strong>
 							</td>
 						</tr>
@@ -1291,10 +1291,10 @@
 							<tr>
 								<td>Odliczenie</td>
 								<td>
-									<t t-esc="item.get('reason') or '-'"/>
+									<t t-out="item.get('reason') or '-'"/>
 								</td>
 								<td class="text-right">
-									<t t-esc="item.get('amount') or '0.00'"/>
+									<t t-out="item.get('amount') or '0.00'"/>
 								</td>
 							</tr>
 						</t>
@@ -1306,7 +1306,7 @@
 							</td>
 							<td class="text-right">
 								<strong>
-									<t t-esc="settlement.get('total_deductions')"/>
+									<t t-out="settlement.get('total_deductions')"/>
 								</strong>
 							</td>
 						</tr>
@@ -1321,8 +1321,8 @@
 							</td>
 							<td class="text-right">
 								<strong>
-									<t t-esc="settlement.get('amount_due')"/>
-									<t t-esc="
+									<t t-out="settlement.get('amount_due')"/>
+									<t t-out="
 										ksef.get('invoice', {}).get('currency')
 										or ''
 									"/>
@@ -1338,10 +1338,10 @@
 							</td>
 							<td class="text-right">
 								<strong>
-									<t t-esc="
+									<t t-out="
 										settlement.get('amount_to_settle')
 									"/>
-									<t t-esc="
+									<t t-out="
 										ksef.get('invoice', {}).get('currency')
 										or ''
 									"/>
@@ -1399,8 +1399,8 @@
 						white-space: nowrap;
 						vertical-align: middle;
 					">
-						<t t-esc="gross_total"/>
-						<t t-esc="
+						<t t-out="gross_total"/>
+						<t t-out="
 							ksef.get('invoice', {}).get('currency')
 							or ''
 						"/>
@@ -1634,7 +1634,7 @@
 						string="Faktura KSeF"
 						type="object" 
 						class="btn-secondary" 
-						icon="fa-file-pdf-o"
+						icon="picture_as_pdf"
 						groups="account.group_account_invoice"
 						invisible="move_type in ['xout_invoice', 'xout_refund'] or not ksef_number"
 						/>

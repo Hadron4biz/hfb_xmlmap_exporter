@@ -94,7 +94,7 @@ class AccountMove(models.Model):
 
 		# 3. Dekoduj XML
 		try:
-			xml_bytes = attachment.raw.content  # Odoo 20: brak pola datas
+			xml_bytes = attachment.raw.content
 			xml_text = xml_bytes.decode('utf-8', errors='replace')
 		except Exception as e:
 			_logger.error("Błąd dekodowania UPO XML: %s", e, exc_info=True)
@@ -135,7 +135,7 @@ class AccountMove(models.Model):
 		if not attachment:
 			raise UserError(_("Brak załącznika UPO."))
 
-		xml_bytes = attachment.raw.content  # Odoo 20: brak pola datas
+		xml_bytes = attachment.raw.content
 
 		import xml.etree.ElementTree as ET
 		root = ET.fromstring(xml_bytes)

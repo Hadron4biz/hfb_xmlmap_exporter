@@ -725,7 +725,6 @@ class ProviderKsefApiService:
 		
 		try:
 			# 2. Pobierz klucze Z LOGU
-			# Odoo 20: odczyt pola Binary zwraca BinaryValue z surową zawartością
 			key = self.log.ksef_session_key.content
 			iv = self.log.ksef_session_iv.content
 			

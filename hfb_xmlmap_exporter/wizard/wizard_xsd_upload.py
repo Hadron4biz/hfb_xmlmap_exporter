@@ -68,7 +68,6 @@ class XmlTemplateXsdUploadWizard(models.TransientModel):
 		attachment = self.env["ir.attachment"].with_company( self.company_id).create({
 			'company_id': self.company_id.id,
 			"name": self.xsd_filename,
-			# Odoo 20: ir.attachment nie ma pola datas; xsd_file to BinaryValue
 			"raw": self.xsd_file.content,
 			"res_model": "xml.export.template",
 			"res_id": self.template_id.id,

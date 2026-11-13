@@ -115,7 +115,7 @@
                 <field name="value_expr" optional="hide"/>
 				<button name="action_open_node_form"
 					type="object"
-					icon="fa-pencil"
+					icon="edit" icon_class="oi-filled"
 					title="Edytuj węzeł"
 					class="btn-link"/>
             </list>

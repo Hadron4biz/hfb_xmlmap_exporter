@@ -29,12 +29,12 @@
 									<a t-att-href="ksef_qr_url"
 									   style="color: #1a73e8; text-decoration: none;"
 									   target="_blank">
-										<t t-esc="ksef_qr_url"/>
+										<t t-out="ksef_qr_url"/>
 									</a>
 								</p>
 								<p t-if="o.ksef_issue_mode != 'offline'" style="font-size: 10px; color: #777; margin-bottom: 0;">
 									Numer KSeF:
-									<span t-esc="o.ksef_number or '-'"/>
+									<span t-out="o.ksef_number or '-'"/>
 								</p>
                                 <p t-if="o.ksef_issue_mode != 'online'" style="font-size: 10px; color: #777; margin-bottom: 0;">
                                     FAKTURA WYSTAWIONA W TRYBIE OFFLINE KSeF

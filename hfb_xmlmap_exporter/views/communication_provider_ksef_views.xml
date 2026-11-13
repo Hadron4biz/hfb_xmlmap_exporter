@@ -84,7 +84,7 @@
 											type="object" 
 											string="Pobierz klucze publiczne MF" 
 											class="btn-info text-nowrap" 
-											icon="fa-download" 
+											icon="download" 
 											confirm="Czy na pewno chcesz pobrać nowe klucze publiczne z API KSeF?"/>
 								</group>
 								<field name="mf_certificate_pem" 

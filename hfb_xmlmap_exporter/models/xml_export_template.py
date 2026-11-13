@@ -132,7 +132,6 @@ class XmlTemplateExporter(models.AbstractModel):
 
 		# Główny schema w base64
 		if template.xsd_attachment_id:
-			# Odoo 20: brak pola datas; eksport JSON potrzebuje base64 (str)
 			raw = template.xsd_attachment_id.raw.to_base64()
 			if isinstance(raw, bytes):
 				raw = raw.decode("ascii")
@@ -145,7 +144,7 @@ class XmlTemplateExporter(models.AbstractModel):
 		# Dodatkowe XSD attachments - DODAJ TO!
 		res["xsd_type_attachments"] = []
 		for att in template.xsd_type_attachment_ids:
-			raw = att.raw.to_base64()  # Odoo 20: brak pola datas
+			raw = att.raw.to_base64()
 			if isinstance(raw, bytes):
 				raw = raw.decode("ascii")
 			res["xsd_type_attachments"].append({
@@ -349,7 +348,6 @@ class XmlExportTemplate(models.Model):
 
 		attachment = self.env['ir.attachment'].with_company( self.company_id).create({
 			'name': filename,
-			# Odoo 20: ir.attachment nie ma pola datas
 			'raw': json_str.encode("utf-8"),
 			'res_model': 'xml.export.template',
 			'res_id': self.id,
@@ -506,7 +504,6 @@ class XmlExportTemplate(models.Model):
 		# importy, include, ref, type, group i dziedziczenie typów.
 		for attachment in attachments:
 			try:
-				# Odoo 20: raw zwraca BinaryValue, lxml wymaga bytes; pola datas już nie ma
 				xml_data = attachment.raw.content
 				root = etree.fromstring(xml_data)
 			except Exception as exc:

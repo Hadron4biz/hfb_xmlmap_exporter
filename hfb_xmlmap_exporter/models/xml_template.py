@@ -286,7 +286,7 @@ class XmlExportTemplate(models.Model):
 		# Parse main XSD
 		# ------------------------------------------------------------
 		try:
-			schema_root = etree.fromstring(self.xsd_attachment_id.raw.content)  # Odoo 20: BinaryValue -> bytes
+			schema_root = etree.fromstring(self.xsd_attachment_id.raw.content)
 		except Exception as e:
 			raise UserError(f"Błąd parsowania XSD: {e}")
 
@@ -931,7 +931,6 @@ class XmlExportTemplate(models.Model):
 			'company_id': record.company_id.id,
 			'name': f"{self.name}-{record.id}.xml",
 			'type': 'binary',
-			# Odoo 20: ir.attachment nie ma pola datas
 			'raw': xml_bytes,
 			'mimetype': 'application/xml',
 			'res_model': record._name,
@@ -1487,7 +1486,7 @@ class XmlExportTemplate(models.Model):
 		from lxml import etree
 		ns = {"xsd": "http://www.w3.org/2001/XMLSchema"}
 
-		xml_data = self.xsd_attachment_id.raw.content  # Odoo 20: BinaryValue -> bytes
+		xml_data = self.xsd_attachment_id.raw.content
 		_logger.info(f'\n🚩🚩🚩 action_import_xsd_types\nxml_data')
 		root = etree.fromstring(xml_data)
 		imports = root.findall(".//xsd:import", ns) + root.findall(".//xsd:include", ns)
@@ -1556,7 +1555,6 @@ class XmlExportTemplate(models.Model):
 		schemas = []
 		import_warnings = []
 		for attachment in attachments:
-			# Odoo 20: raw zwraca BinaryValue, lxml wymaga bytes; pola datas już nie ma
 			xml_data = attachment.raw.content
 			if not xml_data:
 				message = _(

@@ -17,7 +17,7 @@
             position: relative;
             z-index: 2;
 
-            .fa {
+            .oi {
                 font-size: 22px;
                 line-height: 32px;
                 background: white;
@@ -25,13 +25,13 @@
                 padding: 2px;
             }
 
-            &.text-success .fa {
+            &.text-success .oi {
                 color: #28a745;
             }
-            &.text-muted .fa {
+            &.text-muted .oi {
                 color: #adb5bd;
             }
-            &.text-danger .fa {
+            &.text-danger .oi {
                 color: #dc3545;
             }
         }
