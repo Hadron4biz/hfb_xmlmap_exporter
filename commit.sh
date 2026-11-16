@@ -1,4 +1,5 @@
 #!/bin/sh
+#
 # by warp3r(2017-2026)
 ##
 # czyszczenie Python Cache
